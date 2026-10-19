@@ -1,6 +1,6 @@
 # 백엔드(apps/api) CI: 형식 검사 · 타입 검사 · 단위 테스트 · DB 테스트 · 린트 + 빌드
 # DB 테스트는 이 작업에서만 띄우는 PostgreSQL 서비스 컨테이너를 쓴다. Supabase에는 접속하지 않는다.
-# 프론트엔드(apps/web) 검사는 이슈 #2에서 함께 추가한다.
+# 프론트엔드는 web-ci.yml에서 별도로 검사한다.
 name: API CI
 
 on:

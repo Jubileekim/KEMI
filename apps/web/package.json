@@ -1,0 +1,59 @@
+{
+  "name": "@kemi/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.10 <25"
+  },
+  "scripts": {
+    "predev": "npm run build -w @kemi/shared",
+    "dev": "vite",
+    "pretypecheck": "npm run build -w @kemi/shared",
+    "typecheck": "tsc --noEmit",
+    "prelint": "npm run build -w @kemi/shared",
+    "lint": "eslint . --max-warnings 0",
+    "build": "npm run typecheck && npm run lint && vite build",
+    "preview": "vite preview",
+    "pretest": "npm run build -w @kemi/shared",
+    "test": "vitest run",
+    "pretest:watch": "npm run build -w @kemi/shared",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install chromium",
+    "test:e2e:report": "playwright show-report",
+    "ui:add": "shadcn add"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.2",
+    "@kemi/shared": "^0.0.0",
+    "@tanstack/react-query": "^5.104.4",
+    "axios": "^1.20.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.59.0",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-hook-form": "^7.90.0",
+    "react-router": "^8.4.0",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "shadcn": "^4.22.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "5.9.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
