@@ -36,6 +36,20 @@ npm run dev:api
 | `apps/api` | `npm run db:migrate` | 개발 DB에 마이그레이션 생성·적용 |
 | `apps/api` | `npm run db:deploy` | 배포 DB에 기존 마이그레이션만 적용 |
 
+## API 경로 규칙
+
+| 경로 | 용도 | 누가 호출하나 |
+|---|---|---|
+| `GET /health` | 프로세스 생존 확인 (DB 확인 안 함) | Render 헬스 체크, 배포 직후 확인 |
+| `GET /health/ready` | DB 연결까지 확인 | 배포·연동 점검 |
+| `/api/*` | 서비스 API (예: `/api/auth/login`) | 프론트엔드 (Vercel rewrite 경유) |
+
+- 헬스 체크는 `/api/health`가 아니라 `/health`로 통일한다.
+  - Render 헬스 체크는 Vercel을 거치지 않고 Render 서비스 주소로 직접 호출된다.
+  - 앞으로 `/api/*`에 붙일 인증·요청 제한 같은 미들웨어의 영향을 받지 않게 서비스 API와 분리한다.
+- 프론트엔드에서 배포 연결을 확인할 때는 Render 주소로 직접 호출한다: `https://<render-서비스>.onrender.com/health`
+- Vercel rewrite는 `/api/*`만 Render로 전달하며, 경로의 `/api`는 그대로 유지한다. (`/api/auth/login` → Render의 `/api/auth/login`)
+
 ## 환경 변수
 
 | 이름 | 필수 | 기본값 | 설명 |
@@ -84,6 +98,21 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 
 - `code`: `@kemi/shared`의 `ERROR_CODES` 중 하나. 화면은 `message` 문구가 아니라 `code`로 분기한다.
 - 알 수 없는 서버 오류는 내부 내용을 숨기고 `500 INTERNAL_ERROR`로 응답한다.
+
+## 아직 검증하지 않은 것
+
+- 실제 Supabase DB 연결과 마이그레이션 적용 (개발용 Supabase 프로젝트 준비 후 `/health/ready` 200 확인부터)
+- Render 배포와 헬스 체크 동작
+- Vercel rewrite를 거친 `/api/*` 호출
+
+## TypeScript 버전 (5.9)
+
+`typescript@5.9.3`을 사용한다. 근거는 다음과 같다. (2026-10-19 npm 레지스트리 기준)
+
+- 함께 쓸 예정인 `typescript-eslint@8.71.2`의 peer 의존성이 `typescript >=4.8.4 <6.1.0`이다. 최신 `typescript@7.0.2`는 이 범위 밖이라 설치할 때 peer 경고가 나고, 공식 지원 대상이 아니다.
+- `prisma@7.10.1`의 peer 의존성은 `typescript >=5.4.0`이라 5.9로 충분하다.
+- TypeScript 7로 이 코드를 직접 빌드·검사해 보지는 않았다. 실제로 동작하지 않는다고 확인한 것은 아니다.
+- 6.0.3도 위 범위에 들어간다. 5.9를 고른 것은 더 오래 쓰인 안정판을 택한 보수적인 선택이다. ESLint를 설정할 때 6.0으로 올릴지 함께 정한다.
 
 ## 폴더 구조
 

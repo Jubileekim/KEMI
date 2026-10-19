@@ -16,6 +16,14 @@
 | 기한 처리 | 서버 시각과 DB 마감 시각으로 판정. node-cron은 보조 정리 작업 |
 | 공통 패키지 | `packages/shared`: 요청 검증 스키마·공통 타입·오류 코드만. Prisma 모델은 공유하지 않음 |
 
+### 헬스 체크 경로
+
+- `GET /health`(생존 확인), `GET /health/ready`(DB 연결 확인)로 통일한다. 서비스 API는 `/api/*`에 둔다.
+- 처음 논의한 `/api/health`와 다른 이유는 두 가지다.
+  - Render 헬스 체크는 Vercel rewrite를 거치지 않고 Render 주소로 직접 호출된다.
+  - `/api/*`에 붙일 인증·요청 제한 미들웨어와 분리하기 위해서다.
+- 프론트엔드의 배포 연결 확인(Plan1 1주차)은 Render 주소의 `/health`를 직접 호출한다.
+
 ### 채팅 Realtime 권한 (선행 검증 필요)
 
 - 비공개 채널에는 대화방 참여자 권한 검사가 필요하다.
@@ -181,4 +189,4 @@
 1. 회원 테이블(`users`, `auth_identities`, `auth_sessions`, `client_profiles`, `creator_profiles`) + 이메일 회원가입·로그인·토큰 회전
 2. 공통 상태값 shared enum과 CHECK 일치 테스트
 3. Supabase Realtime 자체 JWT 연동 검증
-4. ESLint·Prettier·GitHub Actions (프론트엔드와 공동 설정)
+4. ESLint·Prettier·GitHub Actions CI (프론트엔드와 공동 설정, [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2))
