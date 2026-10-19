@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@kemi/shared';
+import type { ErrorCode } from "@kemi/shared";
 
 export default class AppError extends Error {
   constructor(
@@ -8,6 +8,6 @@ export default class AppError extends Error {
     readonly details?: unknown,
   ) {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
   }
 }

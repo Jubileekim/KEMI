@@ -3,7 +3,7 @@ export default function loadEnvFileIfExists(path: string): void {
   try {
     process.loadEnvFile(path);
   } catch (err) {
-    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
       return;
     }
     throw err;

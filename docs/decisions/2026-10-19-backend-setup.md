@@ -6,21 +6,21 @@
 
 ## 표기 규칙
 
-| 표기 | 뜻 |
-|---|---|
-| **[확정]** | 팀이 결정한 정책. 바꾸려면 팀 합의가 필요하다 |
-| **[제안]** | 백엔드 담당이 제안한 값·방식. 해당 기능 PR 리뷰에서 확정한다 |
-| **[검증 필요]** | 실제 환경에서 작은 검증을 마친 뒤 적용한다 |
+| 표기            | 뜻                                                           |
+| --------------- | ------------------------------------------------------------ |
+| **[확정]**      | 팀이 결정한 정책. 바꾸려면 팀 합의가 필요하다                |
+| **[제안]**      | 백엔드 담당이 제안한 값·방식. 해당 기능 PR 리뷰에서 확정한다 |
+| **[검증 필요]** | 실제 환경에서 작은 검증을 마친 뒤 적용한다                   |
 
 ## 0. 인프라 기준
 
-| 영역 | 내용 | 상태 |
-|---|---|---|
-| DB | Supabase PostgreSQL (별도 PostgreSQL 서버 없음), 마이그레이션은 Prisma로 통일 | [확정] |
-| 파일 | Supabase Storage. 브라우저가 직접 업로드하고 서버가 권한 발급·완료 확인 | [확정] |
-| 프론트엔드 배포 | Vercel. `/api/*`를 Render로 rewrite | [확정] |
-| 백엔드 배포 | Render 무료 플랜 | [확정] |
-| 공통 패키지 | `packages/shared`: 요청 검증 스키마·공통 타입·상태값·오류 코드만. Prisma 모델은 공유하지 않음 | [확정] |
+| 영역            | 내용                                                                                          | 상태   |
+| --------------- | --------------------------------------------------------------------------------------------- | ------ |
+| DB              | Supabase PostgreSQL (별도 PostgreSQL 서버 없음), 마이그레이션은 Prisma로 통일                 | [확정] |
+| 파일            | Supabase Storage. 브라우저가 직접 업로드하고 서버가 권한 발급·완료 확인                       | [확정] |
+| 프론트엔드 배포 | Vercel. `/api/*`를 Render로 rewrite                                                           | [확정] |
+| 백엔드 배포     | Render 무료 플랜                                                                              | [확정] |
+| 공통 패키지     | `packages/shared`: 요청 검증 스키마·공통 타입·상태값·오류 코드만. Prisma 모델은 공유하지 않음 | [확정] |
 
 ### 헬스 체크 경로 [확정 · PR #1 구현]
 
@@ -67,6 +67,7 @@
 ## 2. 공고당 계약 최대 한 개
 
 **정책 [확정]**
+
 - 공개 모집에서는 공고당 최종 체결 계약이 최대 한 개다.
 - 같은 조건서 버전에 양측이 서명해야 계약이 체결된다.
 - MVP에서는 계약 취소 후 같은 공고를 다시 열거나 다른 후보와 재계약하지 않는다. 재모집은 새 공고로 한다.
@@ -76,6 +77,7 @@
 **제약 설계 [제안]**
 
 계약 초안과 무효 조건서가 어디에 저장되는지 먼저 확인한 뒤 제약을 정했다.
+
 - ERD v0.6에서 계약 전 초안·수정·무효 처리는 모두 `terms_versions`에서 이뤄진다. 상태는 `DRAFT / SIGNING / SIGNED / SUPERSEDED / EXPIRED / VOID`이고, 무효 조건서도 삭제하지 않고 보존한다.
 - `contracts` 행은 같은 버전의 두 번째 유효 서명 시점에 처음 생성된다. 초안 단계의 계약 행은 없다.
 - 따라서 `contracts.project_id`의 제약은 초안이나 무효 조건서와 부딪히지 않는다.
@@ -90,6 +92,7 @@
 **두 번째 서명 트랜잭션 [제안]**
 
 다음을 하나의 트랜잭션으로 처리한다.
+
 1. 공고 행을 `SELECT … FOR UPDATE`로 잠근다 (공개 모집일 때).
 2. 서명 대상 버전이 `SIGNING`이고 만료 전이며 해시가 일치하는지 확인한다.
 3. 서명을 INSERT하고, 버전을 `SIGNED`로 바꾼다.
@@ -101,6 +104,7 @@
 공고 행 잠금이 1차 방어이고, UNIQUE는 마지막 방어선이다.
 
 **취소와 환불 [확정]**
+
 - 계약 취소: `contracts.status = CANCELLED`
 - 환불 완료: `refunds.status = SUCCEEDED`
 - 계약 취소만으로 환불 완료로 표시하지 않는다.
@@ -108,6 +112,7 @@
 ## 3. 공개 모집 지원 중복
 
 **정책 [확정]**
+
 - 같은 크리에이터는 같은 공고에 중복 지원할 수 없다.
 - MVP에서는 철회한 뒤에도 같은 공고에 재지원할 수 없다.
 - 직접 의뢰의 반복 거래는 이 제약으로 막지 않는다.
@@ -116,32 +121,35 @@
 
 **상태 정의 대조** (`work_requests.status`, ERD v0.6)
 
-| 상태 | 의미 | 활성 여부 |
-|---|---|---|
-| `PENDING` | 제출됨, 의뢰인의 협의 요청 전 | 활성 |
-| `DISCUSSING` | 협의 중 (조건서 작성·서명 대기 포함) | 활성 |
-| `CONTRACTED` | 계약 확정 | 종료 (성공) |
-| `DECLINED` | 거절됨 | 종료 |
-| `WITHDRAWN` | 크리에이터가 철회 | 종료 |
-| `EXPIRED` | 응답 기한 만료 (주로 직접 의뢰) | 종료 |
-| `NOT_SELECTED` | 다른 후보 계약 또는 무선정 종료 | 종료 |
+| 상태           | 의미                                 | 활성 여부   |
+| -------------- | ------------------------------------ | ----------- |
+| `PENDING`      | 제출됨, 의뢰인의 협의 요청 전        | 활성        |
+| `DISCUSSING`   | 협의 중 (조건서 작성·서명 대기 포함) | 활성        |
+| `CONTRACTED`   | 계약 확정                            | 종료 (성공) |
+| `DECLINED`     | 거절됨                               | 종료        |
+| `WITHDRAWN`    | 크리에이터가 철회                    | 종료        |
+| `EXPIRED`      | 응답 기한 만료 (주로 직접 의뢰)      | 종료        |
+| `NOT_SELECTED` | 다른 후보 계약 또는 무선정 종료      | 종료        |
 
 - [제안] 활성 상태는 `PENDING`, `DISCUSSING` 두 가지다. 화면 표시와 "진행 중 지원" 집계에 쓴다.
 - 재지원을 금지하므로, 중복 제약은 활성 상태만이 아니라 **모든 상태**에 걸어야 한다. 활성 상태에만 부분 UNIQUE를 걸면 철회 후 재지원이 허용돼 정책과 어긋난다.
 
 **제약 [제안]**
+
 - `work_requests (project_id, creator_id)` UNIQUE.
   - 공개 지원은 `project_id`가 있으므로 공고당 크리에이터 1건만 존재할 수 있다.
   - 직접 의뢰는 `project_id = NULL`이라 이 제약을 받지 않는다.
 - CHECK: `request_type = 'PROJECT_APPLICATION'`이면 `project_id IS NOT NULL`, `DIRECT_REQUEST`이면 `project_id IS NULL`.
 
 **API 검사** (DB 제약만으로 부족한 부분)
+
 - 공고가 `OPEN`이고, 서버 현재 시각이 `recruitment_end_at` 이전인지
 - 지원자 역할이 `CREATOR`이고, 공고 작성자 본인이 아닌지
 - 첨부한 패키지·포트폴리오가 지원자 소유인지
 - UNIQUE 위반은 `409 CONFLICT`("이미 지원한 공고")로 응답
 
 **직접 의뢰 중복 생성 방지 [제안]**
+
 - `work_requests.client_request_key` 컬럼을 추가하고 `(client_id, client_request_key)` UNIQUE를 건다. ERD v0.6에 없는 컬럼이다.
 - 클라이언트는 의뢰 작성 화면을 열 때 UUID를 만들고, 재시도할 때 같은 값을 보낸다.
 - 서버는 같은 키가 이미 있으면 새로 만들지 않고 기존 요청을 반환한다.
@@ -150,21 +158,24 @@
 
 **한도와 형식 [확정]** (무료 MVP 기준)
 
-| 종류 | 파일당 한도 | 허용 형식 |
-|---|---|---|
-| 영상 | 50MB | MP4, MOV |
-| 이미지 | 10MB | JPG·JPEG, PNG, WebP |
-| ZIP | 50MB | ZIP |
+| 종류   | 파일당 한도 | 허용 형식           |
+| ------ | ----------- | ------------------- |
+| 영상   | 50MB        | MP4, MOV            |
+| 이미지 | 10MB        | JPG·JPEG, PNG, WebP |
+| ZIP    | 50MB        | ZIP                 |
 
 - Supabase 무료 플랜의 파일당 업로드 한도(50MB)에 맞췄다. 유료로 전환할 때 다시 정한다.
 
 **흐름 [확정]**
+
 1. Express가 권한을 확인하고 업로드 권한(서명 URL)을 발급한다.
 2. 브라우저가 Supabase Storage로 직접 업로드한다.
 3. 업로드가 끝나면 서버가 실제 파일의 소유권·크기·형식을 확인한 뒤 업무 데이터에 연결한다.
+
 - 계약 자료와 납품물은 비공개 버킷에 둔다. 다운로드·미리보기 URL을 발급할 때도 참여자 권한을 확인한다.
 
 **검사 방식 [제안]**
+
 - 발급할 때: 선언한 크기·MIME 형식·업로드 목적, 대상 리소스의 소유권과 거래 당사자 여부
 - 완료를 확인할 때:
   - Storage 객체의 실제 크기를 확인한다.
@@ -176,17 +187,18 @@
 
 **기존 300MB 표기 수정 대상**
 
-| 문서 | 위치 | 수정 내용 |
-|---|---|---|
-| PRD | 15.6 파일과 편집 원본 ("300MB는 파일당 한도 후보") | 위 표로 변경. 300MB는 유료 전환 시 재검토 |
-| PRD | 24장 기능명세 확정 항목 "파일" 행 | 300MB 적용 단위 → 위 표로 확정 |
-| 기능명세서 | FILE-01 (파일 업로드) | 한도·형식·검사 단계 반영 |
-| ERD v0.6 | `files` 업무 규칙 ("300MB 적용 단위는 D17 미결정") | 위 표로 교체 |
-| ERD v0.6 | 미결정 D17 | 크기·형식 확정. ZIP 내부 검사와 보관 기간만 미결로 남김 |
+| 문서       | 위치                                               | 수정 내용                                               |
+| ---------- | -------------------------------------------------- | ------------------------------------------------------- |
+| PRD        | 15.6 파일과 편집 원본 ("300MB는 파일당 한도 후보") | 위 표로 변경. 300MB는 유료 전환 시 재검토               |
+| PRD        | 24장 기능명세 확정 항목 "파일" 행                  | 300MB 적용 단위 → 위 표로 확정                          |
+| 기능명세서 | FILE-01 (파일 업로드)                              | 한도·형식·검사 단계 반영                                |
+| ERD v0.6   | `files` 업무 규칙 ("300MB 적용 단위는 D17 미결정") | 위 표로 교체                                            |
+| ERD v0.6   | 미결정 D17                                         | 크기·형식 확정. ZIP 내부 검사와 보관 기간만 미결로 남김 |
 
 ## 5. 인증 토큰
 
 **확정 사항 [확정]**
+
 - Access/Refresh 토큰을 쓴다.
 - 수명
   - Access 토큰: 15분
@@ -201,6 +213,7 @@
 - 프론트엔드는 갱신 요청을 하나로 모은다. 서버는 정상적인 동시 요청과 재사용(탈취 의심)을 구분한다.
 
 **식별자 [확정]**
+
 - PK·FK는 ERD v0.6대로 `bigint`다.
 - API 응답과 JWT의 `sub`(사용자 ID)·`sid`(세션 ID)는 문자열로 보낸다(예: `"42"`).
 - `JSON.stringify`는 `BigInt`를 직렬화하지 못한다. 그래서 응답을 만들 때 서버가 `bigint`를 문자열로 바꾸고, 요청으로 받은 ID는 숫자 형식인지 검증한 뒤 `BigInt`로 바꾼다.
@@ -211,25 +224,25 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 `auth_sessions` — 로그인 세션 1건 = 토큰 계열 1개
 
-| 컬럼 | 설명 |
-|---|---|
-| `id` bigint PK | Access 토큰의 `sid`. 회전해도 바뀌지 않는다 |
-| `user_id` | 회원 |
-| `expires_at` | 로그인 시각 + 7일. 회전해도 바꾸지 않는다 |
+| 컬럼                          | 설명                                                              |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `id` bigint PK                | Access 토큰의 `sid`. 회전해도 바뀌지 않는다                       |
+| `user_id`                     | 회원                                                              |
+| `expires_at`                  | 로그인 시각 + 7일. 회전해도 바꾸지 않는다                         |
 | `revoked_at`, `revoke_reason` | 세션 전체 폐기 시각과 사유(`LOGOUT` / `REUSE_DETECTED` / `ADMIN`) |
-| `last_used_at` | 마지막 갱신 시각 |
-| `created_at` | 로그인 시각 |
+| `last_used_at`                | 마지막 갱신 시각                                                  |
+| `created_at`                  | 로그인 시각                                                       |
 
 `auth_refresh_tokens` — 개별 Refresh 토큰
 
-| 컬럼 | 설명 |
-|---|---|
-| `id` bigint PK | |
-| `session_id` FK | 소속 세션 (앞서 말한 `family_id`의 역할) |
-| `token_hash` UNIQUE | 토큰 원문의 SHA-256 해시 |
-| `used_at` | 회전에 사용된 시각. NULL이면 아직 유효 |
-| `replaced_by_id` UNIQUE | 이 토큰 대신 발급된 다음 토큰 |
-| `created_at` | 발급 시각 |
+| 컬럼                    | 설명                                     |
+| ----------------------- | ---------------------------------------- |
+| `id` bigint PK          |                                          |
+| `session_id` FK         | 소속 세션 (앞서 말한 `family_id`의 역할) |
+| `token_hash` UNIQUE     | 토큰 원문의 SHA-256 해시                 |
+| `used_at`               | 회전에 사용된 시각. NULL이면 아직 유효   |
+| `replaced_by_id` UNIQUE | 이 토큰 대신 발급된 다음 토큰            |
+| `created_at`            | 발급 시각                                |
 
 - 앞서 합의한 `family_id`·`replaced_by_id`·`last_used_at`의 역할은 모두 유지된다. 다만 `family_id`는 `session_id` FK가 된다.
 - Refresh 쿠키의 `Max-Age`는 세션 `expires_at`까지 남은 시간으로 정한다.
@@ -237,6 +250,7 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 **회전 절차 [제안]**
 
 `POST /api/auth/refresh` 하나를 처리하는 트랜잭션:
+
 1. 쿠키의 토큰을 해시해서 `auth_refresh_tokens` 행을 `SELECT … FOR UPDATE`로 잠그고, 소속 세션과 함께 읽는다.
 2. 토큰이 없거나, 세션이 폐기됐거나, 세션이 만료(`expires_at ≤ now`)됐으면 `401 SESSION_REVOKED`로 응답하고 쿠키를 삭제한다.
 3. `used_at`이 NULL이면 정상 회전이다.
@@ -247,6 +261,7 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 4. `used_at`이 이미 있으면:
    - `now − used_at ≤ 10초`: 정상적인 동시 요청으로 본다. **새 토큰을 발급하지 않고**, 세션도 폐기하지 않는다. `409 REFRESH_RACE`로 응답하고 쿠키는 건드리지 않는다.
    - 10초 초과: 재사용(탈취 의심)으로 본다. 세션에 `revoked_at = now`, `revoke_reason = REUSE_DETECTED`를 기록하고, `401 SESSION_REVOKED`로 응답하며 쿠키를 삭제한다.
+
 - `FOR UPDATE` 잠금 때문에 같은 토큰으로 온 두 요청은 순서대로 처리된다. 두 요청이 모두 새 토큰을 받는 일은 없다.
 
 **갱신 실패와 재시도 정책 [제안]**
@@ -254,6 +269,7 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 `409 REFRESH_RACE` 뒤에 한 번 재시도한다고 반드시 성공한다고 가정하지 않는다. 브라우저에 새 쿠키가 아직 저장되지 않았거나, 첫 응답이 아예 도착하지 않았을 수 있기 때문이다.
 
 클라이언트가 지킬 규칙 (프론트엔드 구현 기준)
+
 1. **한 탭 안:** 갱신 요청은 하나의 Promise로 모은다(single-flight). `401 TOKEN_EXPIRED`를 받은 요청들은 이 갱신 결과를 함께 기다린 뒤, 원래 요청을 한 번만 다시 보낸다.
 2. **여러 탭:** 같은 출처(origin)의 탭끼리 Web Locks API(`navigator.locks.request('kemi-auth-refresh', …)`)로 갱신을 한 번에 하나만 실행한다.
    - 잠금을 기다리던 탭은 잠금을 얻은 시점에 이미 새 쿠키를 갖고 있으므로, 대부분 바로 성공한다.
@@ -268,21 +284,23 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 상황별 동작
 
-| 상황 | 일어나는 일 | 결과 |
-|---|---|---|
-| 새 쿠키가 저장되기 전에 재시도 | 재시도가 아직 이전 토큰을 보낸다. 10초 안이라 다시 `409`를 받고, 새 토큰은 발급되지 않는다 | 다음 간격 뒤 재시도. 그사이 새 쿠키가 저장되면 성공, 끝까지 아니면 재로그인 |
-| 여러 탭이 동시에 갱신 | Web Locks가 있으면 순서대로 실행돼 첫 탭만 회전하고 나머지는 새 쿠키로 성공. 없으면 서버 잠금으로 하나만 200, 나머지는 `409` 후 재시도 | 정상이면 모든 탭 복구, 실패한 탭만 재로그인 |
-| 첫 응답 유실 (서버는 회전했는데 응답이 도착하지 않음) | 브라우저에는 이전 토큰만 남는다. 재시도는 10초 안에서 계속 `409`다. 서버는 이미 사용한 토큰에 새 토큰을 다시 주지 않는다 | 재시도를 다 쓰면 재로그인. 이 세션은 클라이언트가 더 쓸 수 없고, 7일 만료나 다음 재사용 감지 때 끝난다 |
-| 응답 유실 뒤 10초가 지나 이전 토큰이 다시 들어옴 (예: 새로고침) | 서버는 재사용으로 판단하고 세션 전체를 폐기한다 (`REUSE_DETECTED`) | 재로그인. 탈취가 아닌데도 폐기되는 경우지만, 영향은 그 세션 하나에 그친다 |
+| 상황                                                            | 일어나는 일                                                                                                                            | 결과                                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 새 쿠키가 저장되기 전에 재시도                                  | 재시도가 아직 이전 토큰을 보낸다. 10초 안이라 다시 `409`를 받고, 새 토큰은 발급되지 않는다                                             | 다음 간격 뒤 재시도. 그사이 새 쿠키가 저장되면 성공, 끝까지 아니면 재로그인                            |
+| 여러 탭이 동시에 갱신                                           | Web Locks가 있으면 순서대로 실행돼 첫 탭만 회전하고 나머지는 새 쿠키로 성공. 없으면 서버 잠금으로 하나만 200, 나머지는 `409` 후 재시도 | 정상이면 모든 탭 복구, 실패한 탭만 재로그인                                                            |
+| 첫 응답 유실 (서버는 회전했는데 응답이 도착하지 않음)           | 브라우저에는 이전 토큰만 남는다. 재시도는 10초 안에서 계속 `409`다. 서버는 이미 사용한 토큰에 새 토큰을 다시 주지 않는다               | 재시도를 다 쓰면 재로그인. 이 세션은 클라이언트가 더 쓸 수 없고, 7일 만료나 다음 재사용 감지 때 끝난다 |
+| 응답 유실 뒤 10초가 지나 이전 토큰이 다시 들어옴 (예: 새로고침) | 서버는 재사용으로 판단하고 세션 전체를 폐기한다 (`REUSE_DETECTED`)                                                                     | 재로그인. 탈취가 아닌데도 폐기되는 경우지만, 영향은 그 세션 하나에 그친다                              |
 
 - 서버는 토큰 원문을 저장하지 않는다. 그래서 응답이 유실됐을 때 같은 새 토큰을 다시 보내 줄 방법이 없다. 이 경우의 복구 수단은 재로그인으로 정한다.
 - `409 REFRESH_RACE` 응답 예: `{ "error": { "code": "REFRESH_RACE", "message": "다른 요청이 먼저 갱신했습니다. 잠시 후 다시 시도해주세요.", "details": { "retryAfterMs": 500 } } }`
 
 **로그아웃 [제안]**
+
 - 세션에 `revoked_at`, `revoke_reason = LOGOUT`을 기록하고 쿠키를 삭제한다.
 - 이후 Refresh 요청은 `401`이다. 아직 만료되지 않은 Access 토큰도 다음 요청부터 `401`이다(8장 Access 토큰 검증).
 
 **비밀번호 해시 [확정]**
+
 - `bcrypt`, cost 12를 쓴다.
 - 확인 결과 (2026-10-19, 이 PC의 Windows · Node 24.18, 저장소 밖 임시 폴더)
   - `bcrypt@6.0.0`의 설치, 해시, 비교가 성공했다. 맞는 비밀번호는 `true`, 틀린 비밀번호는 `false`로 나왔다.
@@ -293,23 +311,25 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 - bcrypt는 72바이트 이후를 무시하므로, 입력 검증에서 비밀번호 길이를 72바이트 이하로 제한한다.
 
 **오류 응답 [확정]**
+
 - 형식: `{ error: { code, message, details? } }`
 - `details`에는 공개해도 되는 정보만 넣는다. 예: 검증 실패 필드의 경로와 메시지.
 - 스택, SQL, 토큰, 해시, 내부 ID 같은 정보는 넣지 않는다.
 - [제안] 인증 오류 코드
 
-| 코드 | 상태 | 언제 |
-|---|---|---|
-| `VALIDATION_FAILED` | 400 | 입력 검증 실패 (`ADMIN` 가입 요청 포함) |
-| `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일 |
-| `INVALID_CREDENTIALS` | 401 | 이메일이 없거나, 비밀번호가 틀리거나, 소셜 전용 계정일 때 (모두 같은 메시지) |
-| `TOKEN_EXPIRED` | 401 | Access 토큰 만료 (프론트엔드는 갱신 시도) |
-| `UNAUTHENTICATED` | 401 | Access 토큰이 없거나 잘못됨 |
-| `SESSION_REVOKED` | 401 | 세션 폐기·만료, 재사용 감지 |
-| `REFRESH_RACE` | 409 | 유예 안의 동시 갱신. `details.retryAfterMs` 포함 (위 재시도 정책) |
-| `FORBIDDEN` | 403 | 회원 상태가 이용 불가(제한·탈퇴) |
+| 코드                   | 상태 | 언제                                                                         |
+| ---------------------- | ---- | ---------------------------------------------------------------------------- |
+| `VALIDATION_FAILED`    | 400  | 입력 검증 실패 (`ADMIN` 가입 요청 포함)                                      |
+| `EMAIL_ALREADY_EXISTS` | 409  | 이미 가입된 이메일                                                           |
+| `INVALID_CREDENTIALS`  | 401  | 이메일이 없거나, 비밀번호가 틀리거나, 소셜 전용 계정일 때 (모두 같은 메시지) |
+| `TOKEN_EXPIRED`        | 401  | Access 토큰 만료 (프론트엔드는 갱신 시도)                                    |
+| `UNAUTHENTICATED`      | 401  | Access 토큰이 없거나 잘못됨                                                  |
+| `SESSION_REVOKED`      | 401  | 세션 폐기·만료, 재사용 감지                                                  |
+| `REFRESH_RACE`         | 409  | 유예 안의 동시 갱신. `details.retryAfterMs` 포함 (위 재시도 정책)            |
+| `FORBIDDEN`            | 403  | 회원 상태가 이용 불가(제한·탈퇴)                                             |
 
 **저장·쿠키·CSRF·OAuth [제안]**
+
 - Vercel rewrite로 `/api/*`를 Render로 전달해, 브라우저 입장에서 프론트엔드와 API가 같은 도메인이 되게 한다.
 - Refresh 토큰: `HttpOnly; Secure; SameSite=Lax; Path=/api/auth` 쿠키
 - Access 토큰: 응답 본문으로 받아 메모리에만 보관한다. localStorage에 저장하지 않는다.
@@ -323,6 +343,7 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 - [확정] `payments`, `payment_events`, `refunds`, `settlements`, `cancellation_agreements`, `disputes`의 상태와 거래 이력은 기본 범위에 포함한다.
 
 **상태값 관리**
+
 - [확정] 상태값은 `text` + DB `CHECK` 제약으로 저장하고, 공통 검증은 `@kemi/shared`의 Zod enum으로 한다. 두 목록은 서로 같아야 한다.
 - [제안] `@kemi/shared`의 `as const` 배열을 유일한 원본으로 둔다. 마이그레이션의 CHECK 목록과 shared 배열이 같은지 비교하는 테스트를 첫 테이블 PR에 추가한다.
 - Prisma 스키마로 표현할 수 없는 제약(CHECK, 부분 인덱스)은 마이그레이션 SQL에 직접 추가한다.
@@ -338,19 +359,23 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 ## 8. 회원가입·로그인 PR 설계
 
 **진행 방식 [확정]**
+
 - PR #1이 병합되기 전에는 인증 구현을 시작하지 않는다.
 - 병합 후 기존 `feat/auth-email` 브랜치와 작업 상태를 확인하고, 최신 `main`을 반영해 한 세션에서 진행한다.
 - 강제 초기화로 기존 작업을 지우지 않는다. `auth-draft` stash 원본도 유지한다.
 
 **범위**
+
 - 포함: `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`
 - 제외: 프로필 수정 API(다음 프로필 PR), 소셜 로그인, 비밀번호 재설정
 
 **가입 역할 [확정]**
+
 - 가입 요청으로 고를 수 있는 역할은 `CLIENT`, `CREATOR`뿐이다. `ADMIN`을 보내면 `400 VALIDATION_FAILED`로 응답한다.
 - `ADMIN`은 운영용 시드·스크립트로만 만든다.
 
 **Access 토큰 검증 [확정]**
+
 - 서명과 만료만 보지 않는다. 요청마다 DB에서 다음을 확인한다.
   1. 토큰의 `sid`에 해당하는 `auth_sessions` 행이 폐기되지 않았는지(`revoked_at IS NULL`)
   2. 그 세션의 `expires_at`이 지나지 않았는지
@@ -362,24 +387,25 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 **실제 DB로 검증할 테스트 [확정]**
 
-| 시나리오 | 기대 결과 |
-|---|---|
-| 회원가입 | 201, 비밀번호는 bcrypt 해시로만 저장, 응답에 해시·토큰 해시 없음 |
-| 이메일 중복 가입 | 대소문자·공백만 다른 이메일도 `409 EMAIL_ALREADY_EXISTS` |
-| `ADMIN` 가입 요청 | `400 VALIDATION_FAILED` |
-| 정상 로그인 | 200, Access 토큰과 Refresh 쿠키 발급, 사용자 ID는 문자열 |
-| 잘못된 비밀번호 | `401 INVALID_CREDENTIALS`. 없는 이메일·소셜 전용 계정과 같은 응답 |
-| 정상 회전 | 새 쿠키 발급, 이전 토큰 행은 `used_at`·`replaced_by_id`가 채워진 채 보존, 세션 `sid`는 그대로, 기존 Access 토큰도 계속 유효 |
-| 최대 수명 | 회전해도 세션 `expires_at`이 바뀌지 않음, 만료된 세션의 갱신은 `401` |
-| 동시 갱신 | 아래 "동시 갱신 테스트 방법"으로 같은 토큰의 요청 두 개를 실제로 동시에 보낸다. 정확히 하나만 200(새 쿠키), 다른 하나는 `409 REFRESH_RACE`(Set-Cookie 없음). 토큰 행은 2개(원래 1 + 새 1)뿐이고 세션은 폐기되지 않음 |
-| 409 뒤 재시도 | 409 쪽이 이전 토큰으로 다시 보내면 또 `409`(새 토큰 없음), 새 쿠키로 보내면 200 |
-| 재사용 감지 | 사용한 지 10초가 지난 토큰을 다시 쓰면 `401 SESSION_REVOKED`, 세션 `revoke_reason = REUSE_DETECTED`, 최신 토큰과 Access 토큰도 실패 |
-| 로그아웃 후 차단 | Refresh는 `401`, 기존 Access 토큰으로 `GET /api/auth/me`도 `401` |
-| 회원 상태 | 제한된 회원의 Access 토큰은 `403` |
+| 시나리오          | 기대 결과                                                                                                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 회원가입          | 201, 비밀번호는 bcrypt 해시로만 저장, 응답에 해시·토큰 해시 없음                                                                                                                                                     |
+| 이메일 중복 가입  | 대소문자·공백만 다른 이메일도 `409 EMAIL_ALREADY_EXISTS`                                                                                                                                                             |
+| `ADMIN` 가입 요청 | `400 VALIDATION_FAILED`                                                                                                                                                                                              |
+| 정상 로그인       | 200, Access 토큰과 Refresh 쿠키 발급, 사용자 ID는 문자열                                                                                                                                                             |
+| 잘못된 비밀번호   | `401 INVALID_CREDENTIALS`. 없는 이메일·소셜 전용 계정과 같은 응답                                                                                                                                                    |
+| 정상 회전         | 새 쿠키 발급, 이전 토큰 행은 `used_at`·`replaced_by_id`가 채워진 채 보존, 세션 `sid`는 그대로, 기존 Access 토큰도 계속 유효                                                                                          |
+| 최대 수명         | 회전해도 세션 `expires_at`이 바뀌지 않음, 만료된 세션의 갱신은 `401`                                                                                                                                                 |
+| 동시 갱신         | 아래 "동시 갱신 테스트 방법"으로 같은 토큰의 요청 두 개를 실제로 동시에 보낸다. 정확히 하나만 200(새 쿠키), 다른 하나는 `409 REFRESH_RACE`(Set-Cookie 없음). 토큰 행은 2개(원래 1 + 새 1)뿐이고 세션은 폐기되지 않음 |
+| 409 뒤 재시도     | 409 쪽이 이전 토큰으로 다시 보내면 또 `409`(새 토큰 없음), 새 쿠키로 보내면 200                                                                                                                                      |
+| 재사용 감지       | 사용한 지 10초가 지난 토큰을 다시 쓰면 `401 SESSION_REVOKED`, 세션 `revoke_reason = REUSE_DETECTED`, 최신 토큰과 Access 토큰도 실패                                                                                  |
+| 로그아웃 후 차단  | Refresh는 `401`, 기존 Access 토큰으로 `GET /api/auth/me`도 `401`                                                                                                                                                     |
+| 회원 상태         | 제한된 회원의 Access 토큰은 `403`                                                                                                                                                                                    |
 
 - 10초가 지난 상황은 실제로 기다리지 않는다. 테스트에서 `used_at`을 11초 전으로 바꿔서 재현한다.
 
 **동시 갱신 테스트 방법 [확정]**
+
 - 테스트 파일을 순서대로 실행하는 것(파일 사이의 격리)과, 테스트 안에서 동시 요청을 검증하는 것은 별개다. 동시 갱신은 테스트 안에서 실제로 동시에 보낸다.
 - 서버를 `app.listen(0)`으로 실제 포트에 띄우고, 같은 Refresh 쿠키를 붙인 요청 두 개를 `Promise.all`로 동시에 보낸다.
 - 두 요청이 반드시 겹치도록, 인증 서비스에 테스트에서만 쓰는 지연 지점을 둔다(토큰 행을 잠근 직후 200ms 대기). 첫 요청이 잠금을 쥔 동안 두 번째 요청이 실제로 대기하게 된다.
@@ -396,51 +422,56 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 인증 세션이 중단 전에 만든 초안이다. stash 원본(`auth-draft`)은 유지한다.
 
-| 항목 | 판단 |
-|---|---|
-| `packages/shared/src/auth.ts`: 이메일 정규화, 가입 역할에서 `ADMIN` 제외, bcrypt 72바이트 상한, 요청 스키마 | 재사용 |
-| `packages/shared/src/status.ts`: `as const` 배열 + Zod enum 구조 | 구조 재사용, 값은 수정 |
-| `AuthIdentity` 모델 (`(provider, provider_user_id)` UNIQUE, `provider_email`) | 재사용 (PK는 `bigint`로 수정) |
-| `AuthSession` 한 테이블 구조 | 수정: `auth_sessions` + `auth_refresh_tokens` 두 테이블 (5장) |
-| PK를 `UUID`로 바꿈 | 수정: `bigint` 유지 (확정) |
-| `users.status` 값 `SUSPENDED` | 수정: ERD v0.6은 `ACTIVE / RESTRICTED / WITHDRAWN` |
-| 표시 이름을 프로필 테이블의 `display_name`에 둠 | 수정: ERD v0.6은 `users.name`(2~20자, 중복 허용) |
-| 마이그레이션에 CHECK 제약 없음 (주석에는 있다고 적음) | 수정: role·status·provider·revoke_reason·이메일 정규화 CHECK 추가 |
-| 마이그레이션 시각 `20261019120000` (손으로 쓴 값) | 새로 생성 |
-| 오류 코드에 `TOKEN_EXPIRED`, `SESSION_REVOKED` 없음 | 추가 |
-| `bcryptjs` | 수정: `bcrypt`로 교체 (확정) |
-| `jose`(JWT), `cookie-parser` | 재사용 |
+| 항목                                                                                                        | 판단                                                              |
+| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/shared/src/auth.ts`: 이메일 정규화, 가입 역할에서 `ADMIN` 제외, bcrypt 72바이트 상한, 요청 스키마 | 재사용                                                            |
+| `packages/shared/src/status.ts`: `as const` 배열 + Zod enum 구조                                            | 구조 재사용, 값은 수정                                            |
+| `AuthIdentity` 모델 (`(provider, provider_user_id)` UNIQUE, `provider_email`)                               | 재사용 (PK는 `bigint`로 수정)                                     |
+| `AuthSession` 한 테이블 구조                                                                                | 수정: `auth_sessions` + `auth_refresh_tokens` 두 테이블 (5장)     |
+| PK를 `UUID`로 바꿈                                                                                          | 수정: `bigint` 유지 (확정)                                        |
+| `users.status` 값 `SUSPENDED`                                                                               | 수정: ERD v0.6은 `ACTIVE / RESTRICTED / WITHDRAWN`                |
+| 표시 이름을 프로필 테이블의 `display_name`에 둠                                                             | 수정: ERD v0.6은 `users.name`(2~20자, 중복 허용)                  |
+| 마이그레이션에 CHECK 제약 없음 (주석에는 있다고 적음)                                                       | 수정: role·status·provider·revoke_reason·이메일 정규화 CHECK 추가 |
+| 마이그레이션 시각 `20261019120000` (손으로 쓴 값)                                                           | 새로 생성                                                         |
+| 오류 코드에 `TOKEN_EXPIRED`, `SESSION_REVOKED` 없음                                                         | 추가                                                              |
+| `bcryptjs`                                                                                                  | 수정: `bcrypt`로 교체 (확정)                                      |
+| `jose`(JWT), `cookie-parser`                                                                                | 재사용                                                            |
 
-**PostgreSQL 버전 [미확인]**
-- 테스트 DB(로컬 Docker, CI)는 현재 PostgreSQL 17(확인 버전 17.11)이다.
-- 팀 개발용 Supabase DB의 주 버전은 미확인이다(팀원 확인 예정). 그래서 테스트 DB와 개발 DB 사이에 버전 차이가 있을 수 있다. 확인 방법: Supabase 대시보드의 프로젝트 설정(Infrastructure) 또는 `SELECT version();`
-- 다르면(예: 15) `apps/api/docker-compose.test.yml`과 `.github/workflows/api-ci.yml`의 이미지를 같은 주 버전으로 바꾼다.
+**PostgreSQL 버전 [확정]**
+
+- 팀 개발용 Supabase DB는 PostgreSQL 17.11이다(2026-10-19 팀원 확인).
+- 로컬 테스트 DB(`apps/api/docker-compose.test.yml`)와 CI(`.github/workflows/api-ci.yml`) 이미지를 모두 `postgres:17.11-alpine`으로 고정했다. 로컬 컨테이너에서 `server_version` 17.11을 확인했다.
+- Supabase를 업그레이드하면 두 이미지 태그도 같이 바꾼다.
+- [검증 필요] 실제 Supabase DB에 대한 연결과 마이그레이션 적용은 아직 하지 않았다. 버전이 같다는 것만 확인됐다.
 
 ## 9. 기존 문서와 충돌하는 내용 (변경 목록)
 
-| 문서 | 현재 내용 | 변경 |
-|---|---|---|
-| 공통 작업 기준 10-3 | `GET /api/health` | `GET /health`, `GET /health/ready` 유지 (0장 사유) |
-| ERD v0.6 `users` | 이메일 UNIQUE + 자동 병합 금지 | 이메일 로그인 전용 · NULL 허용 · 정규화 UNIQUE |
-| ERD v0.6 `auth_identities` | `provider_subject` | `provider_user_id`로 이름 변경, `provider_email` 추가 |
-| ERD v0.6 `auth_sessions` | 한 테이블에 해시·만료·폐기 | `auth_sessions`(로그인 세션) + `auth_refresh_tokens`(개별 토큰)로 분리, 세션 최대 수명 고정 (5장) |
-| ERD v0.6 `work_requests` | 중복 제약 없음 | `(project_id, creator_id)` UNIQUE, `client_request_key` 추가 |
-| ERD v0.6 `terms_versions` | 요청+버전 UNIQUE | 요청당 `SIGNING` 1개 부분 UNIQUE 추가 |
-| ERD v0.6 `files`, D17 · PRD 15.6·24장 · 기능명세 FILE-01 | 300MB | 4장 표 |
-| ERD v0.6 `ledger_*` | 선택 확장 | 초기 마이그레이션에서 제외 |
-| ERD v0.6 상태값 | text (CHECK 언급 없음) | text + CHECK + shared Zod enum |
-| 공통 작업 기준 · Plan1 | 프로필 API를 회원가입과 같은 날 구현 | 프로필 수정 API는 다음 프로필 PR로 분리 |
+| 문서                                                     | 현재 내용                            | 변경                                                                                              |
+| -------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| 공통 작업 기준 10-3                                      | `GET /api/health`                    | `GET /health`, `GET /health/ready` 유지 (0장 사유)                                                |
+| ERD v0.6 `users`                                         | 이메일 UNIQUE + 자동 병합 금지       | 이메일 로그인 전용 · NULL 허용 · 정규화 UNIQUE                                                    |
+| ERD v0.6 `auth_identities`                               | `provider_subject`                   | `provider_user_id`로 이름 변경, `provider_email` 추가                                             |
+| ERD v0.6 `auth_sessions`                                 | 한 테이블에 해시·만료·폐기           | `auth_sessions`(로그인 세션) + `auth_refresh_tokens`(개별 토큰)로 분리, 세션 최대 수명 고정 (5장) |
+| ERD v0.6 `work_requests`                                 | 중복 제약 없음                       | `(project_id, creator_id)` UNIQUE, `client_request_key` 추가                                      |
+| ERD v0.6 `terms_versions`                                | 요청+버전 UNIQUE                     | 요청당 `SIGNING` 1개 부분 UNIQUE 추가                                                             |
+| ERD v0.6 `files`, D17 · PRD 15.6·24장 · 기능명세 FILE-01 | 300MB                                | 4장 표                                                                                            |
+| ERD v0.6 `ledger_*`                                      | 선택 확장                            | 초기 마이그레이션에서 제외                                                                        |
+| ERD v0.6 상태값                                          | text (CHECK 언급 없음)               | text + CHECK + shared Zod enum                                                                    |
+| 공통 작업 기준 · Plan1                                   | 프로필 API를 회원가입과 같은 날 구현 | 프로필 수정 API는 다음 프로필 PR로 분리                                                           |
 
 ## 다음 작업
 
-| 작업 | 처리 |
-|---|---|
-| API CI (타입 검사·단위·DB 테스트·빌드) | PR #1에 추가 (`.github/workflows/api-ci.yml`) |
-| ESLint (Airbnb + TypeScript, 빌드 시 강제) | PR #1에 추가 (`eslint.config.js`, README "코드 규칙") |
-| Prettier·프론트엔드 ESLint·CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 기존 `feat/auth-email` 상태를 확인하고 최신 `main`을 반영해 진행 (8장) |
-| 의뢰인·크리에이터 프로필 수정 API | 인증 PR 다음 프로필 PR |
-| shared 상태값 enum과 CHECK 일치 테스트 | 첫 테이블 PR에 포함 |
-| Supabase Realtime 자체 JWT 연동 검증 | 채팅 작업 전 별도 검증 |
-| Swagger/OpenAPI 문서 뼈대 | 결정 필요 (PR #1 보완 또는 별도 이슈) |
-| 팀 개발용 Supabase PostgreSQL 주 버전 확인 | 팀원 확인 예정. 확인 후 테스트 DB·CI 이미지를 맞춤 (8장) |
+| 작업                                                       | 처리                                                                                               |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                             |
+| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                             |
+| Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음 |
+| TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                        |
+| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                    |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | PR #1 병합 확인(2026-10-19). 최신 `main`을 반영한 `feat/auth-email`에서 진행 (8장)                 |
+| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                             |
+| shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                |
+| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                             |
+| Swagger/OpenAPI 문서 뼈대                                  | 결정 필요 (PR #1 보완 또는 별도 이슈)                                                              |
+| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                       |
+| 실제 Supabase DB 연결·마이그레이션 적용                    | 미검증 — 접속 정보 준비 후 `/health/ready` 200과 `migrate deploy` 확인                             |

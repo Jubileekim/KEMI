@@ -1,6 +1,6 @@
-import { createApp } from './app.js';
-import { EnvValidationError, parseEnv, type Env } from './config/env.js';
-import { createPrismaClient } from './lib/prisma.js';
+import { createApp } from "./app.js";
+import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
+import { createPrismaClient } from "./lib/prisma.js";
 
 function start(env: Env) {
   const prisma = createPrismaClient(env);
@@ -9,7 +9,7 @@ function start(env: Env) {
     checkDatabase: async () => {
       await prisma.$queryRaw`SELECT 1`;
     },
-    trustProxy: env.NODE_ENV === 'production',
+    trustProxy: env.NODE_ENV === "production",
   });
 
   const server = app.listen(env.PORT, () => {
@@ -21,12 +21,14 @@ function start(env: Env) {
   const shutdown = (signal: string) => {
     console.info(`${signal} received, shutting down`);
     server.close(() => {
-      prisma.$disconnect().catch((err: unknown) => console.error('DB disconnect failed:', err));
+      prisma
+        .$disconnect()
+        .catch((err: unknown) => console.error("DB disconnect failed:", err));
     });
   };
 
-  process.once('SIGTERM', () => shutdown('SIGTERM'));
-  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
 }
 
 try {

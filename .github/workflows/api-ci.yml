@@ -1,6 +1,6 @@
-# 백엔드(apps/api) CI: 타입 검사 · 단위 테스트 · DB 테스트 · 린트 + 빌드
+# 백엔드(apps/api) CI: 형식 검사 · 타입 검사 · 단위 테스트 · DB 테스트 · 린트 + 빌드
 # DB 테스트는 이 작업에서만 띄우는 PostgreSQL 서비스 컨테이너를 쓴다. Supabase에는 접속하지 않는다.
-# Prettier와 프론트엔드 검사는 이슈 #2에서 함께 추가한다.
+# 프론트엔드(apps/web) 검사는 이슈 #2에서 함께 추가한다.
 name: API CI
 
 on:
@@ -23,7 +23,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17-alpine
+        # 팀 개발용 Supabase와 같은 PostgreSQL 17.11로 고정한다.
+        image: postgres:17.11-alpine
         env:
           POSTGRES_USER: kemi_test
           POSTGRES_PASSWORD: kemi_test
@@ -50,6 +51,9 @@ jobs:
 
       - name: 의존성 설치
         run: npm ci
+
+      - name: 형식 검사 (Prettier)
+        run: npm run format:check
 
       - name: 타입 검사
         run: npm run typecheck

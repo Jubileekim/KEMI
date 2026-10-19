@@ -13,17 +13,18 @@
 
 ## users — 회원
 
-| 컬럼 | 타입 | 필수 | v0.6과 비교 | 설명 |
-|---|---|---|---|---|
-| `id` | bigint PK | 필수 | 같음 | |
-| `email` | text | NULL 허용 | 의미 변경 | 이메일 로그인 주소. 소셜 전용 가입자는 NULL |
-| `password_hash` | text | NULL 허용 | 같음 | bcrypt(cost 12). 소셜 전용 계정은 NULL |
-| `name` | varchar(20) | 필수 | 같음 | 표시 이름 2~20자, 중복 허용 |
-| `role` | text | 필수 | 같음 | `CLIENT` / `CREATOR` / `ADMIN` |
-| `status` | text | 필수 | 같음 | `ACTIVE` / `RESTRICTED` / `WITHDRAWN` |
-| `created_at`, `updated_at` | timestamptz | 필수 | 같음 | |
+| 컬럼                       | 타입        | 필수      | v0.6과 비교 | 설명                                        |
+| -------------------------- | ----------- | --------- | ----------- | ------------------------------------------- |
+| `id`                       | bigint PK   | 필수      | 같음        |                                             |
+| `email`                    | text        | NULL 허용 | 의미 변경   | 이메일 로그인 주소. 소셜 전용 가입자는 NULL |
+| `password_hash`            | text        | NULL 허용 | 같음        | bcrypt(cost 12). 소셜 전용 계정은 NULL      |
+| `name`                     | varchar(20) | 필수      | 같음        | 표시 이름 2~20자, 중복 허용                 |
+| `role`                     | text        | 필수      | 같음        | `CLIENT` / `CREATOR` / `ADMIN`              |
+| `status`                   | text        | 필수      | 같음        | `ACTIVE` / `RESTRICTED` / `WITHDRAWN`       |
+| `created_at`, `updated_at` | timestamptz | 필수      | 같음        |                                             |
 
 제약
+
 - `UNIQUE (email)`: NULL은 서로 다른 값으로 취급되므로 소셜 전용 회원끼리 충돌하지 않는다.
 - `CHECK (email IS NULL OR email = lower(btrim(email)))`: 정규화한 값만 저장한다.
 - `CHECK (role IN (...))`, `CHECK (status IN (...))`
@@ -31,16 +32,17 @@
 
 ## auth_identities — 외부 인증 계정
 
-| 컬럼 | 타입 | 필수 | v0.6과 비교 | 설명 |
-|---|---|---|---|---|
-| `id` | bigint PK | 필수 | 같음 | |
-| `user_id` | bigint FK → users.id | 필수 | 같음 | |
-| `provider` | text | 필수 | 같음 | `GOOGLE` / `KAKAO` |
-| `provider_user_id` | text | 필수 | **이름 변경** (`provider_subject`) | 제공자가 발급한 사용자 식별자 |
-| `provider_email` | text | NULL 허용 | **추가** | 제공자가 알려준 이메일. `users.email`과 자동 병합하지 않는다 |
-| `created_at` | timestamptz | 필수 | 같음 | |
+| 컬럼               | 타입                 | 필수      | v0.6과 비교                        | 설명                                                         |
+| ------------------ | -------------------- | --------- | ---------------------------------- | ------------------------------------------------------------ |
+| `id`               | bigint PK            | 필수      | 같음                               |                                                              |
+| `user_id`          | bigint FK → users.id | 필수      | 같음                               |                                                              |
+| `provider`         | text                 | 필수      | 같음                               | `GOOGLE` / `KAKAO`                                           |
+| `provider_user_id` | text                 | 필수      | **이름 변경** (`provider_subject`) | 제공자가 발급한 사용자 식별자                                |
+| `provider_email`   | text                 | NULL 허용 | **추가**                           | 제공자가 알려준 이메일. `users.email`과 자동 병합하지 않는다 |
+| `created_at`       | timestamptz          | 필수      | 같음                               |                                                              |
 
 제약
+
 - `UNIQUE (provider, provider_user_id)`
 - `CHECK (provider IN ('GOOGLE', 'KAKAO'))`
 
@@ -48,34 +50,36 @@
 
 v0.6에서는 한 테이블이 로그인 세션과 개별 Refresh 토큰을 함께 맡았다. 이번 변경으로 로그인 세션만 담당한다.
 
-| 컬럼 | 타입 | 필수 | v0.6과 비교 | 설명 |
-|---|---|---|---|---|
-| `id` | bigint PK | 필수 | 같음 | Access 토큰의 `sid`. 회전해도 바뀌지 않는다 |
-| `user_id` | bigint FK → users.id | 필수 | 같음 | |
-| `expires_at` | timestamptz | 필수 | 의미 변경 | 로그인 시각 + 7일. 회전해도 연장하지 않는다 |
-| `revoked_at` | timestamptz | NULL 허용 | 같음 | 세션 전체 폐기 시각 |
-| `revoke_reason` | text | NULL 허용 | **추가** | `LOGOUT` / `REUSE_DETECTED` / `ADMIN` |
-| `last_used_at` | timestamptz | NULL 허용 | **추가** | 마지막 갱신 시각 |
-| `created_at` | timestamptz | 필수 | 같음 | 로그인 시각 |
-| ~~`refresh_token_hash`~~ | | | **삭제** | `auth_refresh_tokens.token_hash`로 이동 |
+| 컬럼                     | 타입                 | 필수      | v0.6과 비교 | 설명                                        |
+| ------------------------ | -------------------- | --------- | ----------- | ------------------------------------------- |
+| `id`                     | bigint PK            | 필수      | 같음        | Access 토큰의 `sid`. 회전해도 바뀌지 않는다 |
+| `user_id`                | bigint FK → users.id | 필수      | 같음        |                                             |
+| `expires_at`             | timestamptz          | 필수      | 의미 변경   | 로그인 시각 + 7일. 회전해도 연장하지 않는다 |
+| `revoked_at`             | timestamptz          | NULL 허용 | 같음        | 세션 전체 폐기 시각                         |
+| `revoke_reason`          | text                 | NULL 허용 | **추가**    | `LOGOUT` / `REUSE_DETECTED` / `ADMIN`       |
+| `last_used_at`           | timestamptz          | NULL 허용 | **추가**    | 마지막 갱신 시각                            |
+| `created_at`             | timestamptz          | 필수      | 같음        | 로그인 시각                                 |
+| ~~`refresh_token_hash`~~ |                      |           | **삭제**    | `auth_refresh_tokens.token_hash`로 이동     |
 
 제약
+
 - `CHECK (revoke_reason IS NULL OR revoke_reason IN ('LOGOUT', 'REUSE_DETECTED', 'ADMIN'))`
 - `CHECK ((revoked_at IS NULL) = (revoke_reason IS NULL))`: 폐기 시각과 사유는 항상 함께 기록된다.
 - `INDEX (user_id)`
 
 ## auth_refresh_tokens — 개별 Refresh 토큰 (신규)
 
-| 컬럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | bigint PK | 필수 | |
-| `session_id` | bigint FK → auth_sessions.id | 필수 | 소속 세션 (토큰 계열) |
-| `token_hash` | text | 필수 | 토큰 원문의 SHA-256 해시(hex). 원문은 저장하지 않는다 |
-| `used_at` | timestamptz | NULL 허용 | 회전에 사용된 시각. NULL이면 아직 쓸 수 있다 |
-| `replaced_by_id` | bigint FK → auth_refresh_tokens.id | NULL 허용 | 이 토큰 대신 발급된 다음 토큰 |
-| `created_at` | timestamptz | 필수 | 발급 시각 |
+| 컬럼             | 타입                               | 필수      | 설명                                                  |
+| ---------------- | ---------------------------------- | --------- | ----------------------------------------------------- |
+| `id`             | bigint PK                          | 필수      |                                                       |
+| `session_id`     | bigint FK → auth_sessions.id       | 필수      | 소속 세션 (토큰 계열)                                 |
+| `token_hash`     | text                               | 필수      | 토큰 원문의 SHA-256 해시(hex). 원문은 저장하지 않는다 |
+| `used_at`        | timestamptz                        | NULL 허용 | 회전에 사용된 시각. NULL이면 아직 쓸 수 있다          |
+| `replaced_by_id` | bigint FK → auth_refresh_tokens.id | NULL 허용 | 이 토큰 대신 발급된 다음 토큰                         |
+| `created_at`     | timestamptz                        | 필수      | 발급 시각                                             |
 
 제약
+
 - `UNIQUE (token_hash)`
 - `UNIQUE (replaced_by_id)`: 한 토큰을 대신하는 다음 토큰은 하나뿐이다.
 - `CHECK ((used_at IS NULL) = (replaced_by_id IS NULL))`: 사용 처리와 다음 토큰 연결은 항상 함께 기록된다.

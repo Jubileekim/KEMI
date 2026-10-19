@@ -19,7 +19,7 @@
     "lint": "eslint . --max-warnings 0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   },
   "engines": {
     "node": ">=24.10 <25"

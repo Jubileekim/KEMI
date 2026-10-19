@@ -2,7 +2,8 @@
 # 실행: npm run test:db:up  /  종료(데이터 삭제): npm run test:db:down
 services:
   postgres-test:
-    image: postgres:17-alpine
+    # 팀 개발용 Supabase와 같은 PostgreSQL 17.11로 고정한다.
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_USER: kemi_test
       POSTGRES_PASSWORD: kemi_test
