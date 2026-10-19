@@ -12,6 +12,7 @@ interface TestAppOptions {
   checkDatabase?: () => Promise<void>;
   beforeRotationCommit?: () => Promise<void>;
   trustProxyHops?: number;
+  apiDocs?: boolean;
 }
 
 // 단위 테스트용: 주소만 있고 실제로 쿼리하지 않으므로 접속하지 않는다.
@@ -22,6 +23,7 @@ export function createTestApp({
   checkDatabase = () => Promise.resolve(),
   beforeRotationCommit,
   trustProxyHops,
+  apiDocs,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -36,5 +38,6 @@ export function createTestApp({
     }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
+    apiDocs,
   });
 }

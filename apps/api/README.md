@@ -109,6 +109,20 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 }
 ```
 
+## API 문서 (OpenAPI)
+
+- 개발 서버(`npm run dev:api`)에서 열 수 있다.
+  - Swagger UI: `http://localhost:4000/api/docs`
+  - 원본 JSON: `http://localhost:4000/api/openapi.json`
+- 운영 환경(`NODE_ENV=production`)에서는 문서 경로를 열지 않는다.
+- 문서 정의: `src/docs/openapi.ts`
+  - 요청 본문 스키마는 서버가 검증에 쓰는 `@kemi/shared`의 Zod 스키마에서 자동으로 만든다.
+  - 응답·오류 스키마는 직접 적는다.
+- `test/openapi.test.ts`가 두 가지를 확인한다.
+  - 문서가 OpenAPI 3.1 규격에 맞는지
+  - 문서의 모든 경로가 실제 라우터에 있는지
+- API를 추가·변경하면 이 문서도 같은 PR에서 고친다.
+
 ## 인증 API
 
 자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 5장·8장에 있다.

@@ -582,6 +582,6 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                             |
 | shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                |
 | Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                             |
-| Swagger/OpenAPI 문서 뼈대                                  | 결정 필요 (PR #1 보완 또는 별도 이슈)                                                              |
+| Swagger/OpenAPI 문서                                       | `feat/openapi-docs` PR: 기존 health·인증 API 문서와 Swagger UI(운영 환경 제외)                     |
 | 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                       |
 | 실제 Supabase DB 연결·마이그레이션 적용                    | 미검증 — 접속 정보 준비 후 `/health/ready` 200과 `migrate deploy` 확인                             |
