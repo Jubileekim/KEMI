@@ -46,34 +46,156 @@ PR #4(이메일 회원가입·로그인·토큰 회전)가 `main`에 병합된 �
 
 3. 대상이 맞는지 확인한다. Supabase SQL Editor에서 `SELECT version();`을 실행해 17.11인지 본다.
 
-### 1-3. 적용
+### 1-3. 적용 전 읽기 전용 점검
+
+적용 전에 대상 DB의 현재 상태를 **읽기 전용**으로 확인한다. Supabase SQL Editor에서 실행하거나, 같은 접속 정보로 읽기 전용 트랜잭션(`BEGIN READ ONLY`)에서 실행한다. 아래 SQL은 아무것도 바꾸지 않는다.
+
+```sql
+BEGIN READ ONLY;
+
+-- (1) 대상 확인: 버전·DB·접속 역할
+SELECT version(), current_database(), current_user;
+
+-- (2) public 스키마의 기존 테이블 목록
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public' ORDER BY table_name;
+
+-- (3) 만들 테이블과 같은 이름이 이미 있는지 (모든 스키마)
+SELECT table_schema, table_name FROM information_schema.tables
+WHERE table_name IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens', '_prisma_migrations');
+
+-- (4) Prisma 마이그레이션 이력 테이블이 있는지 (NULL이면 없음)
+SELECT to_regclass('public._prisma_migrations') AS prisma_history;
+
+-- (5) 새 테이블에 RLS 등을 자동으로 거는 이벤트 트리거
+SELECT evtname, evtevent, evtenabled FROM pg_event_trigger ORDER BY evtname;
+
+-- (6) 접속 역할의 권한 속성
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;
+
+ROLLBACK;
+```
+
+(4)에서 이력 테이블이 있으면 이어서 확인한다.
+
+```sql
+BEGIN READ ONLY;
+SELECT migration_name, started_at, finished_at, rolled_back_at
+FROM public._prisma_migrations ORDER BY started_at;
+ROLLBACK;
+```
 
 ```bash
 cd apps/api
 npx prisma migrate status
+```
+
+**예상 결과와 중단 조건**
+
+| 항목              | 예상                                                                                                              | 다르면                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| (1) 버전          | PostgreSQL 17.11                                                                                                  | 중단하고 보고                                         |
+| (3) 같은 이름     | `public`에는 없다. Supabase Auth의 `auth.users`가 보이는 것은 정상이다(다른 스키마이고, Prisma는 `public`만 쓴다) | `public`에 같은 이름이 있으면 중단                    |
+| (4) 이력          | 없음(처음 적용) 또는 있어도 이 마이그레이션 기록이 없음                                                           | 다른 기록·실패 기록(`finished_at` NULL)이 있으면 중단 |
+| (5) 이벤트 트리거 | 목록을 기록한다. RLS를 자동으로 켜는 트리거가 있으면 1-5에서 영향을 확인한다                                      | —                                                     |
+| `migrate status`  | `20261019051147_auth_tables` 1개만 적용 대기                                                                      | 중단                                                  |
+
+예상과 다르면 **적용하지 않고**, 차이를 이슈에 보고한 뒤 팀원과 정한다.
+
+### 1-4. 적용
+
+대상과 변경 사항을 확인하고 팀원 확인을 받은 뒤 실행한다.
+
+```bash
+cd apps/api
 npm run db:deploy
 npx prisma migrate status
 ```
 
-- 첫 `migrate status`에서 `20261019051147_auth_tables`가 적용 대기(not yet applied)로 나와야 한다. 다른 결과가 나오면 멈추고 팀원과 확인한다.
 - 적용 뒤 `migrate status`는 "Database schema is up to date"여야 한다.
 
-### 1-4. 확인
+### 1-5. 적용 후 확인
+
+```sql
+BEGIN READ ONLY;
+
+-- 테이블 4개
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public' AND table_name IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens');
+
+-- CHECK 제약 8개 (users 4, auth_identities 1, auth_sessions 2, auth_refresh_tokens 1)
+SELECT conrelid::regclass AS table_name, conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE contype = 'c' AND conrelid::regclass::text IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens')
+ORDER BY 1, 2;
+
+-- 마이그레이션 이력
+SELECT migration_name, finished_at FROM public._prisma_migrations;
+
+-- RLS 상태
+SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class
+WHERE relnamespace = 'public'::regnamespace AND relname IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens');
+
+-- Supabase Data API 역할(anon·authenticated)에 준 권한
+SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
+WHERE table_schema = 'public' AND table_name IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens')
+  AND grantee IN ('anon', 'authenticated');
+
+ROLLBACK;
+```
 
 ```bash
 npm run dev:api
 ```
 
 - `GET http://localhost:4000/health/ready` → `200 {"status":"ok","checks":{"database":"ok"}}`
-- Supabase Table Editor에 테이블 4개와 `_prisma_migrations`의 기록 1건이 보인다.
-- 결과(성공 여부, 시각)를 1-1의 공유 글에 답글로 남긴다.
 
-### 되돌리기 (필요할 때만, 팀원 합의 후)
+**RLS와 Express·Prisma 확인**
+
+- Prisma는 테이블을 만든 역할(보통 `postgres`)로 접속한다. PostgreSQL에서 RLS는 테이블 소유자에게는 적용되지 않는다(`FORCE ROW LEVEL SECURITY`를 켠 경우는 예외). 그래서 RLS가 자동으로 켜져 있어도, 정책 없이 Express·Prisma가 동작해야 한다.
+- 이를 실제로 확인한다. **Express가 쓰는 것과 같은 접속 정보(`DATABASE_URL`)**로 아래 SQL을 실행한다. 회원·세션·토큰 행을 INSERT·SELECT·UPDATE한 뒤 마지막에 **ROLLBACK**하므로, 공용 DB에 데이터는 남지 않는다. 중간에 권한 오류가 나면 RLS·권한 설정을 보고한다.
 
 ```sql
+BEGIN;
+INSERT INTO users (email, name, role, updated_at)
+VALUES ('rls-check@example.com', '점검', 'CLIENT', now());
+WITH new_session AS (
+  INSERT INTO auth_sessions (user_id, expires_at)
+  SELECT id, now() + interval '1 day' FROM users WHERE email = 'rls-check@example.com'
+  RETURNING id
+)
+INSERT INTO auth_refresh_tokens (session_id, token_hash)
+SELECT id, 'rls-check' FROM new_session;
+SELECT count(*) AS rows_visible FROM auth_refresh_tokens WHERE token_hash = 'rls-check';
+UPDATE auth_sessions SET last_used_at = now()
+WHERE user_id = (SELECT id FROM users WHERE email = 'rls-check@example.com');
+ROLLBACK;
+```
+
+- `rows_visible`가 1이고 오류 없이 ROLLBACK까지 끝나면 정상이다.
+- **Data API 노출 확인 (중요):** Supabase는 `public` 스키마 테이블을 Data API(anon 키)로 노출할 수 있다.
+  - RLS가 꺼져 있고 `anon`·`authenticated`에 권한이 있으면, `users.password_hash` 같은 값을 Data API로 읽을 수 있게 된다.
+  - 이 경우 공개 전에 막아야 한다. 테이블마다 RLS를 켜거나, `anon`·`authenticated` 권한을 회수한다. 이 변경은 **새 마이그레이션으로 PR을 거쳐** 적용한다. 공용 DB에서 직접 바꾸지 않는다.
+- 결과(성공 여부, 시각, RLS·권한 확인 결과)를 공유 글에 답글로 남긴다.
+
+### 되돌리기 — 비상 절차 (자동 실행 금지)
+
+- 데이터 삭제를 수반한다. 이 테이블에 쌓인 회원·세션 데이터가 모두 지워진다.
+- 스크립트·CI·자동화로 실행하지 않는다. 팀원 합의 후 사람이 직접 실행한다.
+- 가능하면 실행 전에 백업을 받는다.
+
+```sql
+-- 비상 시에만, 팀원 합의 후 수동으로 실행
 DROP TABLE auth_refresh_tokens, auth_sessions, auth_identities, users;
 DELETE FROM _prisma_migrations WHERE migration_name = '20261019051147_auth_tables';
 ```
+
+**주의: 수동 삭제로 Prisma 마이그레이션 이력이 "복구"되는 것은 아니다.**
+
+- 이력 행을 지우면, Prisma는 이 마이그레이션을 "적용한 적 없음"으로 본다. 다음 `migrate deploy`에서 다시 적용한다.
+- 테이블만 지우고 이력 행을 남기면, Prisma는 "적용됨"으로 보는데 실제 테이블은 없다. 스키마와 이력이 어긋난 상태(drift)가 된다.
+- Prisma는 이미 적용된 마이그레이션을 되돌리는 기능(down)을 제공하지 않는다. 정상적인 되돌리기는 **변경을 되돌리는 새 마이그레이션을 PR로 만들어 적용**하는 것이다. 그래야 모든 DB의 이력이 같게 유지된다.
+- 비상 절차를 실행했다면, 그 사실과 시각을 이슈에 남기고 다른 환경(로컬·테스트·CI)과 이력이 달라졌음을 공유한다.
 
 ## 2. Render 백엔드 배포 설정
 
