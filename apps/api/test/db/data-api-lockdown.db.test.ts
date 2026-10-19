@@ -47,6 +47,16 @@ describe("인증 테이블의 Data API 접근 차단", () => {
     expect(rows[0]?.granted).toBe(0n);
   });
 
+  it("anon·authenticated는 Prisma 마이그레이션 이력 테이블에 어떤 권한도 없다", async () => {
+    // _prisma_migrations는 Prisma가 첫 마이그레이션보다 먼저 만들어, 기본 권한 변경 전의 권한을 받는다.
+    const rows = await prisma.$queryRaw<{ granted: bigint }[]>`
+      SELECT count(*) AS granted FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
+      WHERE has_table_privilege(r.role, 'public._prisma_migrations',
+              'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')`;
+
+    expect(rows[0]?.granted).toBe(0n);
+  });
+
   it("앞으로 public에 새로 만드는 테이블·시퀀스에도 자동으로 권한이 붙지 않는다", async () => {
     // 새 테이블을 만들어 확인한 뒤, 트랜잭션을 되돌려 흔적을 남기지 않는다.
     const granted = await prisma
