@@ -1,0 +1,8 @@
+{
+  "name": "kemi",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:api": "npm run dev -w @kemi/api"
+  }
+}

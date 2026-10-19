@@ -1,0 +1,497 @@
+// KEMI ERD v0.5 baseline (22 tables, 32 foreign keys).
+// Source: KEMI_ERD_Ledger_v0.5.dbml (design draft, 2026-10-15).
+// REVIEW ONLY: PRD v1.4 has additional requirements not modeled here.
+// DO NOT run prisma db push or prisma migrate until PRD gaps and RLS are reviewed.
+// Monetary fields are BigInt (integer KRW); serialize BigInt for JSON API output.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CLIENT
+  CREATOR
+  @@map("user_role")
+}
+
+enum NicheCategory {
+  BEAUTY
+  FOOD
+  LIFESTYLE
+  TECH
+  OTHER
+  @@map("niche_category")
+}
+
+enum ContentStyle {
+  MODERN
+  BRIGHT
+  EMOTIONAL
+  PROFESSIONAL
+  OTHER
+  @@map("content_style")
+}
+
+enum RecruitmentStatus {
+  SCHEDULED
+  OPEN
+  CLOSED
+  CANCELED
+  @@map("recruitment_status")
+}
+
+enum RequestType {
+  PROJECT_APPLICATION
+  DIRECT_REQUEST
+  @@map("request_type")
+}
+
+enum RequestStatus {
+  PENDING
+  SELECTED
+  REJECTED
+  CANCELED
+  @@map("request_status")
+}
+
+enum OfferStatus {
+  NONE
+  PENDING
+  AGREED
+  DECLINED
+  @@map("offer_status")
+}
+
+enum ContractStatus {
+  DRAFT
+  SIGNED
+  IN_PROGRESS
+  COMPLETED
+  VOIDED
+  @@map("contract_status")
+}
+
+enum DeliverableStatus {
+  SUBMITTED
+  CHANGES_REQUESTED
+  SUPERSEDED
+  APPROVED
+  @@map("deliverable_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  FAILED
+  PAID_HELD
+  SETTLED
+  @@map("payment_status")
+}
+
+enum PaymentEventType {
+  PAYMENT_CONFIRMED
+  PAYMENT_FAILED
+  SETTLEMENT_RECORDED
+  @@map("payment_event_type")
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  REVENUE
+  @@map("ledger_account_type")
+}
+
+enum LedgerTransactionType {
+  PAYMENT_CAPTURED
+  SETTLEMENT_RELEASED
+  @@map("ledger_transaction_type")
+}
+
+enum LedgerEntrySide {
+  DEBIT
+  CREDIT
+  @@map("ledger_entry_side")
+}
+
+model User {
+  id BigInt @id @default(autoincrement())
+  email String @unique @db.VarChar(255)
+  name String @db.VarChar(100)
+  role UserRole?
+  passwordHash String? @db.VarChar(255) @map("password_hash")
+  avatarUrl String? @db.Text @map("avatar_url")
+  bio String? @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  authIdentities AuthIdentity[] @relation("AuthIdentities_UserId")
+  brandProfile BrandProfile? @relation("BrandProfiles_UserId")
+  creatorProfile CreatorProfile? @relation("CreatorProfiles_UserId")
+  signatures Signature[] @relation("Signatures_UserId")
+  submittedDeliverables Deliverable[] @relation("Deliverables_SubmittedBy")
+  authoredReviews Review[] @relation("Reviews_AuthorUserId")
+  receivedReviews Review[] @relation("Reviews_TargetUserId")
+  notifications Notification[] @relation("Notifications_RecipientUserId")
+  @@map("users")
+}
+
+model AuthIdentity {
+  id BigInt @id @default(autoincrement())
+  userId BigInt @map("user_id")
+  provider String @db.VarChar(30)
+  providerSubject String @db.VarChar(255) @map("provider_subject")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  user User @relation("AuthIdentities_UserId", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerSubject])
+  @@map("auth_identities")
+}
+
+model BrandProfile {
+  userId BigInt @id @map("user_id")
+  companyName String @db.VarChar(150) @map("company_name")
+  industry String @db.VarChar(100)
+  websiteUrl String? @db.Text @map("website_url")
+
+  user User @relation("BrandProfiles_UserId", fields: [userId], references: [id], onDelete: Restrict)
+  projects Project[] @relation("Projects_ClientId")
+  workRequests WorkRequest[] @relation("WorkRequests_ClientId")
+  @@map("brand_profiles")
+}
+
+model CreatorProfile {
+  userId BigInt @id @map("user_id")
+  mainNiche NicheCategory @map("main_niche")
+  experienceYears Int @default(0) @map("experience_years")
+  hourlyRate BigInt @map("hourly_rate")
+  externalPortfolioUrl String? @db.Text @map("external_portfolio_url")
+  isAvailable Boolean @default(true) @map("is_available")
+
+  user User @relation("CreatorProfiles_UserId", fields: [userId], references: [id], onDelete: Restrict)
+  creatorSkills CreatorSkill[] @relation("CreatorSkills_CreatorId")
+  portfolios Portfolio[] @relation("Portfolios_CreatorId")
+  servicePackages ServicePackage[] @relation("ServicePackages_CreatorId")
+  workRequests WorkRequest[] @relation("WorkRequests_CreatorId")
+  projectBookmarks ProjectBookmark[] @relation("ProjectBookmarks_CreatorId")
+  @@map("creator_profiles")
+}
+
+model Skill {
+  id BigInt @id @default(autoincrement())
+  name String @db.VarChar(100)
+  normalizedName String @unique @db.VarChar(100) @map("normalized_name")
+  isCustom Boolean @default(false) @map("is_custom")
+
+  creatorSkills CreatorSkill[] @relation("CreatorSkills_SkillId")
+  projectSkills ProjectSkill[] @relation("ProjectSkills_SkillId")
+  @@map("skills")
+}
+
+model CreatorSkill {
+  id BigInt @id @default(autoincrement())
+  creatorId BigInt @map("creator_id")
+  skillId BigInt @map("skill_id")
+
+  creator CreatorProfile @relation("CreatorSkills_CreatorId", fields: [creatorId], references: [userId], onDelete: Restrict)
+  skill Skill @relation("CreatorSkills_SkillId", fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([creatorId, skillId])
+  @@map("creator_skills")
+}
+
+model Portfolio {
+  id BigInt @id @default(autoincrement())
+  creatorId BigInt @map("creator_id")
+  title String @db.VarChar(200)
+  description String? @db.Text
+  videoUrl String @db.Text @map("video_url")
+  thumbnailUrl String? @db.Text @map("thumbnail_url")
+  contentStyle ContentStyle? @map("content_style")
+  durationSeconds Int? @map("duration_seconds")
+  aspectRatio String? @db.VarChar(10) @map("aspect_ratio")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  creator CreatorProfile @relation("Portfolios_CreatorId", fields: [creatorId], references: [userId], onDelete: Restrict)
+  @@map("portfolios")
+}
+
+model ServicePackage {
+  id BigInt @id @default(autoincrement())
+  creatorId BigInt @map("creator_id")
+  title String @db.VarChar(200)
+  description String @db.Text
+  basePrice BigInt @map("base_price")
+  deliveryDays Int @map("delivery_days")
+  termsText String? @db.Text @map("terms_text")
+  isActive Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  creator CreatorProfile @relation("ServicePackages_CreatorId", fields: [creatorId], references: [userId], onDelete: Restrict)
+  workRequests WorkRequest[] @relation("WorkRequests_ServicePackageId")
+  @@map("service_packages")
+}
+
+model Project {
+  id BigInt @id @default(autoincrement())
+  clientId BigInt @map("client_id")
+  title String @db.VarChar(200)
+  description String @db.Text
+  category NicheCategory
+  budget BigInt
+  recruitmentStartAt DateTime @db.Timestamptz(6) @map("recruitment_start_at")
+  recruitmentEndAt DateTime @db.Timestamptz(6) @map("recruitment_end_at")
+  recruitmentStatus RecruitmentStatus @default(OPEN) @map("recruitment_status")
+  briefJson Json? @db.JsonB @map("brief_json")
+  deletedAt DateTime? @db.Timestamptz(6) @map("deleted_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  client BrandProfile @relation("Projects_ClientId", fields: [clientId], references: [userId], onDelete: Restrict)
+  projectSkills ProjectSkill[] @relation("ProjectSkills_ProjectId")
+  workRequests WorkRequest[] @relation("WorkRequests_ProjectId")
+  notifications Notification[] @relation("Notifications_ProjectId")
+  projectBookmarks ProjectBookmark[] @relation("ProjectBookmarks_ProjectId")
+  @@map("projects")
+}
+
+model ProjectSkill {
+  id BigInt @id @default(autoincrement())
+  projectId BigInt @map("project_id")
+  skillId BigInt @map("skill_id")
+
+  project Project @relation("ProjectSkills_ProjectId", fields: [projectId], references: [id], onDelete: Restrict)
+  skill Skill @relation("ProjectSkills_SkillId", fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, skillId])
+  @@map("project_skills")
+}
+
+model WorkRequest {
+  id BigInt @id @default(autoincrement())
+  requestType RequestType @map("request_type")
+  clientId BigInt @map("client_id")
+  creatorId BigInt @map("creator_id")
+  projectId BigInt? @map("project_id")
+  servicePackageId BigInt? @map("service_package_id")
+  title String @db.VarChar(200)
+  scopeText String @db.Text @map("scope_text")
+  message String @db.Text
+  briefJson Json? @db.JsonB @map("brief_json")
+  initialAmount BigInt @map("initial_amount")
+  offerAmount BigInt? @map("offer_amount")
+  expectedDays Int @map("expected_days")
+  status RequestStatus @default(PENDING)
+  offerStatus OfferStatus @default(NONE) @map("offer_status")
+  rejectionReason String? @db.VarChar(80) @map("rejection_reason")
+  offeredAt DateTime? @db.Timestamptz(6) @map("offered_at")
+  offerRespondedAt DateTime? @db.Timestamptz(6) @map("offer_responded_at")
+  selectedAt DateTime? @db.Timestamptz(6) @map("selected_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  client BrandProfile @relation("WorkRequests_ClientId", fields: [clientId], references: [userId], onDelete: Restrict)
+  creator CreatorProfile @relation("WorkRequests_CreatorId", fields: [creatorId], references: [userId], onDelete: Restrict)
+  project Project? @relation("WorkRequests_ProjectId", fields: [projectId], references: [id], onDelete: Restrict)
+  servicePackage ServicePackage? @relation("WorkRequests_ServicePackageId", fields: [servicePackageId], references: [id], onDelete: Restrict)
+  contract Contract? @relation("Contracts_WorkRequestId")
+  notifications Notification[] @relation("Notifications_WorkRequestId")
+  @@map("work_requests")
+}
+
+model Contract {
+  id BigInt @id @default(autoincrement())
+  workRequestId BigInt @unique @map("work_request_id")
+  title String @db.VarChar(200)
+  agreedAmount BigInt @map("agreed_amount")
+  currency String @default("KRW") @db.VarChar(3)
+  workStartAt DateTime @db.Timestamptz(6) @map("work_start_at")
+  deliveryDueAt DateTime @db.Timestamptz(6) @map("delivery_due_at")
+  termsText String @db.Text @map("terms_text")
+  clientSnapshot Json @db.JsonB @map("client_snapshot")
+  creatorSnapshot Json @db.JsonB @map("creator_snapshot")
+  termsHash String @db.VarChar(128) @map("terms_hash")
+  status ContractStatus @default(DRAFT)
+  completedAt DateTime? @db.Timestamptz(6) @map("completed_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  workRequest WorkRequest @relation("Contracts_WorkRequestId", fields: [workRequestId], references: [id], onDelete: Restrict)
+  signatures Signature[] @relation("Signatures_ContractId")
+  deliverables Deliverable[] @relation("Deliverables_ContractId")
+  payments Payment[] @relation("Payments_ContractId")
+  reviews Review[] @relation("Reviews_ContractId")
+  @@map("contracts")
+}
+
+model Signature {
+  id BigInt @id @default(autoincrement())
+  contractId BigInt @map("contract_id")
+  userId BigInt @map("user_id")
+  signedTermsHash String @db.VarChar(128) @map("signed_terms_hash")
+  signedAt DateTime @db.Timestamptz(6) @map("signed_at")
+
+  contract Contract @relation("Signatures_ContractId", fields: [contractId], references: [id], onDelete: Restrict)
+  user User @relation("Signatures_UserId", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, userId])
+  @@map("signatures")
+}
+
+model Deliverable {
+  id BigInt @id @default(autoincrement())
+  contractId BigInt @map("contract_id")
+  submittedBy BigInt @map("submitted_by")
+  versionNo Int @map("version_no")
+  videoUrl String @db.Text @map("video_url")
+  message String? @db.Text
+  status DeliverableStatus @default(SUBMITTED)
+  feedbackText String? @db.Text @map("feedback_text")
+  submittedAt DateTime @db.Timestamptz(6) @map("submitted_at")
+  approvedAt DateTime? @db.Timestamptz(6) @map("approved_at")
+
+  contract Contract @relation("Deliverables_ContractId", fields: [contractId], references: [id], onDelete: Restrict)
+  submittedByUser User @relation("Deliverables_SubmittedBy", fields: [submittedBy], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, versionNo])
+  @@map("deliverables")
+}
+
+model Payment {
+  id BigInt @id @default(autoincrement())
+  contractId BigInt @map("contract_id")
+  orderId String @unique @db.VarChar(100) @map("order_id")
+  provider String @db.VarChar(30)
+  providerPaymentId String? @db.VarChar(200) @map("provider_payment_id")
+  amount BigInt
+  currency String @default("KRW") @db.VarChar(3)
+  feeRateBps Int @default(1000) @map("fee_rate_bps")
+  feeAmount BigInt @map("fee_amount")
+  payoutAmount BigInt @map("payout_amount")
+  status PaymentStatus @default(PENDING)
+  paidAt DateTime? @db.Timestamptz(6) @map("paid_at")
+  settledAt DateTime? @db.Timestamptz(6) @map("settled_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  contract Contract @relation("Payments_ContractId", fields: [contractId], references: [id], onDelete: Restrict)
+  paymentEvents PaymentEvent[] @relation("PaymentEvents_PaymentId")
+
+  @@unique([provider, providerPaymentId])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id BigInt @id @default(autoincrement())
+  paymentId BigInt @map("payment_id")
+  eventType PaymentEventType @map("event_type")
+  eventKey String @unique @db.VarChar(200) @map("event_key")
+  grossAmount BigInt @map("gross_amount")
+  feeAmount BigInt @default(0) @map("fee_amount")
+  payoutAmount BigInt @default(0) @map("payout_amount")
+  currency String @default("KRW") @db.VarChar(3)
+  occurredAt DateTime @db.Timestamptz(6) @map("occurred_at")
+  metadata Json? @db.JsonB
+
+  payment Payment @relation("PaymentEvents_PaymentId", fields: [paymentId], references: [id], onDelete: Restrict)
+  ledgerTransaction LedgerTransaction? @relation("LedgerTransactions_PaymentEventId")
+  @@map("payment_events")
+}
+
+model Review {
+  id BigInt @id @default(autoincrement())
+  contractId BigInt @map("contract_id")
+  authorUserId BigInt @map("author_user_id")
+  targetUserId BigInt @map("target_user_id")
+  rating Int
+  content String @db.Text
+  tags Json @db.JsonB
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  contract Contract @relation("Reviews_ContractId", fields: [contractId], references: [id], onDelete: Restrict)
+  author User @relation("Reviews_AuthorUserId", fields: [authorUserId], references: [id], onDelete: Restrict)
+  target User @relation("Reviews_TargetUserId", fields: [targetUserId], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, authorUserId])
+  @@map("reviews")
+}
+
+model Notification {
+  id BigInt @id @default(autoincrement())
+  recipientUserId BigInt @map("recipient_user_id")
+  projectId BigInt? @map("project_id")
+  workRequestId BigInt? @map("work_request_id")
+  eventType String @db.VarChar(60) @map("event_type")
+  eventKey String @db.VarChar(200) @map("event_key")
+  title String @db.VarChar(200)
+  body String @db.Text
+  readAt DateTime? @db.Timestamptz(6) @map("read_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  recipient User @relation("Notifications_RecipientUserId", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  project Project? @relation("Notifications_ProjectId", fields: [projectId], references: [id], onDelete: Restrict)
+  workRequest WorkRequest? @relation("Notifications_WorkRequestId", fields: [workRequestId], references: [id], onDelete: Restrict)
+
+  @@unique([recipientUserId, eventKey])
+  @@map("notifications")
+}
+
+model ProjectBookmark {
+  id BigInt @id @default(autoincrement())
+  creatorId BigInt @map("creator_id")
+  projectId BigInt @map("project_id")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  creator CreatorProfile @relation("ProjectBookmarks_CreatorId", fields: [creatorId], references: [userId], onDelete: Restrict)
+  project Project @relation("ProjectBookmarks_ProjectId", fields: [projectId], references: [id], onDelete: Restrict)
+
+  @@unique([creatorId, projectId])
+  @@map("project_bookmarks")
+}
+
+model LedgerAccount {
+  id BigInt @id @default(autoincrement())
+  code String @db.VarChar(60)
+  name String @db.VarChar(100)
+  accountType LedgerAccountType @map("account_type")
+  currency String @default("KRW") @db.VarChar(3)
+  isActive Boolean @default(true) @map("is_active")
+
+  entries LedgerEntry[] @relation("LedgerEntries_LedgerAccountId")
+
+  @@unique([code, currency])
+  @@map("ledger_accounts")
+}
+
+model LedgerTransaction {
+  id BigInt @id @default(autoincrement())
+  paymentEventId BigInt @unique @map("payment_event_id")
+  transactionType LedgerTransactionType @map("transaction_type")
+  currency String @db.VarChar(3)
+  memo String? @db.Text
+  occurredAt DateTime @db.Timestamptz(6) @map("occurred_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  paymentEvent PaymentEvent @relation("LedgerTransactions_PaymentEventId", fields: [paymentEventId], references: [id], onDelete: Restrict)
+  entries LedgerEntry[] @relation("LedgerEntries_LedgerTransactionId")
+  @@map("ledger_transactions")
+}
+
+model LedgerEntry {
+  id BigInt @id @default(autoincrement())
+  ledgerTransactionId BigInt @map("ledger_transaction_id")
+  ledgerAccountId BigInt @map("ledger_account_id")
+  entrySide LedgerEntrySide @map("entry_side")
+  amount BigInt
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  ledgerTransaction LedgerTransaction @relation("LedgerEntries_LedgerTransactionId", fields: [ledgerTransactionId], references: [id], onDelete: Restrict)
+  ledgerAccount LedgerAccount @relation("LedgerEntries_LedgerAccountId", fields: [ledgerAccountId], references: [id], onDelete: Restrict)
+  @@map("ledger_entries")
+}
