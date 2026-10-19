@@ -146,7 +146,7 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 
 **아직 확인하지 않은 것**
 - 마이그레이션 적용과 인증 DB 테스트: 아직 마이그레이션 파일이 없어서 `migrate deploy`는 "No pending migrations"로 끝난다. 지금의 DB 테스트는 연결 확인일 뿐이고, 인증 기능 테스트가 아니다.
-- 팀 개발용 Supabase의 PostgreSQL 주 버전 (테스트 DB를 같은 버전으로 맞춰야 함)
+- 팀 개발용 Supabase의 PostgreSQL 주 버전: 미확인(팀원 확인 예정). 테스트 DB와 CI는 PostgreSQL 17을 쓰고 있어 버전 차이가 있을 수 있다.
 - 실제 Supabase DB 연결과 마이그레이션 적용 (개발용 Supabase 프로젝트 준비 후 `/health/ready` 200 확인부터)
 - Render 배포와 헬스 체크 동작
 - Vercel rewrite를 거친 `/api/*` 호출
