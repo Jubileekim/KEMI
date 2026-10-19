@@ -37,8 +37,9 @@ export interface AuthResult {
 export interface AuthServiceOptions {
   prisma: PrismaClient;
   accessTokenSecret: string;
-  // 테스트 전용: 회전 대상 토큰 행을 잠근 직후 호출된다. 동시 요청이 반드시 겹치게 하는 데 쓴다.
-  afterRefreshTokenLocked?: () => Promise<void>;
+  // 테스트 전용: 회전 트랜잭션 안에서 토큰 행을 잠근 뒤, 커밋 직전에 호출된다.
+  // 동시 요청이 실제로 겹치는지 확인하거나, 중간 실패 시 롤백되는지 확인하는 데 쓴다.
+  beforeRotationCommit?: () => Promise<void>;
 }
 
 interface UserRow {
@@ -84,7 +85,7 @@ function assertActive(user: UserRow): void {
 export function createAuthService({
   prisma,
   accessTokenSecret,
-  afterRefreshTokenLocked,
+  beforeRotationCommit,
 }: AuthServiceOptions) {
   const secret = new TextEncoder().encode(accessTokenSecret);
   // 없는 이메일·소셜 전용 계정도 bcrypt 비교를 한 번 해서, 응답 시간으로 가입 여부가 드러나지 않게 한다.
@@ -188,7 +189,7 @@ export function createAuthService({
       if (used.count === 0) {
         throw new RotationConflict();
       }
-      await afterRefreshTokenLocked?.();
+      await beforeRotationCommit?.();
       return true;
     });
     if (!rotated) {

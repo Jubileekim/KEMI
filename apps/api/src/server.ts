@@ -15,7 +15,7 @@ function start(env: Env) {
       accessTokenSecret: env.JWT_ACCESS_SECRET,
     }),
     appOrigin: env.APP_ORIGIN,
-    trustProxy: env.NODE_ENV === "production",
+    trustProxyHops: env.TRUST_PROXY_HOPS,
   });
 
   const server = app.listen(env.PORT, () => {

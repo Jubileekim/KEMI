@@ -19,6 +19,8 @@ const envSchema = z.object({
     .min(32, "JWT_ACCESS_SECRET은 32자 이상이어야 합니다."),
   // 프론트엔드 주소(예: https://kemi.vercel.app). 쿠키를 쓰는 요청의 Origin 검사에 쓴다.
   APP_ORIGIN: z.url({ error: "APP_ORIGIN은 http(s) 주소여야 합니다." }),
+  // 앞단 프록시 개수(0 = 프록시 없음). 배포 경로에 맞게 확인한 값을 넣는다(README "클라이언트 IP").
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
 });
 
 export type Env = z.infer<typeof envSchema>;

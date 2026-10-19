@@ -124,7 +124,8 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 - 사용자 ID는 문자열이다(`"42"`). DB는 `bigint`다.
 - Access 토큰은 15분이다. 응답 본문으로 받아 메모리에만 보관한다.
 - Refresh 토큰은 `kemi_refresh` 쿠키(`HttpOnly; Secure; SameSite=Lax; Path=/api/auth`)로만 주고받는다. 로그인 세션은 로그인 시점부터 최대 7일이고, 회전해도 연장되지 않는다.
-- 오류 코드: `VALIDATION_FAILED`(400), `INVALID_CREDENTIALS`(401), `TOKEN_EXPIRED`(401), `UNAUTHENTICATED`(401), `SESSION_REVOKED`(401), `FORBIDDEN`(403), `EMAIL_ALREADY_EXISTS`(409), `REFRESH_RACE`(409, `details.retryAfterMs`)
+- 요청 제한: 가입 1시간 10회, 로그인 15분 10회, 갱신 15분 60회(IP 기준). 넘으면 `429 RATE_LIMITED`
+- 오류 코드: `VALIDATION_FAILED`(400), `INVALID_CREDENTIALS`(401), `TOKEN_EXPIRED`(401), `UNAUTHENTICATED`(401), `SESSION_REVOKED`(401), `FORBIDDEN`(403), `EMAIL_ALREADY_EXISTS`(409), `REFRESH_RACE`(409, `details.retryAfterMs`), `RATE_LIMITED`(429)
 
 ## API 경로 규칙
 
@@ -142,15 +143,16 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 
 ## 환경 변수
 
-| 이름                     | 필수 | 기본값         | 설명                                                          |
-| ------------------------ | ---- | -------------- | ------------------------------------------------------------- |
-| `NODE_ENV`               |      | `development`  | `development` / `test` / `production`                         |
-| `PORT`                   |      | `4000`         | Render는 자동으로 지정한다                                    |
-| `DATABASE_URL`           | ✅   |                | 실행용 PostgreSQL 주소                                        |
-| `DATABASE_POOL_MAX`      |      | `5`            | 서버 한 대의 최대 DB 연결 수                                  |
-| `MIGRATION_DATABASE_URL` |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                     |
-| `JWT_ACCESS_SECRET`      | ✅   |                | Access 토큰 서명 키 (32자 이상)                               |
-| `APP_ORIGIN`             | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다 |
+| 이름                     | 필수 | 기본값         | 설명                                                                                                                            |
+| ------------------------ | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`               |      | `development`  | `development` / `test` / `production`                                                                                           |
+| `PORT`                   |      | `4000`         | Render는 자동으로 지정한다                                                                                                      |
+| `DATABASE_URL`           | ✅   |                | 실행용 PostgreSQL 주소                                                                                                          |
+| `DATABASE_POOL_MAX`      |      | `5`            | 서버 한 대의 최대 DB 연결 수                                                                                                    |
+| `MIGRATION_DATABASE_URL` |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                                                                                       |
+| `JWT_ACCESS_SECRET`      | ✅   |                | Access 토큰 서명 키 (32자 이상)                                                                                                 |
+| `APP_ORIGIN`             | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다                                                                   |
+| `TRUST_PROXY_HOPS`       |      | `0`            | 앞단 프록시 개수. 요청 제한의 클라이언트 IP 판단에 쓴다. 배포 값은 배포 후 확인해서 정한다 (결정 기록 8장 "클라이언트 IP 판단") |
 
 실제 값은 `.env`(커밋 금지)나 Render 대시보드의 Environment에만 넣는다. 저장소에는 `.env.example`만 둔다.
 
@@ -175,6 +177,7 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 | Root Directory    | (비움, 저장소 루트)                                                                                                                      |
 | Build Command     | `npm ci --include=dev && npm run build:api` (린트·Prisma CLI·TypeScript가 devDependencies라서 `NODE_ENV=production`이어도 설치되게 한다) |
 | Start Command     | `npm start -w @kemi/api`                                                                                                                 |
+| Environment       | `TRUST_PROXY_HOPS`는 배포 후 실제 `X-Forwarded-For`를 확인한 값으로 넣는다. 확인 전에는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다   |
 | Health Check Path | `/health`                                                                                                                                |
 | Environment       | `NODE_ENV=production`, `DATABASE_URL` 등                                                                                                 |
 

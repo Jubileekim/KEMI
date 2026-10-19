@@ -16,6 +16,7 @@ describe("parseEnv", () => {
       DATABASE_POOL_MAX: 5,
       JWT_ACCESS_SECRET,
       APP_ORIGIN,
+      TRUST_PROXY_HOPS: 0,
     });
   });
 

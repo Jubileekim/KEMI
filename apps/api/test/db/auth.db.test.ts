@@ -1,6 +1,6 @@
 import request, { type Response } from "supertest";
 import { setTimeout as delay } from "node:timers/promises";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { REFRESH_COOKIE_NAME } from "../../src/auth/auth.router.js";
 import { createTestApp, TEST_APP_ORIGIN } from "../support/test-app.js";
 import { createTestPrismaClient, resetDatabase } from "../support/test-db.js";
@@ -14,11 +14,13 @@ afterAll(async () => {
   await monitor.$disconnect();
 });
 
+// 요청 제한 카운터가 테스트 사이에 이어지지 않도록 테스트마다 앱을 새로 만든다.
+let app = createTestApp({ prisma });
+
 beforeEach(async () => {
   await resetDatabase(prisma);
+  app = createTestApp({ prisma });
 });
-
-const app = createTestApp({ prisma });
 const PASSWORD = "correct-horse-battery";
 
 function refreshCookieOf(res: Response): string | undefined {
@@ -236,6 +238,35 @@ describe("Refresh 토큰 회전", () => {
   });
 });
 
+describe("회전 트랜잭션 롤백", () => {
+  // 세션 갱신·새 토큰 저장·이전 토큰 사용 처리를 마친 뒤, 커밋 직전에 실패를 일으킨다.
+  const failingApp = createTestApp({
+    prisma,
+    beforeRotationCommit: () => Promise.reject(new Error("중간 실패 재현")),
+  });
+
+  beforeEach(async () => {
+    await signup();
+  });
+
+  it("중간에 실패하면 새 토큰·사용 처리·세션 갱신이 모두 되돌려지고, 같은 토큰으로 다시 갱신할 수 있다", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { cookie } = await login();
+
+    const failed = await refresh(cookie, failingApp);
+    expect(failed.status).toBe(500);
+    expect(refreshCookieOf(failed)).toBeUndefined();
+
+    const session = await latestSession();
+    expect(session.lastUsedAt).toBeNull();
+    expect(session.refreshTokens).toHaveLength(1);
+    expect(session.refreshTokens[0]?.usedAt).toBeNull();
+    expect(session.refreshTokens[0]?.replacedById).toBeNull();
+
+    expect((await refresh(cookie)).status).toBe(200);
+  });
+});
+
 describe("동시 갱신 (같은 토큰의 요청 두 개를 실제로 동시에 보낸다)", () => {
   // 회전 중인 요청이 잠금을 쥔 동안, 다른 요청이 DB에서 잠금을 기다리는지 확인한다.
   async function otherRequestIsWaitingForLock(): Promise<boolean> {
@@ -254,7 +285,7 @@ describe("동시 갱신 (같은 토큰의 요청 두 개를 실제로 동시에 
   const overlapped: boolean[] = [];
   const concurrentApp = createTestApp({
     prisma,
-    afterRefreshTokenLocked: async () => {
+    beforeRotationCommit: async () => {
       overlapped.push(await otherRequestIsWaitingForLock());
     },
   });

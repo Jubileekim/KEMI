@@ -8,6 +8,7 @@ import {
 } from "express";
 import AppError from "../http/app-error.js";
 import type { AuthResult, AuthService } from "./auth.service.js";
+import createAuthRateLimits from "./rate-limits.js";
 
 export const REFRESH_COOKIE_NAME = "kemi_refresh";
 
@@ -48,6 +49,8 @@ export function createAuthRouter(
 ): Router {
   const router = Router();
   router.use(cookieParser());
+  // 라우터(앱)마다 따로 센다.
+  const limits = createAuthRateLimits();
 
   // 쿠키만으로 동작하는 요청(refresh·logout)은 우리 프론트엔드에서 온 것만 받는다(CSRF 방어).
   const requireAppOrigin = (req: Request) => {
@@ -56,15 +59,15 @@ export function createAuthRouter(
     }
   };
 
-  router.post("/signup", async (req, res) => {
+  router.post("/signup", limits.signup, async (req, res) => {
     sendAuthResult(res, 201, await authService.signup(req.body));
   });
 
-  router.post("/login", async (req, res) => {
+  router.post("/login", limits.login, async (req, res) => {
     sendAuthResult(res, 200, await authService.login(req.body));
   });
 
-  router.post("/refresh", async (req, res) => {
+  router.post("/refresh", limits.refresh, async (req, res) => {
     requireAppOrigin(req);
     try {
       sendAuthResult(
