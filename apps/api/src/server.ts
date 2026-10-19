@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { createAuthService } from "./auth/auth.service.js";
 import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
 
@@ -9,7 +10,12 @@ function start(env: Env) {
     checkDatabase: async () => {
       await prisma.$queryRaw`SELECT 1`;
     },
-    trustProxy: env.NODE_ENV === "production",
+    authService: createAuthService({
+      prisma,
+      accessTokenSecret: env.JWT_ACCESS_SECRET,
+    }),
+    appOrigin: env.APP_ORIGIN,
+    trustProxyHops: env.TRUST_PROXY_HOPS,
   });
 
   const server = app.listen(env.PORT, () => {

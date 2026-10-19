@@ -9,6 +9,7 @@
 - 프론트엔드(`apps/web`) 실행·설정 방법: [apps/web/README.md](apps/web/README.md)
 - 백엔드(`apps/api`) 실행 방법: [apps/api/README.md](apps/api/README.md)
 - 백엔드 초기 결정 기록: [docs/decisions/2026-10-19-backend-setup.md](docs/decisions/2026-10-19-backend-setup.md)
+- 인증 배포·검증 절차: [docs/runbooks/auth-deploy-verification.md](docs/runbooks/auth-deploy-verification.md)
 
 Node.js 24 / npm 11 환경에서 저장소 루트에서 실행한다.
 
