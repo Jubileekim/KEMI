@@ -11,6 +11,13 @@
   },
   "scripts": {
     "build:shared": "npm run build -w @kemi/shared",
+    "dev:web": "npm run dev -w @kemi/web",
+    "build:web": "npm run build -w @kemi/web",
+    "preview:web": "npm run preview -w @kemi/web",
+    "lint:web": "npm run lint -w @kemi/web",
+    "typecheck:web": "npm run typecheck -w @kemi/web",
+    "test:web": "npm run test -w @kemi/web",
+    "test:web:e2e": "npm run test:e2e -w @kemi/web",
     "dev:api": "npm run dev -w @kemi/api",
     "build:api": "npm run lint -w @kemi/shared && npm run build -w @kemi/api",
     "test:api": "npm run test -w @kemi/api",
@@ -25,6 +32,7 @@
     "eslint": "^9.39.5",
     "eslint-config-airbnb-extended": "^3.3.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-refresh": "^0.5.7",
     "prettier": "3.9.10"
   }
 }
