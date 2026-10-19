@@ -504,11 +504,45 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 실행 절차와 공유 글 양식, 되돌리는 방법: [docs/runbooks/auth-deploy-verification.md](../runbooks/auth-deploy-verification.md) 1단계
 
-현재 적용 대기: `20261019051147_auth_tables`
+현재 적용 대기 (두 개를 함께 적용한다)
 
-- 내용: `users`, `auth_identities`, `auth_sessions`, `auth_refresh_tokens` 테이블과 CHECK 제약
-- 데이터 변경: 새 테이블만 만들고, 기존 데이터는 바꾸지 않는다
+| 마이그레이션                            | 내용                                                                                                                                                |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20261019051147_auth_tables`            | 인증 테이블 4개와 CHECK 제약                                                                                                                        |
+| `20261019070424_auth_data_api_lockdown` | 인증 테이블 RLS 명시 적용, `anon`·`authenticated`의 테이블·시퀀스 권한 회수, 앞으로 만들 테이블·시퀀스의 기본 권한 회수 (아래 "Data API 접근 차단") |
+
+- 데이터 변경: 새 테이블을 만들고 권한만 바꾼다. 기존 데이터는 바꾸지 않는다.
 - 상태: **미적용** (테스트 DB와 CI에서만 적용 확인)
+
+**Data API 접근 차단 [구현]** (`20261019070424_auth_data_api_lockdown`)
+
+개발용 Supabase를 읽기 전용으로 점검한 결과(2026-10-19)는 다음과 같다.
+
+- **권한(확인됨):**
+  - `anon`·`authenticated`는 `public` 스키마 USAGE 권한이 있다.
+  - `postgres` 역할의 기본 권한 때문에, Prisma가 `public`에 만드는 새 테이블·시퀀스에 이 두 역할의 모든 권한이 자동으로 붙는다.
+- **자동 RLS(확인됨):**
+  - `ensure_rls` 이벤트 트리거(`public.rls_auto_enable`)가 `public`의 새 테이블에 RLS를 켠다(ENABLE, FORCE 아님).
+  - 다만 켜는 데 실패하면 로그만 남기고 계속 진행한다.
+- **Data API 활성화 여부(미확인):** Data API가 켜져 있는지, 어떤 스키마를 노출하는지는 DB에서 확인할 수 없다(`authenticator` 역할에 `pgrst.db_schemas` 설정이 없음, 호스팅 플랫폼 설정에 있음). 그래서 "권한이 있으니 지금 외부에서 접근 가능하다"고 단정하지 않는다. 대시보드의 **Project Settings → Data API**에서 활성화 여부와 노출 스키마를 확인한다.
+
+이번 마이그레이션이 하는 일:
+
+1. 인증 테이블 4개에 RLS를 명시적으로 켠다. 정책이 없으므로 RLS를 적용받는 역할은 어떤 행도 읽거나 쓸 수 없다.
+2. `anon`·`authenticated`의 인증 테이블 4개와 시퀀스 4개 권한을 모두 회수한다.
+3. 마이그레이션을 실행하는 역할(Prisma 접속 역할, Supabase에서는 `postgres`)이 앞으로 `public`에 만드는 테이블·시퀀스에 이 두 역할의 권한이 자동으로 붙지 않게 기본 권한을 바꾼다.
+4. 다음은 바꾸지 않는다: `supabase_admin` 등 다른 역할의 기본 권한, `auth`·`storage`·`realtime` 등 Supabase 시스템 스키마, `service_role` 권한.
+5. `anon`·`authenticated` 역할이 없는 DB(로컬 PostgreSQL)에서는 2·3을 건너뛰고 RLS만 켠다.
+
+- Express(Prisma)는 `postgres`(테이블 소유자, `BYPASSRLS`)로 접속하므로 영향을 받지 않는다.
+- 앞으로의 규칙 [확정]:
+  - 새 테이블도 Data API로 열지 않는 것이 기본이다.
+  - 프론트엔드가 Supabase 클라이언트로 직접 읽어야 하는 테이블이 생기면, 그 테이블에만 권한과 RLS 정책을 명시적으로 추가하는 마이그레이션을 PR로 만든다.
+  - 새 테이블을 만드는 마이그레이션에도 `ENABLE ROW LEVEL SECURITY`를 함께 넣는다.
+- 검증
+  - 테스트 DB에 Supabase와 같은 역할과 기본 권한을 재현한 뒤 두 마이그레이션을 적용했다. RLS가 켜지고, 두 역할에 남은 권한이 0개이며, 새로 만든 테이블에도 권한이 붙지 않는 것을 DB 테스트로 확인했다.
+  - 회수 구문이나 기본 권한 변경을 일부러 빼면 해당 테스트가 실패하는 것도 확인했다.
+  - `anon`·`authenticated` 역할이 없는 PostgreSQL 17.11에서도 두 마이그레이션이 오류 없이 적용된다.
 
 **PostgreSQL 버전 [확정]**
 

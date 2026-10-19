@@ -21,7 +21,7 @@ PR #4(이메일 회원가입·로그인·토큰 회전)가 `main`에 병합된 �
 ```text
 [DB 마이그레이션 적용 예정]
 - 대상: 팀 개발용 Supabase 프로젝트 (<프로젝트 이름>), PostgreSQL 17.11
-- 마이그레이션: 20261019051147_auth_tables
+- 마이그레이션: 20261019051147_auth_tables, 20261019070424_auth_data_api_lockdown (함께 적용)
 - 변경: users, auth_identities, auth_sessions, auth_refresh_tokens 테이블과 CHECK 제약을 새로 만든다. 기존 테이블·데이터는 바꾸지 않는다.
 - 적용 방법: prisma migrate deploy (migrate dev·reset은 쓰지 않음)
 - 되돌리는 방법: 아래 "되돌리기" SQL (이 테이블에 쌓인 회원 데이터도 함께 지워진다)
@@ -98,7 +98,7 @@ npx prisma migrate status
 | (3) 같은 이름     | `public`에는 없다. Supabase Auth의 `auth.users`가 보이는 것은 정상이다(다른 스키마이고, Prisma는 `public`만 쓴다) | `public`에 같은 이름이 있으면 중단                    |
 | (4) 이력          | 없음(처음 적용) 또는 있어도 이 마이그레이션 기록이 없음                                                           | 다른 기록·실패 기록(`finished_at` NULL)이 있으면 중단 |
 | (5) 이벤트 트리거 | 목록을 기록한다. RLS를 자동으로 켜는 트리거가 있으면 1-5에서 영향을 확인한다                                      | —                                                     |
-| `migrate status`  | `20261019051147_auth_tables` 1개만 적용 대기                                                                      | 중단                                                  |
+| `migrate status`  | `20261019051147_auth_tables`, `20261019070424_auth_data_api_lockdown` 2개만 적용 대기                             | 중단                                                  |
 
 예상과 다르면 **적용하지 않고**, 차이를 이슈에 보고한 뒤 팀원과 정한다.
 
@@ -173,6 +173,7 @@ ROLLBACK;
 ```
 
 - `rows_visible`가 1이고 오류 없이 ROLLBACK까지 끝나면 정상이다.
+- **기대 결과 (`20261019070424_auth_data_api_lockdown` 적용 후):** 4개 테이블 모두 `relrowsecurity = true`이고, `anon`·`authenticated` 권한 조회 결과는 0행이어야 한다. 다르면 보고한다.
 - **Data API 노출 확인 (중요):** Supabase는 `public` 스키마 테이블을 Data API(anon 키)로 노출할 수 있다.
   - RLS가 꺼져 있고 `anon`·`authenticated`에 권한이 있으면, `users.password_hash` 같은 값을 Data API로 읽을 수 있게 된다.
   - 이 경우 공개 전에 막아야 한다. 테이블마다 RLS를 켜거나, `anon`·`authenticated` 권한을 회수한다. 이 변경은 **새 마이그레이션으로 PR을 거쳐** 적용한다. 공용 DB에서 직접 바꾸지 않는다.
@@ -187,7 +188,8 @@ ROLLBACK;
 ```sql
 -- 비상 시에만, 팀원 합의 후 수동으로 실행
 DROP TABLE auth_refresh_tokens, auth_sessions, auth_identities, users;
-DELETE FROM _prisma_migrations WHERE migration_name = '20261019051147_auth_tables';
+DELETE FROM _prisma_migrations
+WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data_api_lockdown');
 ```
 
 **주의: 수동 삭제로 Prisma 마이그레이션 이력이 "복구"되는 것은 아니다.**
@@ -195,6 +197,7 @@ DELETE FROM _prisma_migrations WHERE migration_name = '20261019051147_auth_table
 - 이력 행을 지우면, Prisma는 이 마이그레이션을 "적용한 적 없음"으로 본다. 다음 `migrate deploy`에서 다시 적용한다.
 - 테이블만 지우고 이력 행을 남기면, Prisma는 "적용됨"으로 보는데 실제 테이블은 없다. 스키마와 이력이 어긋난 상태(drift)가 된다.
 - Prisma는 이미 적용된 마이그레이션을 되돌리는 기능(down)을 제공하지 않는다. 정상적인 되돌리기는 **변경을 되돌리는 새 마이그레이션을 PR로 만들어 적용**하는 것이다. 그래야 모든 DB의 이력이 같게 유지된다.
+- `20261019070424_auth_data_api_lockdown`이 바꾼 `public` 기본 권한(`anon`·`authenticated` 제외)은 테이블을 지워도 되돌아가지 않는다. 원래대로 돌려야 하면 그것도 새 마이그레이션 PR로 한다.
 - 비상 절차를 실행했다면, 그 사실과 시각을 이슈에 남기고 다른 환경(로컬·테스트·CI)과 이력이 달라졌음을 공유한다.
 
 ## 2. Render 백엔드 배포 설정
