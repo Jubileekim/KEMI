@@ -86,6 +86,14 @@ v0.6에서는 한 테이블이 로그인 세션과 개별 Refresh 토큰을 함�
 - `INDEX (session_id)`
 - 행은 삭제하지 않는다. 회전 이력을 보존한다.
 
+## 접근 제어 (Supabase Data API)
+
+마이그레이션 `20261019070424_auth_data_api_lockdown`에서 처리한다. 첫 마이그레이션은 수정하지 않았다.
+
+- `users`, `auth_identities`, `auth_sessions`, `auth_refresh_tokens` 모두 RLS를 켠다. 정책은 두지 않는다.
+- `anon`·`authenticated` 역할의 테이블·시퀀스 권한을 회수한다.
+- 서버(Express·Prisma)만 테이블 소유자 역할로 접근한다.
+
 ## 관계 요약
 
 ```text
