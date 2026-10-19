@@ -236,7 +236,70 @@
 - [제안] `@kemi/shared`의 `as const` 배열을 유일한 원본으로 둔다. 마이그레이션의 CHECK 목록과 shared 배열이 같은지 비교하는 테스트를 첫 테이블 PR에 추가한다.
 - Prisma 스키마로 표현할 수 없는 제약(CHECK, 부분 인덱스)은 마이그레이션 SQL에 직접 추가한다.
 
-## 7. 기존 문서와 충돌하는 내용 (변경 목록)
+## 7. 테스트 DB [확정]
+
+- 로컬 Docker PostgreSQL(`apps/api/docker-compose.test.yml`)을 쓴다. 개발용 Supabase DB로 테스트를 대신 실행하지 않는다.
+- 개발용은 `DATABASE_URL`, 테스트용은 `TEST_DATABASE_URL`로 구분한다.
+- 안전장치: `TEST_DATABASE_URL`이 없거나, 로컬 호스트가 아니거나, DB 이름이 `_test`로 끝나지 않거나, `DATABASE_URL`과 같은 DB이면 테스트가 실패한다. 개발 DB로 자동 대체하지 않는다.
+- Prisma 마이그레이션(`migrate deploy`)을 테스트 DB에 적용한 뒤 DB 테스트를 실행한다.
+- GitHub Actions는 PostgreSQL 서비스 컨테이너로 같은 테스트를 실행한다(`.github/workflows/api-ci.yml`).
+
+## 8. 회원가입·로그인 PR 설계 (보완)
+
+`feat/auth-email` 브랜치에서, PR #1 병합 후 최신 `main`을 반영해 한 세션으로 진행한다.
+
+**범위**
+- 포함: `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`
+- 제외: 프로필 수정 API(다음 프로필 PR), 소셜 로그인, 비밀번호 재설정
+
+**가입 역할 [확정]**
+- 가입 요청으로 고를 수 있는 역할은 `CLIENT`, `CREATOR`뿐이다. `ADMIN`을 보내면 `400 VALIDATION_FAILED`로 응답한다.
+- `ADMIN`은 운영용 시드·스크립트로만 만든다.
+
+**Access 토큰 검증 [확정]**
+- 서명과 만료만 보지 않는다. 요청마다 DB에서 다음을 확인한다.
+  1. 토큰의 세션 ID(`sid`)에 해당하는 `auth_sessions` 행이 폐기(`revoked_at`)되지 않았는지
+  2. 회원 상태가 이용 가능(`ACTIVE`)한지
+- 로그아웃이나 재사용 감지로 토큰 계열을 폐기하면, 아직 만료되지 않은 Access 토큰도 바로 막힌다.
+- [제안] 실패 응답: 세션이 폐기됐으면 `401 SESSION_REVOKED`, 회원이 제한·탈퇴 상태면 `403 FORBIDDEN`.
+- [제안] 비용: 요청마다 조회가 1회(세션과 회원을 함께 조회) 늘어난다. MVP 규모에서는 감수한다.
+
+**실제 DB로 검증할 테스트 [확정]**
+
+| 시나리오 | 기대 결과 |
+|---|---|
+| 정상 회전 | 새 Refresh 쿠키 발급, 이전 행은 `replaced_by_id`가 채워진 채 보존 |
+| 재사용 감지 | 유예 시간이 지난 뒤 이전 토큰을 쓰면 401, 같은 `family_id` 전체 폐기, 최신 토큰도 실패 |
+| 동시 갱신 | 같은 토큰으로 동시에 두 번 요청하면 하나는 200, 하나는 `409 REFRESH_RACE`, 계열은 유지 |
+| 로그아웃 후 차단 | 로그아웃 뒤 Refresh는 401, 기존 Access 토큰으로 `/api/auth/me`도 401 |
+| 가입 역할 | `ADMIN` 가입 요청은 400 |
+| 회원 상태 | 제한된 회원의 Access 토큰은 403 |
+
+**`auth-draft` 검토 결과**
+
+인증 세션이 중단 전에 만든 초안이다. stash 원본(`stash@{0}`)은 검토가 끝날 때까지 보존한다.
+
+| 항목 | 판단 |
+|---|---|
+| `packages/shared/src/auth.ts`: 이메일 정규화, 가입 역할에서 `ADMIN` 제외, bcrypt 72바이트 상한, 요청 스키마 | 재사용 |
+| `packages/shared/src/status.ts`: `as const` 배열 + Zod enum 구조 | 구조 재사용, 값은 수정 |
+| `AuthIdentity`·`AuthSession` 모델 (`family_id`, `token_hash` UNIQUE, `replaced_by_id` UNIQUE) | 재사용 |
+| `users.status` 값 `SUSPENDED` | 수정: ERD v0.6은 `ACTIVE / RESTRICTED / WITHDRAWN` |
+| 표시 이름을 `client_profiles`·`creator_profiles.display_name`에 둠 | 수정: ERD v0.6은 `users.name`(2~20자, 중복 허용) |
+| PK를 `UUID`로 바꿈 | 결정 필요: ERD v0.6은 `bigint` |
+| 마이그레이션에 CHECK 제약 없음 (주석에는 있다고 적음) | 수정: role·status·provider·이메일 정규화 CHECK 추가 |
+| 마이그레이션 시각 `20261019120000` (손으로 쓴 값) | 새로 생성 |
+| 오류 코드에 `TOKEN_EXPIRED`, `SESSION_REVOKED` 없음 | 추가 |
+| `bcryptjs`(순수 JS) 사용 | 결정 필요: 스택 표는 bcrypt. 순수 JS라 Render에서 네이티브 빌드 문제가 없는 대신 느리다 |
+| `jose`(JWT), `cookie-parser` | 재사용 |
+
+**인증 구현 전에 정할 것**
+1. PK 타입: ERD 그대로 `bigint`로 갈지, `uuid`로 바꿀지 (ERD 전체에 영향)
+2. 비밀번호 해시 라이브러리: `bcrypt`(네이티브) / `bcryptjs`(순수 JS)
+3. 토큰 수명 15분/7일, 동시 갱신 유예 10초 확정 여부
+4. 오류 응답 형식을 프론트엔드와 합의
+
+## 9. 기존 문서와 충돌하는 내용 (변경 목록)
 
 | 문서 | 현재 내용 | 변경 |
 |---|---|---|
@@ -249,13 +312,16 @@
 | ERD v0.6 `files`, D17 · PRD 15.6·24장 · 기능명세 FILE-01 | 300MB | 4장 표 |
 | ERD v0.6 `ledger_*` | 선택 확장 | 초기 마이그레이션에서 제외 |
 | ERD v0.6 상태값 | text (CHECK 언급 없음) | text + CHECK + shared Zod enum |
+| 공통 작업 기준 · Plan1 | 프로필 API를 회원가입과 같은 날 구현 | 프로필 수정 API는 다음 프로필 PR로 분리 |
 
 ## 다음 작업
 
 | 작업 | 처리 |
 |---|---|
-| ESLint·Prettier·GitHub Actions CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 최신 `main`에서 새 브랜치 |
+| API CI (타입 검사·단위·DB 테스트·빌드) | PR #1에 추가 (`.github/workflows/api-ci.yml`) |
+| ESLint·Prettier·프론트엔드 CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 최신 `main`을 반영한 `feat/auth-email` (8장) |
+| 의뢰인·크리에이터 프로필 수정 API | 인증 PR 다음 프로필 PR |
 | shared 상태값 enum과 CHECK 일치 테스트 | 첫 테이블 PR에 포함 |
 | Supabase Realtime 자체 JWT 연동 검증 | 채팅 작업 전 별도 검증 |
 | Swagger/OpenAPI 문서 뼈대 | 결정 필요 (PR #1 보완 또는 별도 이슈) |

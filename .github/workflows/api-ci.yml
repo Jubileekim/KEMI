@@ -1,0 +1,64 @@
+# 백엔드(apps/api) CI: 타입 검사 · 단위 테스트 · DB 테스트 · 빌드
+# DB 테스트는 이 작업에서만 띄우는 PostgreSQL 서비스 컨테이너를 쓴다. Supabase에는 접속하지 않는다.
+# ESLint·Prettier와 프론트엔드 검사는 이슈 #2에서 함께 추가한다.
+name: API CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kemi_test
+          POSTGRES_PASSWORD: kemi_test
+          POSTGRES_DB: kemi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kemi_test -d kemi_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      # CI 전용 일회용 컨테이너 주소 (비밀값 아님)
+      TEST_DATABASE_URL: postgresql://kemi_test:kemi_test@localhost:5432/kemi_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 타입 검사
+        run: npm run typecheck
+
+      - name: 단위 테스트
+        run: npm run test:api
+
+      - name: DB 테스트 (마이그레이션 적용 포함)
+        run: npm run test:api:db
+
+      - name: 빌드
+        run: npm run build:api

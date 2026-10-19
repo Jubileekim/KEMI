@@ -28,13 +28,51 @@ npm run dev:api
 | 위치 | 명령 | 하는 일 |
 |---|---|---|
 | 루트 | `npm run dev:api` | 공통 패키지 빌드 후 개발 서버 실행 (파일 변경 시 재시작) |
-| 루트 | `npm run test:api` | Vitest + Supertest 테스트 |
+| 루트 | `npm run test:api` | 단위 테스트 (DB 불필요) |
+| 루트 | `npm run test:api:db` | DB 테스트 (테스트 전용 PostgreSQL 필요, 아래 "테스트" 참고) |
 | 루트 | `npm run build:api` | 공통 패키지 → Prisma Client 생성 → `apps/api/dist` 빌드 |
 | 루트 | `npm run typecheck` | 전체 워크스페이스 타입 검사 |
 | `apps/api` | `npm start` | 빌드 결과 실행 (`node dist/server.js`) |
 | `apps/api` | `npm run prisma:validate` | Prisma 스키마 검사 |
 | `apps/api` | `npm run db:migrate` | 개발 DB에 마이그레이션 생성·적용 |
 | `apps/api` | `npm run db:deploy` | 배포 DB에 기존 마이그레이션만 적용 |
+
+## 테스트
+
+테스트는 두 종류로 나뉜다.
+
+| 종류 | 명령 (루트) | DB | 파일 |
+|---|---|---|---|
+| 단위 테스트 | `npm run test:api` | 필요 없음 | `test/**/*.test.ts` |
+| DB 테스트 | `npm run test:api:db` | 테스트 전용 PostgreSQL | `test/**/*.db.test.ts` |
+
+### DB 테스트 실행 (로컬 Docker)
+
+```bash
+cd apps/api
+cp .env.test.example .env.test
+npm run test:db:up
+npm run test:db
+npm run test:db:down
+```
+
+- `test:db:up`은 `docker-compose.test.yml`의 PostgreSQL 17 컨테이너를 포트 `54329`로 띄운다. 데이터는 메모리에만 있어서, 컨테이너를 내리면 사라진다.
+- DB 테스트를 시작하기 전에 `prisma migrate deploy`로 마이그레이션을 테스트 DB에 적용한다.
+- 각 테스트 전에 테이블을 비운다(`_prisma_migrations` 제외).
+
+### 안전장치
+
+DB 테스트는 `TEST_DATABASE_URL`만 사용한다. 개발용 `DATABASE_URL`과 `.env`는 읽지 않는다. 다음 중 하나라도 해당하면 테스트를 시작하지 않고 실패한다.
+- `TEST_DATABASE_URL`이 없다. 이때 개발 DB로 대신 실행하지 않는다.
+- 호스트가 `localhost`/`127.0.0.1`이 아니다(Supabase 등 원격 DB 차단).
+- DB 이름이 `_test`로 끝나지 않는다.
+- `DATABASE_URL`과 같은 DB를 가리킨다.
+
+테이블을 비우는 함수(`resetDatabase`)도 실행할 때마다 현재 DB 이름이 `_test`로 끝나는지 다시 확인한다.
+
+### CI
+
+`.github/workflows/api-ci.yml`이 `main` 대상 PR마다 실행된다. 같은 DB 테스트를 GitHub Actions의 PostgreSQL 서비스 컨테이너로 돌린다. 순서는 타입 검사 → 단위 테스트 → DB 테스트 → 빌드다.
 
 ## API 경로 규칙
 
