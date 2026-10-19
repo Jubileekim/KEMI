@@ -22,6 +22,9 @@ const AUTH_TABLES = [
   "auth_refresh_tokens",
 ];
 const DATA_API_ROLES = ["anon", "authenticated"];
+// PostgreSQL 17의 테이블 권한 전체. MAINTAIN은 information_schema에 나오지 않으므로 직접 포함해 검사한다.
+const ALL_TABLE_PRIVILEGES =
+  "SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN";
 
 describe("인증 테이블의 Data API 접근 차단", () => {
   it("4개 테이블 모두 RLS가 켜져 있다", async () => {
@@ -40,9 +43,19 @@ describe("인증 테이블의 Data API 접근 차단", () => {
       SELECT count(*) AS granted FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
       CROSS JOIN unnest(${AUTH_TABLES}::text[]) AS t(name)
       WHERE has_table_privilege(r.role, 'public.' || t.name,
-              'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+              ${ALL_TABLE_PRIVILEGES})
          OR has_sequence_privilege(r.role, 'public.' || t.name || '_id_seq',
               'USAGE, SELECT, UPDATE')`;
+
+    expect(rows[0]?.granted).toBe(0n);
+  });
+
+  it("anon·authenticated는 Prisma 마이그레이션 이력 테이블에 어떤 권한도 없다", async () => {
+    // _prisma_migrations는 Prisma가 첫 마이그레이션보다 먼저 만들어, 기본 권한 변경 전의 권한을 받는다.
+    const rows = await prisma.$queryRaw<{ granted: bigint }[]>`
+      SELECT count(*) AS granted FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
+      WHERE has_table_privilege(r.role, 'public._prisma_migrations',
+              ${ALL_TABLE_PRIVILEGES})`;
 
     expect(rows[0]?.granted).toBe(0n);
   });
@@ -54,7 +67,7 @@ describe("인증 테이블의 Data API 접근 차단", () => {
         await tx.$executeRaw`CREATE TABLE public.default_acl_probe (id bigserial PRIMARY KEY)`;
         const rows = await tx.$queryRaw<{ granted: bigint }[]>`
           SELECT count(*) AS granted FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
-          WHERE has_table_privilege(r.role, 'public.default_acl_probe', 'SELECT, INSERT, UPDATE, DELETE')
+          WHERE has_table_privilege(r.role, 'public.default_acl_probe', ${ALL_TABLE_PRIVILEGES})
              OR has_sequence_privilege(r.role, 'public.default_acl_probe_id_seq', 'USAGE, SELECT, UPDATE')`;
         throw new ProbeResult(rows[0]?.granted ?? -1n);
       })

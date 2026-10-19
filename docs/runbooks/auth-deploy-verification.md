@@ -92,13 +92,33 @@ npx prisma migrate status
 
 **예상 결과와 중단 조건**
 
-| 항목              | 예상                                                                                                              | 다르면                                                |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| (1) 버전          | PostgreSQL 17.11                                                                                                  | 중단하고 보고                                         |
-| (3) 같은 이름     | `public`에는 없다. Supabase Auth의 `auth.users`가 보이는 것은 정상이다(다른 스키마이고, Prisma는 `public`만 쓴다) | `public`에 같은 이름이 있으면 중단                    |
-| (4) 이력          | 없음(처음 적용) 또는 있어도 이 마이그레이션 기록이 없음                                                           | 다른 기록·실패 기록(`finished_at` NULL)이 있으면 중단 |
-| (5) 이벤트 트리거 | 목록을 기록한다. RLS를 자동으로 켜는 트리거가 있으면 1-5에서 영향을 확인한다                                      | —                                                     |
-| `migrate status`  | `20261019051147_auth_tables`, `20261019070424_auth_data_api_lockdown` 2개만 적용 대기                             | 중단                                                  |
+먼저 (4)의 결과로 어느 경우인지 정한다. 이력 테이블이 없으면 "최초 적용", 있으면 "추가 적용"이다.
+
+_최초 적용 (Prisma 이력이 없는 DB)_
+
+| 항목              | 예상                                                                                                                                 | 다르면                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| (1) 버전          | PostgreSQL 17.11                                                                                                                     | 중단하고 보고                               |
+| (2)·(3) 테이블    | `public`에 우리가 만들 테이블이 없다. Supabase Auth의 `auth.users`가 보이는 것은 정상이다(다른 스키마이고, Prisma는 `public`만 쓴다) | `public`에 같은 이름의 테이블이 있으면 중단 |
+| (4) 이력          | 이력 테이블(`_prisma_migrations`) 없음                                                                                               | — (있으면 아래 "추가 적용"으로 판정)        |
+| (5) 이벤트 트리거 | 목록을 기록한다. RLS를 자동으로 켜는 트리거가 있으면 1-5에서 영향을 확인한다                                                         | —                                           |
+| `migrate status`  | `prisma/migrations`의 마이그레이션 전체가 적용 대기                                                                                  | 중단                                        |
+
+_추가 적용 (일부 마이그레이션이 이미 적용된 DB)_
+
+| 항목              | 예상                                                                                                                                                           | 다르면                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| (1) 버전          | PostgreSQL 17.11                                                                                                                                               | 중단하고 보고                                                           |
+| (2)·(3) 테이블    | 이미 적용된 마이그레이션이 만든 테이블과 `_prisma_migrations`가 **있어야 정상**이다. 이번에 적용할 마이그레이션이 새로 만드는 테이블과 같은 이름은 없어야 한다 | 이미 적용된 테이블이 없거나, 새로 만들 테이블과 같은 이름이 있으면 중단 |
+| (4) 이력          | 모든 기록이 완료(`finished_at` 있음, `rolled_back_at` 없음) 상태이고, 이름이 저장소 `prisma/migrations`에 있는 것과 일치한다                                   | 실패·롤백 기록, 저장소에 없는 기록이 있으면 중단                        |
+| (5) 이벤트 트리거 | 이전 점검과 같은지 본다                                                                                                                                        | 바뀌었으면 보고                                                         |
+| `migrate status`  | 이력에 없는 마이그레이션만 적용 대기로 나온다. 경고(수정된 마이그레이션 등)가 없다                                                                             | 중단                                                                    |
+
+예: 개발용 Supabase(2026-10-19 기준)는 "추가 적용"이다. 아래가 정상이다.
+
+- 테이블: `users`, `auth_identities`, `auth_sessions`, `auth_refresh_tokens`, `_prisma_migrations`가 있다.
+- 이력: `20261019051147_auth_tables`, `20261019070424_auth_data_api_lockdown` 2건이 완료 상태다.
+- `migrate status`: `20261019074729_prisma_history_lockdown` 1개만 적용 대기다.
 
 예상과 다르면 **적용하지 않고**, 차이를 이슈에 보고한 뒤 팀원과 정한다.
 
@@ -136,10 +156,15 @@ SELECT migration_name, finished_at FROM public._prisma_migrations;
 SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class
 WHERE relnamespace = 'public'::regnamespace AND relname IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens');
 
--- Supabase Data API 역할(anon·authenticated)에 준 권한
-SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
-WHERE table_schema = 'public' AND table_name IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens')
-  AND grantee IN ('anon', 'authenticated');
+-- Supabase Data API 역할(anon·authenticated)에 남은 권한 (인증 테이블·시퀀스 + Prisma 이력 테이블)
+-- information_schema는 PostgreSQL 17의 MAINTAIN 권한을 보여주지 않으므로 ACL을 직접 읽는다.
+SELECT c.relname, c.relkind, a.grantee::regrole AS grantee, a.privilege_type
+FROM pg_class c
+CROSS JOIN LATERAL aclexplode(c.relacl) a
+WHERE c.relnamespace = 'public'::regnamespace
+  AND c.relname IN ('users', 'auth_identities', 'auth_sessions', 'auth_refresh_tokens', '_prisma_migrations',
+                    'users_id_seq', 'auth_identities_id_seq', 'auth_sessions_id_seq', 'auth_refresh_tokens_id_seq')
+  AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole);
 
 ROLLBACK;
 ```
@@ -173,7 +198,7 @@ ROLLBACK;
 ```
 
 - `rows_visible`가 1이고 오류 없이 ROLLBACK까지 끝나면 정상이다.
-- **기대 결과 (`20261019070424_auth_data_api_lockdown` 적용 후):** 4개 테이블 모두 `relrowsecurity = true`이고, `anon`·`authenticated` 권한 조회 결과는 0행이어야 한다. 다르면 보고한다.
+- **기대 결과 (`20261019074729_prisma_history_lockdown`까지 적용 후):** 인증 테이블 4개 모두 `relrowsecurity = true`이고, `anon`·`authenticated` 권한 조회 결과(`_prisma_migrations`·시퀀스 포함, MAINTAIN 포함)는 0행이어야 한다. 다르면 보고한다.
 - **Data API 노출 확인 (중요):** Supabase는 `public` 스키마 테이블을 Data API(anon 키)로 노출할 수 있다.
   - RLS가 꺼져 있고 `anon`·`authenticated`에 권한이 있으면, `users.password_hash` 같은 값을 Data API로 읽을 수 있게 된다.
   - 이 경우 공개 전에 막아야 한다. 테이블마다 RLS를 켜거나, `anon`·`authenticated` 권한을 회수한다. 이 변경은 **새 마이그레이션으로 PR을 거쳐** 적용한다. 공용 DB에서 직접 바꾸지 않는다.
@@ -189,7 +214,7 @@ ROLLBACK;
 -- 비상 시에만, 팀원 합의 후 수동으로 실행
 DROP TABLE auth_refresh_tokens, auth_sessions, auth_identities, users;
 DELETE FROM _prisma_migrations
-WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data_api_lockdown');
+WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data_api_lockdown', '20261019074729_prisma_history_lockdown');
 ```
 
 **주의: 수동 삭제로 Prisma 마이그레이션 이력이 "복구"되는 것은 아니다.**
