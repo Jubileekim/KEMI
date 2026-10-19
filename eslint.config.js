@@ -35,7 +35,8 @@ export default [
     rules: {
       // 팀 규칙 1: any 금지
       "@typescript-eslint/no-explicit-any": "error",
-      // 팀 규칙 2: 타입 단언(as, <T>) 금지 → 타입 가드로 좁힌다. (`as const`는 단언이 아니라 허용된다)
+      // 팀 규칙 2: 타입 단언(as, <T>) 금지 → 타입 가드로 좁힌다.
+      // 예외: const assertion(`as const`)은 이 규칙이 assertionStyle 'never'에서도 허용한다.
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },

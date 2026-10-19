@@ -91,7 +91,7 @@ DB 테스트는 `TEST_DATABASE_URL`만 사용한다. 개발용 `DATABASE_URL`과
 - **팀 규칙**
   - `any` 금지: `@typescript-eslint/no-explicit-any`
   - 타입 단언 금지: `as Type`, `<Type>value`, `value!` 모두 금지. 대신 `instanceof`, `typeof`, `'key' in obj` 같은 타입 가드로 타입을 좁힌다.
-    - `as const`는 타입 단언이 아니라 값을 그대로 고정하는 문법이라 허용된다. `satisfies`도 허용된다.
+    - 예외: `as const`(const assertion)는 허용한다. 값을 다른 타입으로 바꾸지 않고 리터럴 타입 그대로 고정하기만 해서, `consistent-type-assertions` 규칙이 `assertionStyle: 'never'`에서도 허용한다. `satisfies`도 단언이 아니라 허용된다.
   - 운영 코드(`src`)에서는 라이브러리가 돌려준 `any` 값을 그대로 쓰는 것도 막는다(`no-unsafe-*`). 테스트는 vitest의 `expect.any()`와 supertest의 `res.body`가 `any` 타입이라 이 규칙에서 제외한다.
   - 로그는 `console.info`, `console.warn`, `console.error`만 쓴다.
 - **빌드와 CI:** `npm run build`(apps/api)는 `npm run lint`를 먼저 실행하고, 경고까지 0개여야(`--max-warnings 0`) 다음 단계로 넘어간다. CI와 Render 빌드도 같은 명령을 쓰므로, 린트를 통과하지 못한 코드는 배포되지 않는다.
