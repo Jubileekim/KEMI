@@ -1,0 +1,5 @@
+# 생성 파일·잠금 파일은 형식 검사에서 제외한다.
+**/dist/
+**/coverage/
+apps/api/src/generated/
+package-lock.json

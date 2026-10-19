@@ -1,0 +1,21 @@
+# 로컬 테스트 전용 PostgreSQL. 개발용 Supabase DB와 완전히 분리된다.
+# 실행: npm run test:db:up  /  종료(데이터 삭제): npm run test:db:down
+services:
+  postgres-test:
+    # 팀 개발용 Supabase와 같은 PostgreSQL 17.11로 고정한다.
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_USER: kemi_test
+      POSTGRES_PASSWORD: kemi_test
+      POSTGRES_DB: kemi_test
+    ports:
+      # 다른 로컬 PostgreSQL(5432)과 겹치지 않게 별도 포트를 쓴다.
+      - "54329:5432"
+    # 테스트 데이터는 컨테이너를 내리면 사라지도록 디스크 대신 메모리에 둔다.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kemi_test -d kemi_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

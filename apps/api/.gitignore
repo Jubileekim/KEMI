@@ -3,3 +3,9 @@ node_modules
 .env
 
 /generated/prisma
+
+# Legacy generated client and local schema backups
+/generated/
+/prisma/*.bak
+!.env.example
+!.env.test.example
