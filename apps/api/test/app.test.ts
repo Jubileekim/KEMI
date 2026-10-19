@@ -1,9 +1,11 @@
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  describe, expect, it, vi,
+} from 'vitest';
 import { z } from 'zod';
 import { createApp } from '../src/app.js';
-import { AppError } from '../src/http/app-error.js';
+import AppError from '../src/http/app-error.js';
 import { errorHandler } from '../src/http/error-handler.js';
 
 const healthyDb = () => Promise.resolve();

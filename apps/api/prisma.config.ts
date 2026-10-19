@@ -1,9 +1,13 @@
-import { existsSync } from 'node:fs';
 import { defineConfig } from 'prisma/config';
 
 // Prisma 7은 .env를 자동으로 읽지 않는다. 로컬에서만 .env를 읽고, 배포 환경은 플랫폼 환경 변수를 쓴다.
-if (existsSync('.env')) {
+// 이미 설정된 환경 변수(테스트·CI·Render)는 .env 값으로 덮어쓰지 않는다.
+try {
   process.loadEnvFile('.env');
+} catch (err) {
+  if (!(err instanceof Error && 'code' in err && err.code === 'ENOENT')) {
+    throw err;
+  }
 }
 
 export default defineConfig({

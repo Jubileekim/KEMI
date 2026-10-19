@@ -10,11 +10,25 @@ export class TestDatabaseGuardError extends Error {
   }
 }
 
+function sameDatabase(other: string, testUrl: URL): boolean {
+  try {
+    const url = new URL(other);
+    return (
+      url.hostname === testUrl.hostname
+      && (url.port || '5432') === (testUrl.port || '5432')
+      && url.pathname === testUrl.pathname
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function resolveTestDatabaseUrl(env: NodeJS.ProcessEnv): string {
   const raw = env.TEST_DATABASE_URL;
   if (!raw) {
     throw new TestDatabaseGuardError(
-      'TEST_DATABASE_URL이 없습니다. apps/api/.env.test.example을 .env.test로 복사하고 `npm run test:db:up`으로 테스트 DB를 켜주세요.',
+      'TEST_DATABASE_URL이 없습니다. apps/api/.env.test.example을 .env.test로 복사하고 '
+        + '`npm run test:db:up`으로 테스트 DB를 켜주세요.',
     );
   }
 
@@ -40,17 +54,4 @@ export function resolveTestDatabaseUrl(env: NodeJS.ProcessEnv): string {
   }
 
   return raw;
-}
-
-function sameDatabase(other: string, testUrl: URL): boolean {
-  try {
-    const url = new URL(other);
-    return (
-      url.hostname === testUrl.hostname &&
-      (url.port || '5432') === (testUrl.port || '5432') &&
-      url.pathname === testUrl.pathname
-    );
-  } catch {
-    return false;
-  }
 }

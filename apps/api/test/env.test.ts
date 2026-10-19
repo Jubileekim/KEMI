@@ -15,7 +15,9 @@ describe('parseEnv', () => {
   });
 
   it('문자열 숫자를 변환한다', () => {
-    const env = parseEnv({ DATABASE_URL, NODE_ENV: 'production', PORT: '10000', DATABASE_POOL_MAX: '8' });
+    const env = parseEnv({
+      DATABASE_URL, NODE_ENV: 'production', PORT: '10000', DATABASE_POOL_MAX: '8',
+    });
     expect(env.PORT).toBe(10000);
     expect(env.DATABASE_POOL_MAX).toBe(8);
   });
@@ -30,9 +32,10 @@ describe('parseEnv', () => {
       parseEnv({ DATABASE_URL: 'mysql://x', PORT: 'abc', NODE_ENV: 'staging' });
       expect.unreachable();
     } catch (err) {
-      expect(err).toBeInstanceOf(EnvValidationError);
-      const { issues } = err as EnvValidationError;
-      expect(issues.map((issue) => issue.split(':')[0])).toEqual(
+      if (!(err instanceof EnvValidationError)) {
+        throw err;
+      }
+      expect(err.issues.map((issue) => issue.split(':')[0])).toEqual(
         expect.arrayContaining(['DATABASE_URL', 'PORT', 'NODE_ENV']),
       );
     }

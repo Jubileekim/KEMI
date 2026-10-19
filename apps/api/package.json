@@ -7,7 +7,9 @@
     "pretest": "npm run build -w @kemi/shared",
     "predev": "npm run build -w @kemi/shared",
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
-    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "prelint": "npm run build -w @kemi/shared && prisma generate",
+    "lint": "eslint . --max-warnings 0",
+    "build": "npm run lint && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "test": "vitest run --project unit",
     "pretest:db": "npm run build -w @kemi/shared && prisma generate",
@@ -40,5 +42,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=24.10 <25"
   }
 }

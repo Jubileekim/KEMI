@@ -7,14 +7,20 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24.10 <25"
   },
   "scripts": {
     "build:shared": "npm run build -w @kemi/shared",
     "dev:api": "npm run dev -w @kemi/api",
-    "build:api": "npm run build:shared && npm run build -w @kemi/api",
+    "build:api": "npm run lint -w @kemi/shared && npm run build -w @kemi/api",
     "test:api": "npm run test -w @kemi/api",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
-    "test:api:db": "npm run test:db -w @kemi/api"
+    "test:api:db": "npm run test:db -w @kemi/api",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-airbnb-extended": "^3.3.0"
   }
 }

@@ -1,11 +1,9 @@
-import { existsSync } from 'node:fs';
 import { createPrismaClient, type PrismaClient } from '../../src/lib/prisma.js';
+import loadEnvFileIfExists from './load-env-file.js';
 import { resolveTestDatabaseUrl } from './test-db-guard.js';
 
 // 테스트 파일은 globalSetup과 다른 프로세스에서 실행되므로 .env.test를 다시 읽는다.
-if (existsSync('.env.test') && !process.env.TEST_DATABASE_URL) {
-  process.loadEnvFile('.env.test');
-}
+loadEnvFileIfExists('.env.test');
 
 // DB 테스트 파일에서 쓰는 Prisma Client. 만들 때마다 안전장치를 다시 확인한다.
 export function createTestPrismaClient(): PrismaClient {

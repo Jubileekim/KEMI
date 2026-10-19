@@ -1,16 +1,17 @@
 import type { ApiErrorBody } from '@kemi/shared';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
-import { AppError } from './app-error.js';
+import AppError from './app-error.js';
 
-export const notFoundHandler: RequestHandler = (req, _res, next) => {
-  next(new AppError(404, 'NOT_FOUND', `${req.method} ${req.path} 경로를 찾을 수 없습니다.`));
-};
-
-export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  const body = toErrorBody(err);
-  res.status(body.status).json(body.payload);
-};
+// express.json()의 본문 파싱 실패를 구분하는 타입 가드
+function isBodyParserError(err: unknown): boolean {
+  return (
+    typeof err === 'object'
+    && err !== null
+    && 'type' in err
+    && err.type === 'entity.parse.failed'
+  );
+}
 
 function toErrorBody(err: unknown): { status: number; payload: ApiErrorBody } {
   if (err instanceof AppError) {
@@ -31,7 +32,6 @@ function toErrorBody(err: unknown): { status: number; payload: ApiErrorBody } {
       },
     };
   }
-  // express.json()의 본문 파싱 실패
   if (isBodyParserError(err)) {
     return {
       status: 400,
@@ -46,11 +46,11 @@ function toErrorBody(err: unknown): { status: number; payload: ApiErrorBody } {
   };
 }
 
-function isBodyParserError(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'type' in err &&
-    (err as { type?: unknown }).type === 'entity.parse.failed'
-  );
-}
+export const notFoundHandler: RequestHandler = (req, _res, next) => {
+  next(new AppError(404, 'NOT_FOUND', `${req.method} ${req.path} 경로를 찾을 수 없습니다.`));
+};
+
+export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  const body = toErrorBody(err);
+  res.status(body.status).json(body.payload);
+};

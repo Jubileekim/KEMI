@@ -30,7 +30,8 @@ npm run dev:api
 | 루트 | `npm run dev:api` | 공통 패키지 빌드 후 개발 서버 실행 (파일 변경 시 재시작) |
 | 루트 | `npm run test:api` | 단위 테스트 (DB 불필요) |
 | 루트 | `npm run test:api:db` | DB 테스트 (테스트 전용 PostgreSQL 필요, 아래 "테스트" 참고) |
-| 루트 | `npm run build:api` | 공통 패키지 → Prisma Client 생성 → `apps/api/dist` 빌드 |
+| 루트 | `npm run lint` | ESLint 검사 (`apps/api`, `packages/shared`) |
+| 루트 | `npm run build:api` | 린트 → Prisma Client 생성 → `apps/api/dist` 빌드. **ESLint 오류나 경고가 하나라도 있으면 빌드가 실패한다** |
 | 루트 | `npm run typecheck` | 전체 워크스페이스 타입 검사 |
 | `apps/api` | `npm start` | 빌드 결과 실행 (`node dist/server.js`) |
 | `apps/api` | `npm run prisma:validate` | Prisma 스키마 검사 |
@@ -72,7 +73,32 @@ DB 테스트는 `TEST_DATABASE_URL`만 사용한다. 개발용 `DATABASE_URL`과
 
 ### CI
 
-`.github/workflows/api-ci.yml`이 `main` 대상 PR마다 실행된다. 같은 DB 테스트를 GitHub Actions의 PostgreSQL 서비스 컨테이너로 돌린다. 순서는 타입 검사 → 단위 테스트 → DB 테스트 → 빌드다.
+`.github/workflows/api-ci.yml`이 `main` 대상 PR마다 실행된다. 같은 DB 테스트를 GitHub Actions의 PostgreSQL 서비스 컨테이너로 돌린다. 순서는 타입 검사 → 단위 테스트 → DB 테스트 → 린트 + 빌드다.
+
+## 코드 규칙 (ESLint)
+
+설정 파일은 저장소 루트의 `eslint.config.js`다.
+
+- **기반:** Airbnb 스타일 + TypeScript 규칙(`eslint-config-airbnb-extended`, ESLint 9)
+  - 공식 `eslint-config-airbnb-base`는 ESLint 7–8만 지원하고 TypeScript 규칙이 없어서, flat config와 TypeScript를 지원하는 이 포트를 쓴다.
+- **팀 규칙**
+  - `any` 금지: `@typescript-eslint/no-explicit-any`
+  - 타입 단언 금지: `as Type`, `<Type>value`, `value!` 모두 금지. 대신 `instanceof`, `typeof`, `'key' in obj` 같은 타입 가드로 타입을 좁힌다.
+    - `as const`는 타입 단언이 아니라 값을 그대로 고정하는 문법이라 허용된다. `satisfies`도 허용된다.
+  - 운영 코드(`src`)에서는 라이브러리가 돌려준 `any` 값을 그대로 쓰는 것도 막는다(`no-unsafe-*`). 테스트는 vitest의 `expect.any()`와 supertest의 `res.body`가 `any` 타입이라 이 규칙에서 제외한다.
+  - 로그는 `console.info`, `console.warn`, `console.error`만 쓴다.
+- **빌드와 CI:** `npm run build`(apps/api)는 `npm run lint`를 먼저 실행하고, 경고까지 0개여야(`--max-warnings 0`) 다음 단계로 넘어간다. CI와 Render 빌드도 같은 명령을 쓰므로, 린트를 통과하지 못한 코드는 배포되지 않는다.
+- **자동 수정:** 형식 문제는 `npx eslint . --fix`로 고칠 수 있다.
+
+타입 가드 예시:
+
+```ts
+// ❌ 단언: 실제 값이 그 모양인지 확인하지 않는다
+const code = (err as { code: string }).code;
+
+// ✅ 타입 가드: 실제로 확인한 뒤에만 그 타입으로 쓴다
+if (err instanceof Error && 'code' in err && err.code === 'ENOENT') { /* ... */ }
+```
 
 ## API 경로 규칙
 
@@ -119,7 +145,7 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 | 항목 | 값 |
 |---|---|
 | Root Directory | (비움, 저장소 루트) |
-| Build Command | `npm ci && npm run build:api` |
+| Build Command | `npm ci --include=dev && npm run build:api` (린트·Prisma CLI·TypeScript가 devDependencies라서 `NODE_ENV=production`이어도 설치되게 한다) |
 | Start Command | `npm start -w @kemi/api` |
 | Health Check Path | `/health` |
 | Environment | `NODE_ENV=production`, `DATABASE_URL` 등 |

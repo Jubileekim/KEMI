@@ -436,7 +436,8 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | 작업 | 처리 |
 |---|---|
 | API CI (타입 검사·단위·DB 테스트·빌드) | PR #1에 추가 (`.github/workflows/api-ci.yml`) |
-| ESLint·Prettier·프론트엔드 CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
+| ESLint (Airbnb + TypeScript, 빌드 시 강제) | PR #1에 추가 (`eslint.config.js`, README "코드 규칙") |
+| Prettier·프론트엔드 ESLint·CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
 | 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 기존 `feat/auth-email` 상태를 확인하고 최신 `main`을 반영해 진행 (8장) |
 | 의뢰인·크리에이터 프로필 수정 API | 인증 PR 다음 프로필 PR |
 | shared 상태값 enum과 CHECK 일치 테스트 | 첫 테이블 PR에 포함 |
