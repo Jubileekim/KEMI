@@ -209,10 +209,10 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 - GitHub Actions(PostgreSQL 서비스)에서 타입 검사·단위 테스트·DB 테스트·빌드 통과
 - 안전장치: `TEST_DATABASE_URL`이 없거나 `_test`가 아닌 DB를 가리키면 DB 테스트가 시작되지 않음
 - 테스트 DB(17.11)에 첫 마이그레이션(`20261019051147_auth_tables`) 적용, 인증 DB 테스트 통과 (회원가입·로그인·회전·최대 수명·재사용 감지·동시 갱신·로그아웃·CHECK와 shared 상태값 일치)
+- 팀 개발용 Supabase 연결과 마이그레이션 3개 적용·검증, Data API 꺼짐 확인 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5))
 
 **아직 확인하지 않은 것**
 
-- 실제 Supabase DB 연결과 마이그레이션 적용: 미검증. 버전이 같다는 것만 확인했다. 접속 정보가 준비되면 `/health/ready` 200과 `prisma migrate deploy`부터 확인한다.
 - Render 배포와 헬스 체크 동작
 - Vercel rewrite를 거친 `/api/*` 호출
 - 실제 브라우저에서의 Refresh 쿠키 동작 (`Secure` 쿠키는 `http://localhost`에서는 대부분의 브라우저가 허용하지만, 프론트엔드 연동 때 확인한다)
