@@ -16,11 +16,15 @@
     "test:api": "npm run test -w @kemi/api",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "test:api:db": "npm run test:db -w @kemi/api",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
-    "eslint-config-airbnb-extended": "^3.3.0"
+    "eslint-config-airbnb-extended": "^3.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.9.10"
   }
 }
