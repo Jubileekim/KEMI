@@ -2,21 +2,26 @@ import { describe, expect, it } from "vitest";
 import { EnvValidationError, parseEnv } from "../src/config/env.js";
 
 const DATABASE_URL = "postgresql://user:secret-password@localhost:5432/kemi";
+const JWT_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
+const APP_ORIGIN = "http://localhost:5173";
+const REQUIRED = { DATABASE_URL, JWT_ACCESS_SECRET, APP_ORIGIN };
 
 describe("parseEnv", () => {
   it("기본값을 채운다", () => {
-    const env = parseEnv({ DATABASE_URL });
+    const env = parseEnv(REQUIRED);
     expect(env).toEqual({
       NODE_ENV: "development",
       PORT: 4000,
       DATABASE_URL,
       DATABASE_POOL_MAX: 5,
+      JWT_ACCESS_SECRET,
+      APP_ORIGIN,
     });
   });
 
   it("문자열 숫자를 변환한다", () => {
     const env = parseEnv({
-      DATABASE_URL,
+      ...REQUIRED,
       NODE_ENV: "production",
       PORT: "10000",
       DATABASE_POOL_MAX: "8",

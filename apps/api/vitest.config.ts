@@ -21,6 +21,8 @@ export default defineConfig({
           // 같은 DB를 비우고 다시 쓰므로 테스트 파일을 동시에 실행하지 않는다.
           fileParallelism: false,
           hookTimeout: 60_000,
+          // bcrypt(cost 12) 해시와 동시 갱신 대기 때문에 기본값(5초)보다 길게 둔다.
+          testTimeout: 20_000,
         },
       },
     ],

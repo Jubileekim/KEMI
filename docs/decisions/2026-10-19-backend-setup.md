@@ -247,22 +247,22 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 - 앞서 합의한 `family_id`·`replaced_by_id`·`last_used_at`의 역할은 모두 유지된다. 다만 `family_id`는 `session_id` FK가 된다.
 - Refresh 쿠키의 `Max-Age`는 세션 `expires_at`까지 남은 시간으로 정한다.
 
-**회전 절차 [제안]**
+**회전 절차 [확정 · 구현]** (`apps/api/src/auth/auth.service.ts`)
 
-`POST /api/auth/refresh` 하나를 처리하는 트랜잭션:
+`POST /api/auth/refresh` 하나를 처리하는 순서:
 
-1. 쿠키의 토큰을 해시해서 `auth_refresh_tokens` 행을 `SELECT … FOR UPDATE`로 잠그고, 소속 세션과 함께 읽는다.
-2. 토큰이 없거나, 세션이 폐기됐거나, 세션이 만료(`expires_at ≤ now`)됐으면 `401 SESSION_REVOKED`로 응답하고 쿠키를 삭제한다.
-3. `used_at`이 NULL이면 정상 회전이다.
+1. 쿠키의 토큰을 해시해서 `auth_refresh_tokens` 행과 소속 세션·회원을 읽는다.
+2. 토큰이 없거나, 세션이 폐기됐거나, 세션이 만료(`expires_at ≤ now`)됐으면 `401 SESSION_REVOKED`로 응답하고 쿠키를 삭제한다. 회원이 이용 불가 상태면 `403`이다.
+3. `used_at`이 NULL이면 한 트랜잭션에서 회전한다.
+   - 세션을 조건부 UPDATE(`revoked_at IS NULL AND expires_at > now`)로 `last_used_at`을 갱신한다. 이때 세션 행이 잠기고, 0건이면 그사이 폐기된 것이라 `401`이다.
    - 새 토큰 행을 INSERT한다.
-   - 이전 행에 `used_at = now`, `replaced_by_id = 새 행`을 기록한다.
-   - 세션 `last_used_at`을 갱신한다.
-   - `200`과 새 Access 토큰, 새 쿠키를 응답한다.
+   - 이전 토큰을 조건부 UPDATE(`id = 이전 토큰 AND used_at IS NULL`)로 `used_at`과 `replaced_by_id`를 기록한다. 0건이면 다른 요청이 먼저 회전한 것이라 트랜잭션을 되돌리고 4번 판정으로 넘어간다.
+   - 커밋한 뒤 `200`과 새 Access 토큰, 새 쿠키를 응답한다.
 4. `used_at`이 이미 있으면:
-   - `now − used_at ≤ 10초`: 정상적인 동시 요청으로 본다. **새 토큰을 발급하지 않고**, 세션도 폐기하지 않는다. `409 REFRESH_RACE`로 응답하고 쿠키는 건드리지 않는다.
+   - `now − used_at ≤ 10초`: 정상적인 동시 요청으로 본다. **새 토큰을 발급하지 않고**, 세션도 폐기하지 않는다. `409 REFRESH_RACE`(`details.retryAfterMs: 500`)로 응답하고 쿠키는 건드리지 않는다.
    - 10초 초과: 재사용(탈취 의심)으로 본다. 세션에 `revoked_at = now`, `revoke_reason = REUSE_DETECTED`를 기록하고, `401 SESSION_REVOKED`로 응답하며 쿠키를 삭제한다.
 
-- `FOR UPDATE` 잠금 때문에 같은 토큰으로 온 두 요청은 순서대로 처리된다. 두 요청이 모두 새 토큰을 받는 일은 없다.
+- 처음 설계는 `SELECT … FOR UPDATE`였지만, 같은 효과를 내는 조건부 UPDATE로 구현했다. PostgreSQL은 같은 행을 UPDATE하려는 두 번째 트랜잭션을 첫 번째가 끝날 때까지 기다리게 하고, 끝난 뒤 조건(`used_at IS NULL`)을 다시 확인한다. 그래서 같은 토큰으로 온 두 요청이 모두 새 토큰을 받는 일은 없다. Prisma 기본 API로 작성할 수 있어 raw SQL과 결과 타입 단언이 필요 없다.
 
 **갱신 실패와 재시도 정책 [제안]**
 
@@ -407,9 +407,11 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 **동시 갱신 테스트 방법 [확정]**
 
 - 테스트 파일을 순서대로 실행하는 것(파일 사이의 격리)과, 테스트 안에서 동시 요청을 검증하는 것은 별개다. 동시 갱신은 테스트 안에서 실제로 동시에 보낸다.
-- 서버를 `app.listen(0)`으로 실제 포트에 띄우고, 같은 Refresh 쿠키를 붙인 요청 두 개를 `Promise.all`로 동시에 보낸다.
-- 두 요청이 반드시 겹치도록, 인증 서비스에 테스트에서만 쓰는 지연 지점을 둔다(토큰 행을 잠근 직후 200ms 대기). 첫 요청이 잠금을 쥔 동안 두 번째 요청이 실제로 대기하게 된다.
-  - 이 지점은 운영 코드에서는 아무 일도 하지 않는다. 테스트가 의존성 주입으로만 넣는다.
+- 같은 Refresh 쿠키를 붙인 요청 두 개를 `Promise.all`로 동시에 보낸다. supertest가 요청마다 실제 포트로 서버를 띄우므로, 두 요청은 서로 다른 DB 연결에서 동시에 처리된다.
+- 두 요청이 실제로 겹쳤는지 확인한다. 인증 서비스에는 테스트에서만 넣는 지점(`afterRefreshTokenLocked`)이 있다. 첫 요청이 토큰 행을 잠근 직후 이 지점에서, 다른 요청이 DB에서 잠금을 기다리는 중인지(`pg_stat_activity`의 `wait_event_type = 'Lock'`) 별도 연결로 확인하고 결과를 기록한다. 결과가 `[true]`(회전은 한 번, 그동안 다른 요청은 대기)여야 통과한다.
+  - 나중에 보낸 요청도 409를 받으므로, 이 확인 없이는 동시성을 검증했다고 할 수 없다.
+  - 이 지점은 운영 코드에서는 넘기지 않아 아무 일도 하지 않는다.
+  - 검증: 회전 코드에서 `used_at IS NULL` 조건을 일부러 빼면 두 요청이 모두 회전해 이 테스트가 실패하는 것을 확인했다.
 - 테스트용 Prisma 연결 수(`DATABASE_POOL_MAX`)는 2 이상으로 둔다. 연결이 하나면 두 트랜잭션이 동시에 열리지 못해 동시성을 검증할 수 없다.
 - 어느 요청이 이길지는 고정하지 않는다. "200 하나 + 409 하나"라는 결과만 확인한다.
 - 같은 테스트를 여러 번(예: 5회) 반복해서, 우연히 통과하는 경우를 줄인다.
@@ -468,7 +470,8 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음 |
 | TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                        |
 | 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                    |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | PR #1 병합 확인(2026-10-19). 최신 `main`을 반영한 `feat/auth-email`에서 진행 (8장)                 |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | `feat/auth-email` PR (리뷰 대기). 테스트 DB에서 마이그레이션 적용과 인증 DB 테스트 22개 통과       |
+| 로그인 시도 횟수 제한(rate limit)                          | 미구현 — 다음 작업 후보                                                                            |
 | 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                             |
 | shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                |
 | Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                             |
