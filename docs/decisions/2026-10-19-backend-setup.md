@@ -186,37 +186,105 @@
 
 ## 5. 인증 토큰
 
-**방식 [확정]**
+**확정 사항 [확정]**
 - Access/Refresh 토큰을 쓴다.
-- Refresh 토큰은 해시로 저장하고, 회전 이력을 보존한다.
-- `auth_sessions`에 `family_id`, `replaced_by_id`, `last_used_at`을 추가한다.
-- 기존 토큰 폐기와 새 토큰 발급은 한 트랜잭션에서 처리한다.
-- 재사용을 감지하면 해당 토큰 계열을 폐기하되, 정상적인 동시 갱신 요청도 처리할 수 있게 설계한다.
+- 수명
+  - Access 토큰: 15분
+  - 로그인 세션(Refresh 토큰 계열): 로그인 시점부터 최대 7일. 회전해도 이 기한은 늘어나지 않는다.
+- Refresh 토큰은 해시로만 저장하고, 회전 이력을 보존한다.
+- 기존 토큰을 사용 처리하는 일과 새 토큰을 발급하는 일은 한 트랜잭션에서 처리한다.
+- 두 종류의 폐기를 구분한다.
+  - 회전으로 "사용 처리된" 개별 토큰
+  - 로그아웃·탈취 감지로 "폐기된" 로그인 세션 전체
+- Access 토큰에 담긴 세션 ID는 회전 때문에 무효화되지 않는다.
+- 동시 갱신 유예는 초기값 10초다. 유예 시간은 이미 사용한 토큰으로 새 토큰을 다시 발급해 주는 시간이 **아니다**.
+- 프론트엔드는 갱신 요청을 하나로 모은다. 서버는 정상적인 동시 요청과 재사용(탈취 의심)을 구분한다.
 
-**수명 [제안 · 초기값]**
-- Access 토큰: 15분
-- Refresh 토큰: 7일
+**식별자 [확정]**
+- PK·FK는 ERD v0.6대로 `bigint`다.
+- API 응답과 JWT의 `sub`(사용자 ID)·`sid`(세션 ID)는 문자열로 보낸다(예: `"42"`).
+- `JSON.stringify`는 `BigInt`를 직렬화하지 못한다. 그래서 응답을 만들 때 서버가 `bigint`를 문자열로 바꾸고, 요청으로 받은 ID는 숫자 형식인지 검증한 뒤 `BigInt`로 바꾼다.
 
-**`auth_sessions` 추가 컬럼의 역할**
-- `family_id`: 최초 로그인 시 생성. 회전해도 유지된다
-- `replaced_by_id`: 이 토큰을 대체한 새 세션 행
-- `last_used_at`: 마지막 사용 시각
+**테이블 구조 [제안]**
+
+ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. 개별 토큰의 "사용됨"과 세션 전체의 "폐기됨"이 서로 다른 행에 기록되므로, 위의 두 가지 폐기가 자연스럽게 구분된다.
+
+`auth_sessions` — 로그인 세션 1건 = 토큰 계열 1개
+
+| 컬럼 | 설명 |
+|---|---|
+| `id` bigint PK | Access 토큰의 `sid`. 회전해도 바뀌지 않는다 |
+| `user_id` | 회원 |
+| `expires_at` | 로그인 시각 + 7일. 회전해도 바꾸지 않는다 |
+| `revoked_at`, `revoke_reason` | 세션 전체 폐기 시각과 사유(`LOGOUT` / `REUSE_DETECTED` / `ADMIN`) |
+| `last_used_at` | 마지막 갱신 시각 |
+| `created_at` | 로그인 시각 |
+
+`auth_refresh_tokens` — 개별 Refresh 토큰
+
+| 컬럼 | 설명 |
+|---|---|
+| `id` bigint PK | |
+| `session_id` FK | 소속 세션 (앞서 말한 `family_id`의 역할) |
+| `token_hash` UNIQUE | 토큰 원문의 SHA-256 해시 |
+| `used_at` | 회전에 사용된 시각. NULL이면 아직 유효 |
+| `replaced_by_id` UNIQUE | 이 토큰 대신 발급된 다음 토큰 |
+| `created_at` | 발급 시각 |
+
+- 앞서 합의한 `family_id`·`replaced_by_id`·`last_used_at`의 역할은 모두 유지된다. 다만 `family_id`는 `session_id` FK가 된다.
+- Refresh 쿠키의 `Max-Age`는 세션 `expires_at`까지 남은 시간으로 정한다.
 
 **회전 절차 [제안]**
-- 이전 Refresh 토큰 행은 삭제하지 않고 보존한다. DB에는 토큰 원문이 아닌 해시만 저장한다.
-- 회전은 한 트랜잭션에서 처리한다.
-  1. 새 행 INSERT
-  2. `UPDATE auth_sessions SET replaced_by_id = :new, last_used_at = now() WHERE id = :old AND replaced_by_id IS NULL AND revoked_at IS NULL AND expires_at > now()`
-  3. 2번에서 바뀐 행이 0개이면 롤백하고, 아래 재사용 판정으로 넘어간다.
-- 재사용 감지: 이미 대체된 토큰이 유예 시간이 지난 뒤 다시 들어오면, 해당 `family_id`의 모든 세션을 폐기(`revoked_at`)하고 401로 응답한다.
-- 로그아웃: 현재 `family_id` 전체를 폐기하고 쿠키를 삭제한다.
 
-**정상적인 동시 갱신 [제안]**
-- 같은 브라우저의 두 탭이 동시에 갱신하면, 한쪽은 이미 대체된 토큰을 보내게 된다.
-- 대체된 지 짧은 유예 시간(초안 10초) 안이면 탈취로 보지 않는다. 계열을 폐기하지 않고 `409 REFRESH_RACE`로 응답한다.
-- 클라이언트는 이 응답을 받으면 한 번 재시도한다. 그 사이 첫 응답의 새 쿠키가 저장됐으므로 새 토큰으로 갱신된다.
-- 프론트엔드는 갱신 요청을 한 번에 하나만 보낸다(single-flight).
-- 테스트할 것: 정상 회전, 유예 안의 동시 갱신, 유예 이후 재사용 시 계열 폐기, 로그아웃 후 갱신 실패
+`POST /api/auth/refresh` 하나를 처리하는 트랜잭션:
+1. 쿠키의 토큰을 해시해서 `auth_refresh_tokens` 행을 `SELECT … FOR UPDATE`로 잠그고, 소속 세션과 함께 읽는다.
+2. 토큰이 없거나, 세션이 폐기됐거나, 세션이 만료(`expires_at ≤ now`)됐으면 `401 SESSION_REVOKED`로 응답하고 쿠키를 삭제한다.
+3. `used_at`이 NULL이면 정상 회전이다.
+   - 새 토큰 행을 INSERT한다.
+   - 이전 행에 `used_at = now`, `replaced_by_id = 새 행`을 기록한다.
+   - 세션 `last_used_at`을 갱신한다.
+   - `200`과 새 Access 토큰, 새 쿠키를 응답한다.
+4. `used_at`이 이미 있으면:
+   - `now − used_at ≤ 10초`: 정상적인 동시 요청으로 본다. **새 토큰을 발급하지 않고**, 세션도 폐기하지 않는다. `409 REFRESH_RACE`로 응답하고 쿠키는 건드리지 않는다.
+   - 10초 초과: 재사용(탈취 의심)으로 본다. 세션에 `revoked_at = now`, `revoke_reason = REUSE_DETECTED`를 기록하고, `401 SESSION_REVOKED`로 응답하며 쿠키를 삭제한다.
+- `FOR UPDATE` 잠금 때문에 같은 토큰으로 온 두 요청은 순서대로 처리된다. 두 요청이 모두 새 토큰을 받는 일은 없다.
+
+**동시 갱신 응답·재시도 순서 [제안]**
+1. 프론트엔드는 한 화면 안에서 갱신 요청을 하나로 모은다(single-flight). Access 토큰 만료(`401 TOKEN_EXPIRED`)를 받은 여러 요청이 하나의 갱신 결과를 함께 기다린다.
+2. 그래도 같은 토큰으로 두 요청이 도착할 수 있다(여러 탭 등). 이때 먼저 잠금을 얻은 요청 A는 `200`과 새 쿠키를 받는다. 뒤의 요청 B는 A가 커밋된 뒤 `409 REFRESH_RACE`를 받는다.
+3. B는 `409`를 받으면 잠시(예: 300ms) 기다린 뒤 **한 번만** 다시 갱신한다. 브라우저에는 A가 받은 새 쿠키가 저장돼 있으므로, 재시도는 새 토큰으로 `200`을 받는다.
+4. 재시도도 `409`나 `401`이면 로그아웃 상태로 처리하고 로그인 화면으로 보낸다. 무한히 재시도하지 않는다.
+
+**로그아웃 [제안]**
+- 세션에 `revoked_at`, `revoke_reason = LOGOUT`을 기록하고 쿠키를 삭제한다.
+- 이후 Refresh 요청은 `401`이다. 아직 만료되지 않은 Access 토큰도 다음 요청부터 `401`이다(8장 Access 토큰 검증).
+
+**비밀번호 해시 [확정]**
+- `bcrypt`, cost 12를 쓴다.
+- 확인 결과 (2026-10-19, 이 PC의 Windows · Node 24.18, 저장소 밖 임시 폴더)
+  - `bcrypt@6.0.0`의 설치, 해시, 비교가 성공했다. 맞는 비밀번호는 `true`, 틀린 비밀번호는 `false`로 나왔다.
+  - cost 12 해시 1회는 약 200ms 걸렸다.
+  - 패키지에 미리 빌드된 바이너리(`win32-x64`, `linux-x64` 등)가 들어 있어 네이티브 빌드 없이 로드됐다.
+  - npm 11은 설치 스크립트(`node-gyp-build`)를 실행하지 않았다는 경고를 낸다. 미리 빌드된 바이너리로 정상 동작했다.
+- [검증 필요] Render와 GitHub Actions(Linux x64)에서의 설치·실행은 인증 PR의 CI·배포에서 확인한다.
+- bcrypt는 72바이트 이후를 무시하므로, 입력 검증에서 비밀번호 길이를 72바이트 이하로 제한한다.
+
+**오류 응답 [확정]**
+- 형식: `{ error: { code, message, details? } }`
+- `details`에는 공개해도 되는 정보만 넣는다. 예: 검증 실패 필드의 경로와 메시지.
+- 스택, SQL, 토큰, 해시, 내부 ID 같은 정보는 넣지 않는다.
+- [제안] 인증 오류 코드
+
+| 코드 | 상태 | 언제 |
+|---|---|---|
+| `VALIDATION_FAILED` | 400 | 입력 검증 실패 (`ADMIN` 가입 요청 포함) |
+| `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일 |
+| `INVALID_CREDENTIALS` | 401 | 이메일이 없거나, 비밀번호가 틀리거나, 소셜 전용 계정일 때 (모두 같은 메시지) |
+| `TOKEN_EXPIRED` | 401 | Access 토큰 만료 (프론트엔드는 갱신 시도) |
+| `UNAUTHENTICATED` | 401 | Access 토큰이 없거나 잘못됨 |
+| `SESSION_REVOKED` | 401 | 세션 폐기·만료, 재사용 감지 |
+| `REFRESH_RACE` | 409 | 유예 안의 동시 갱신 (위 재시도 순서) |
+| `FORBIDDEN` | 403 | 회원 상태가 이용 불가(제한·탈퇴) |
 
 **저장·쿠키·CSRF·OAuth [제안]**
 - Vercel rewrite로 `/api/*`를 Render로 전달해, 브라우저 입장에서 프론트엔드와 API가 같은 도메인이 되게 한다.
@@ -244,9 +312,12 @@
 - Prisma 마이그레이션(`migrate deploy`)을 테스트 DB에 적용한 뒤 DB 테스트를 실행한다.
 - GitHub Actions는 PostgreSQL 서비스 컨테이너로 같은 테스트를 실행한다(`.github/workflows/api-ci.yml`).
 
-## 8. 회원가입·로그인 PR 설계 (보완)
+## 8. 회원가입·로그인 PR 설계
 
-`feat/auth-email` 브랜치에서, PR #1 병합 후 최신 `main`을 반영해 한 세션으로 진행한다.
+**진행 방식 [확정]**
+- PR #1이 병합되기 전에는 인증 구현을 시작하지 않는다.
+- 병합 후 기존 `feat/auth-email` 브랜치와 작업 상태를 확인하고, 최신 `main`을 반영해 한 세션에서 진행한다.
+- 강제 초기화로 기존 작업을 지우지 않는다. `auth-draft` stash 원본도 유지한다.
 
 **범위**
 - 포함: `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`
@@ -258,46 +329,59 @@
 
 **Access 토큰 검증 [확정]**
 - 서명과 만료만 보지 않는다. 요청마다 DB에서 다음을 확인한다.
-  1. 토큰의 세션 ID(`sid`)에 해당하는 `auth_sessions` 행이 폐기(`revoked_at`)되지 않았는지
-  2. 회원 상태가 이용 가능(`ACTIVE`)한지
-- 로그아웃이나 재사용 감지로 토큰 계열을 폐기하면, 아직 만료되지 않은 Access 토큰도 바로 막힌다.
-- [제안] 실패 응답: 세션이 폐기됐으면 `401 SESSION_REVOKED`, 회원이 제한·탈퇴 상태면 `403 FORBIDDEN`.
+  1. 토큰의 `sid`에 해당하는 `auth_sessions` 행이 폐기되지 않았는지(`revoked_at IS NULL`)
+  2. 그 세션의 `expires_at`이 지나지 않았는지
+  3. 회원 상태가 `ACTIVE`인지
+- 회전은 `auth_refresh_tokens`에만 기록되고 세션 행은 그대로이므로, 회전한 뒤에도 기존 Access 토큰은 만료 전까지 계속 유효하다.
+- 로그아웃이나 재사용 감지로 세션이 폐기되면, 만료되지 않은 Access 토큰도 바로 막힌다.
+- [제안] 실패 응답: 세션 폐기·만료는 `401 SESSION_REVOKED`, 회원 제한·탈퇴는 `403 FORBIDDEN`
 - [제안] 비용: 요청마다 조회가 1회(세션과 회원을 함께 조회) 늘어난다. MVP 규모에서는 감수한다.
 
 **실제 DB로 검증할 테스트 [확정]**
 
 | 시나리오 | 기대 결과 |
 |---|---|
-| 정상 회전 | 새 Refresh 쿠키 발급, 이전 행은 `replaced_by_id`가 채워진 채 보존 |
-| 재사용 감지 | 유예 시간이 지난 뒤 이전 토큰을 쓰면 401, 같은 `family_id` 전체 폐기, 최신 토큰도 실패 |
-| 동시 갱신 | 같은 토큰으로 동시에 두 번 요청하면 하나는 200, 하나는 `409 REFRESH_RACE`, 계열은 유지 |
-| 로그아웃 후 차단 | 로그아웃 뒤 Refresh는 401, 기존 Access 토큰으로 `/api/auth/me`도 401 |
-| 가입 역할 | `ADMIN` 가입 요청은 400 |
-| 회원 상태 | 제한된 회원의 Access 토큰은 403 |
+| 회원가입 | 201, 비밀번호는 bcrypt 해시로만 저장, 응답에 해시·토큰 해시 없음 |
+| 이메일 중복 가입 | 대소문자·공백만 다른 이메일도 `409 EMAIL_ALREADY_EXISTS` |
+| `ADMIN` 가입 요청 | `400 VALIDATION_FAILED` |
+| 정상 로그인 | 200, Access 토큰과 Refresh 쿠키 발급, 사용자 ID는 문자열 |
+| 잘못된 비밀번호 | `401 INVALID_CREDENTIALS`. 없는 이메일·소셜 전용 계정과 같은 응답 |
+| 정상 회전 | 새 쿠키 발급, 이전 토큰 행은 `used_at`·`replaced_by_id`가 채워진 채 보존, 세션 `sid`는 그대로, 기존 Access 토큰도 계속 유효 |
+| 최대 수명 | 회전해도 세션 `expires_at`이 바뀌지 않음, 만료된 세션의 갱신은 `401` |
+| 동시 갱신 | 같은 토큰으로 동시에 두 번 요청하면 하나는 200(새 쿠키), 하나는 `409 REFRESH_RACE`(새 토큰 없음). 세션은 유지되고, 409 쪽이 새 쿠키로 재시도하면 200 |
+| 재사용 감지 | 사용한 지 10초가 지난 토큰을 다시 쓰면 `401 SESSION_REVOKED`, 세션 `revoke_reason = REUSE_DETECTED`, 최신 토큰과 Access 토큰도 실패 |
+| 로그아웃 후 차단 | Refresh는 `401`, 기존 Access 토큰으로 `GET /api/auth/me`도 `401` |
+| 회원 상태 | 제한된 회원의 Access 토큰은 `403` |
+
+- 10초가 지난 상황은 실제로 기다리지 않는다. 테스트에서 `used_at`을 11초 전으로 바꿔서 재현한다.
+- DB 테스트 격리
+  - `db` 프로젝트는 테스트 파일을 한 번에 하나씩 실행한다(`fileParallelism: false`).
+  - 각 테스트 전에 테이블을 비운다.
+  - 단위 테스트(`unit` 프로젝트)는 DB에 접속하지 않아서, 함께 실행해도 서로 영향이 없다.
 
 **`auth-draft` 검토 결과**
 
-인증 세션이 중단 전에 만든 초안이다. stash 원본(`stash@{0}`)은 검토가 끝날 때까지 보존한다.
+인증 세션이 중단 전에 만든 초안이다. stash 원본(`auth-draft`)은 유지한다.
 
 | 항목 | 판단 |
 |---|---|
 | `packages/shared/src/auth.ts`: 이메일 정규화, 가입 역할에서 `ADMIN` 제외, bcrypt 72바이트 상한, 요청 스키마 | 재사용 |
 | `packages/shared/src/status.ts`: `as const` 배열 + Zod enum 구조 | 구조 재사용, 값은 수정 |
-| `AuthIdentity`·`AuthSession` 모델 (`family_id`, `token_hash` UNIQUE, `replaced_by_id` UNIQUE) | 재사용 |
+| `AuthIdentity` 모델 (`(provider, provider_user_id)` UNIQUE, `provider_email`) | 재사용 (PK는 `bigint`로 수정) |
+| `AuthSession` 한 테이블 구조 | 수정: `auth_sessions` + `auth_refresh_tokens` 두 테이블 (5장) |
+| PK를 `UUID`로 바꿈 | 수정: `bigint` 유지 (확정) |
 | `users.status` 값 `SUSPENDED` | 수정: ERD v0.6은 `ACTIVE / RESTRICTED / WITHDRAWN` |
-| 표시 이름을 `client_profiles`·`creator_profiles.display_name`에 둠 | 수정: ERD v0.6은 `users.name`(2~20자, 중복 허용) |
-| PK를 `UUID`로 바꿈 | 결정 필요: ERD v0.6은 `bigint` |
-| 마이그레이션에 CHECK 제약 없음 (주석에는 있다고 적음) | 수정: role·status·provider·이메일 정규화 CHECK 추가 |
+| 표시 이름을 프로필 테이블의 `display_name`에 둠 | 수정: ERD v0.6은 `users.name`(2~20자, 중복 허용) |
+| 마이그레이션에 CHECK 제약 없음 (주석에는 있다고 적음) | 수정: role·status·provider·revoke_reason·이메일 정규화 CHECK 추가 |
 | 마이그레이션 시각 `20261019120000` (손으로 쓴 값) | 새로 생성 |
 | 오류 코드에 `TOKEN_EXPIRED`, `SESSION_REVOKED` 없음 | 추가 |
-| `bcryptjs`(순수 JS) 사용 | 결정 필요: 스택 표는 bcrypt. 순수 JS라 Render에서 네이티브 빌드 문제가 없는 대신 느리다 |
+| `bcryptjs` | 수정: `bcrypt`로 교체 (확정) |
 | `jose`(JWT), `cookie-parser` | 재사용 |
 
-**인증 구현 전에 정할 것**
-1. PK 타입: ERD 그대로 `bigint`로 갈지, `uuid`로 바꿀지 (ERD 전체에 영향)
-2. 비밀번호 해시 라이브러리: `bcrypt`(네이티브) / `bcryptjs`(순수 JS)
-3. 토큰 수명 15분/7일, 동시 갱신 유예 10초 확정 여부
-4. 오류 응답 형식을 프론트엔드와 합의
+**PostgreSQL 버전 [검증 필요]**
+- 테스트 DB(로컬 Docker, CI)는 현재 PostgreSQL 17(확인 버전 17.11)이다.
+- 팀 개발용 Supabase DB의 주 버전은 아직 확인하지 못했다. Supabase 대시보드의 프로젝트 설정(Infrastructure)이나 `SELECT version();`으로 확인한다.
+- 다르면(예: 15) `apps/api/docker-compose.test.yml`과 `.github/workflows/api-ci.yml`의 이미지를 같은 주 버전으로 바꾼다.
 
 ## 9. 기존 문서와 충돌하는 내용 (변경 목록)
 
@@ -306,7 +390,7 @@
 | 공통 작업 기준 10-3 | `GET /api/health` | `GET /health`, `GET /health/ready` 유지 (0장 사유) |
 | ERD v0.6 `users` | 이메일 UNIQUE + 자동 병합 금지 | 이메일 로그인 전용 · NULL 허용 · 정규화 UNIQUE |
 | ERD v0.6 `auth_identities` | `provider_subject` | `provider_user_id`로 이름 변경, `provider_email` 추가 |
-| ERD v0.6 `auth_sessions` | 해시·만료·폐기만 있음 | `family_id`, `replaced_by_id`, `last_used_at` 추가 |
+| ERD v0.6 `auth_sessions` | 한 테이블에 해시·만료·폐기 | `auth_sessions`(로그인 세션) + `auth_refresh_tokens`(개별 토큰)로 분리, 세션 최대 수명 고정 (5장) |
 | ERD v0.6 `work_requests` | 중복 제약 없음 | `(project_id, creator_id)` UNIQUE, `client_request_key` 추가 |
 | ERD v0.6 `terms_versions` | 요청+버전 UNIQUE | 요청당 `SIGNING` 1개 부분 UNIQUE 추가 |
 | ERD v0.6 `files`, D17 · PRD 15.6·24장 · 기능명세 FILE-01 | 300MB | 4장 표 |
@@ -320,8 +404,9 @@
 |---|---|
 | API CI (타입 검사·단위·DB 테스트·빌드) | PR #1에 추가 (`.github/workflows/api-ci.yml`) |
 | ESLint·Prettier·프론트엔드 CI | [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2) (프론트엔드와 공동 설정) |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 최신 `main`을 반영한 `feat/auth-email` (8장) |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전 | PR #1 병합 후 기존 `feat/auth-email` 상태를 확인하고 최신 `main`을 반영해 진행 (8장) |
 | 의뢰인·크리에이터 프로필 수정 API | 인증 PR 다음 프로필 PR |
 | shared 상태값 enum과 CHECK 일치 테스트 | 첫 테이블 PR에 포함 |
 | Supabase Realtime 자체 JWT 연동 검증 | 채팅 작업 전 별도 검증 |
 | Swagger/OpenAPI 문서 뼈대 | 결정 필요 (PR #1 보완 또는 별도 이슈) |
+| 팀 개발용 Supabase PostgreSQL 주 버전 확인 | 확인 후 테스트 DB·CI 이미지 맞춤 (8장) |

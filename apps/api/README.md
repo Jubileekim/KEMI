@@ -137,8 +137,16 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 - `code`: `@kemi/shared`의 `ERROR_CODES` 중 하나. 화면은 `message` 문구가 아니라 `code`로 분기한다.
 - 알 수 없는 서버 오류는 내부 내용을 숨기고 `500 INTERNAL_ERROR`로 응답한다.
 
-## 아직 검증하지 않은 것
+## 검증 상태
 
+**확인한 것** (2026-10-19)
+- 로컬 Docker 테스트 DB(PostgreSQL 17.11) 연결: DB 테스트 2개 통과 (DB 이름 확인, 실제 DB로 `/health/ready` 200)
+- GitHub Actions(PostgreSQL 서비스)에서 타입 검사·단위 테스트·DB 테스트·빌드 통과
+- 안전장치: `TEST_DATABASE_URL`이 없거나 `_test`가 아닌 DB를 가리키면 DB 테스트가 시작되지 않음
+
+**아직 확인하지 않은 것**
+- 마이그레이션 적용과 인증 DB 테스트: 아직 마이그레이션 파일이 없어서 `migrate deploy`는 "No pending migrations"로 끝난다. 지금의 DB 테스트는 연결 확인일 뿐이고, 인증 기능 테스트가 아니다.
+- 팀 개발용 Supabase의 PostgreSQL 주 버전 (테스트 DB를 같은 버전으로 맞춰야 함)
 - 실제 Supabase DB 연결과 마이그레이션 적용 (개발용 Supabase 프로젝트 준비 후 `/health/ready` 200 확인부터)
 - Render 배포와 헬스 체크 동작
 - Vercel rewrite를 거친 `/api/*` 호출
