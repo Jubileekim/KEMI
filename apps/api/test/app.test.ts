@@ -2,16 +2,14 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { createApp } from "../src/app.js";
 import AppError from "../src/http/app-error.js";
 import { errorHandler } from "../src/http/error-handler.js";
-
-const healthyDb = () => Promise.resolve();
+import { createTestApp } from "./support/test-app.js";
 
 describe("GET /health", () => {
   it("DB 상태와 관계없이 200을 반환한다", async () => {
     const checkDatabase = vi.fn(() => Promise.reject(new Error("db down")));
-    const res = await request(createApp({ checkDatabase })).get("/health");
+    const res = await request(createTestApp({ checkDatabase })).get("/health");
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: "ok" });
@@ -22,9 +20,7 @@ describe("GET /health", () => {
 
 describe("GET /health/ready", () => {
   it("DB 확인이 성공하면 200을 반환한다", async () => {
-    const res = await request(createApp({ checkDatabase: healthyDb })).get(
-      "/health/ready",
-    );
+    const res = await request(createTestApp()).get("/health/ready");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "ok", checks: { database: "ok" } });
@@ -34,7 +30,7 @@ describe("GET /health/ready", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const checkDatabase = () =>
       Promise.reject(new Error("password authentication failed"));
-    const res = await request(createApp({ checkDatabase })).get(
+    const res = await request(createTestApp({ checkDatabase })).get(
       "/health/ready",
     );
 
@@ -49,16 +45,14 @@ describe("GET /health/ready", () => {
 
 describe("공통 오류 형식", () => {
   it("없는 경로는 NOT_FOUND를 반환한다", async () => {
-    const res = await request(createApp({ checkDatabase: healthyDb })).get(
-      "/nope",
-    );
+    const res = await request(createTestApp()).get("/nope");
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("NOT_FOUND");
   });
 
   it("잘못된 JSON 본문은 INVALID_JSON을 반환한다", async () => {
-    const res = await request(createApp({ checkDatabase: healthyDb }))
+    const res = await request(createTestApp())
       .post("/health")
       .set("Content-Type", "application/json")
       .send('{"broken":');
@@ -68,9 +62,7 @@ describe("공통 오류 형식", () => {
   });
 
   it("x-powered-by 헤더를 보내지 않는다", async () => {
-    const res = await request(createApp({ checkDatabase: healthyDb })).get(
-      "/health",
-    );
+    const res = await request(createTestApp()).get("/health");
     expect(res.headers["x-powered-by"]).toBeUndefined();
   });
 });

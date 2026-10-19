@@ -1,7 +1,6 @@
 // KEMI 백엔드 Prisma 스키마
 // 테이블은 ERD v0.6과 docs/decisions/2026-10-19-backend-setup.md 결정을 기준으로
-// 기능 단위 PR에서 순서대로 추가한다. (초기 구성 단계: 모델 없음)
-// 회원·인증 테이블은 docs/erd/erd-v0.6-changes.md 명세대로 회원가입·로그인 PR에서 추가한다.
+// 기능 단위 PR에서 순서대로 추가한다. 변경 명세: docs/erd/erd-v0.6-changes.md
 //
 // 상태값 규칙: PostgreSQL enum 대신 text + CHECK 제약을 사용하고,
 // 허용 값은 @kemi/shared의 Zod enum과 같은 목록으로 관리한다.
@@ -15,4 +14,78 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── 회원·인증 ────────────────────────────────────────────────
+// CHECK 제약(역할·상태·제공자·폐기 사유·이메일 정규화 등)은 마이그레이션 SQL에 직접 작성했다.
+// 회원은 삭제하지 않고 상태로 관리하므로 FK는 삭제를 막는다(Restrict).
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  // 이메일 로그인 주소. 소셜 전용 가입자는 NULL. 정규화(trim + 소문자)한 값만 저장한다.
+  email        String?  @unique
+  // bcrypt 해시. 소셜 전용 계정은 NULL이며 이메일·비밀번호 로그인을 할 수 없다.
+  passwordHash String?  @map("password_hash")
+  name         String   @db.VarChar(20)
+  role         String
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  identities AuthIdentity[]
+  sessions   AuthSession[]
+
+  @@map("users")
+}
+
+model AuthIdentity {
+  id             BigInt   @id @default(autoincrement())
+  userId         BigInt   @map("user_id")
+  provider       String
+  providerUserId String   @map("provider_user_id")
+  // 제공자가 알려준 이메일(선택). users.email과 자동으로 병합하지 않는다.
+  providerEmail  String?  @map("provider_email")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("auth_identities")
+}
+
+// 로그인 세션 1건 = Refresh 토큰 계열 1개. id는 Access 토큰의 sid이며 회전해도 바뀌지 않는다.
+model AuthSession {
+  id           BigInt    @id @default(autoincrement())
+  userId       BigInt    @map("user_id")
+  // 로그인 시각 + 7일. 회전해도 연장하지 않는다.
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokeReason String?   @map("revoke_reason")
+  lastUsedAt   DateTime? @map("last_used_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  refreshTokens AuthRefreshToken[]
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+// 개별 Refresh 토큰. 원문은 저장하지 않고 SHA-256 해시만 둔다. 회전 이력 보존을 위해 삭제하지 않는다.
+model AuthRefreshToken {
+  id           BigInt    @id @default(autoincrement())
+  sessionId    BigInt    @map("session_id")
+  tokenHash    String    @unique @map("token_hash")
+  // 회전에 사용된 시각. NULL이면 아직 쓸 수 있다.
+  usedAt       DateTime? @map("used_at") @db.Timestamptz(3)
+  replacedById BigInt?   @unique @map("replaced_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session    AuthSession       @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  replacedBy AuthRefreshToken? @relation("RefreshTokenRotation", fields: [replacedById], references: [id], onDelete: Restrict)
+  replaces   AuthRefreshToken? @relation("RefreshTokenRotation")
+
+  @@index([sessionId])
+  @@map("auth_refresh_tokens")
 }

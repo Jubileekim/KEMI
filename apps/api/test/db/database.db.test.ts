@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../../src/app.js";
+import { createTestApp } from "../support/test-app.js";
 import { createTestPrismaClient, resetDatabase } from "../support/test-db.js";
 
 const prisma = createTestPrismaClient();
@@ -22,7 +22,8 @@ describe("테스트 DB 연결", () => {
   });
 
   it("실제 DB로 /health/ready가 200을 반환한다", async () => {
-    const app = createApp({
+    const app = createTestApp({
+      prisma,
       checkDatabase: async () => {
         await prisma.$queryRaw`SELECT 1`;
       },
