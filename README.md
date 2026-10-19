@@ -5,3 +5,6 @@
 ## 협업 규칙
 
 ## 개발 준비
+
+- 백엔드(`apps/api`) 실행 방법: [apps/api/README.md](apps/api/README.md)
+- 백엔드 초기 결정 기록: [docs/decisions/2026-10-19-backend-setup.md](docs/decisions/2026-10-19-backend-setup.md)

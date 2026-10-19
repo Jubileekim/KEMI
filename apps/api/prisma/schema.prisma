@@ -1,0 +1,18 @@
+// KEMI 백엔드 Prisma 스키마
+// 테이블은 ERD v0.6과 docs/decisions/2026-10-19-backend-setup.md 결정을 기준으로
+// 기능 단위 PR에서 순서대로 추가한다. (초기 구성 단계: 모델 없음)
+// 회원·인증 테이블은 docs/erd/erd-v0.6-changes.md 명세대로 회원가입·로그인 PR에서 추가한다.
+//
+// 상태값 규칙: PostgreSQL enum 대신 text + CHECK 제약을 사용하고,
+// 허용 값은 @kemi/shared의 Zod enum과 같은 목록으로 관리한다.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

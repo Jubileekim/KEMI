@@ -1,0 +1,27 @@
+{
+  "name": "@kemi/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "프론트엔드·백엔드 공통 요청 스키마·타입·오류 코드 (Prisma 모델은 포함하지 않음)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24.10 <25"
+  }
+}
