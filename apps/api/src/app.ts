@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import { createAuthRouter } from "./auth/auth.router.js";
 import type { AuthService } from "./auth/auth.service.js";
+import createDocsRouter from "./docs/docs.router.js";
 import { errorHandler, notFoundHandler } from "./http/error-handler.js";
 import { createHealthRouter, type DatabaseCheck } from "./routes/health.js";
 
@@ -11,6 +12,8 @@ export interface AppDependencies {
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
   trustProxyHops?: number;
+  // API 문서(/api/openapi.json, /api/docs)를 붙일지. 운영 환경에서는 끈다.
+  apiDocs?: boolean;
 }
 
 export function createApp({
@@ -18,6 +21,7 @@ export function createApp({
   authService,
   appOrigin,
   trustProxyHops = 0,
+  apiDocs = false,
 }: AppDependencies): Express {
   const app = express();
 
@@ -29,6 +33,9 @@ export function createApp({
 
   app.use(createHealthRouter(checkDatabase));
   app.use("/api/auth", createAuthRouter(authService, appOrigin));
+  if (apiDocs) {
+    app.use("/api", createDocsRouter());
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

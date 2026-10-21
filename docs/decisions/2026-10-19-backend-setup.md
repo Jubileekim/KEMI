@@ -587,9 +587,9 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
 | 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
 | 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                                         |
-| shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                                            |
+| shared 상태값 enum과 CHECK 일치 테스트                     | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                       |
 | Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                                         |
-| Swagger/OpenAPI 문서 뼈대                                  | 결정 필요 (PR #1 보완 또는 별도 이슈)                                                                                          |
+| Swagger/OpenAPI 문서                                       | 완료 — PR #11 병합. health·인증 API 문서와 Swagger UI(운영 환경 제외)                                                          |
 | 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                                                   |
 | 팀 개발용 Supabase DB 연결·`/health/ready` 확인            | 완료 — 로컬 API에서 개발용 Supabase로 `/health/ready` 200 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5)) |
 | 배포 환경(Render)에서 DB 연결·`/health/ready` 확인         | 미검증 — Render 배포 후 확인 (절차서 2단계)                                                                                    |

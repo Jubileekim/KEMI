@@ -109,6 +109,61 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 }
 ```
 
+## API 문서 (OpenAPI)
+
+- 개발 서버(`npm run dev:api`)에서 열 수 있다.
+  - Swagger UI: `http://localhost:4000/api/docs`
+  - 원본 JSON: `http://localhost:4000/api/openapi.json`
+- 운영 환경(`NODE_ENV=production`)에서는 문서 경로를 열지 않는다.
+- 문서 정의: `src/docs/openapi.ts`
+  - 요청 본문 스키마는 서버가 검증에 쓰는 `@kemi/shared`의 Zod 스키마에서 자동으로 만든다.
+  - 응답·오류 스키마는 직접 적는다.
+- `test/openapi.test.ts`가 확인하는 것
+  - 문서가 OpenAPI 3.1 규격에 맞는지
+  - 문서의 모든 경로가 실제 라우터에 있는지
+  - 가입·로그인 요청의 `email`이 `format: email`, `maxLength: 254`로 표시되는지
+- API를 추가·변경하면 이 문서도 같은 PR에서 고친다.
+
+### Swagger UI에서 `refresh`·`logout`이 403이 되는 이유
+
+- `POST /api/auth/refresh`와 `POST /api/auth/logout`은 쿠키만으로 동작하는 요청이다. 그래서 CSRF 방어로 요청의 `Origin`이 `APP_ORIGIN`(예: `http://localhost:5173`)과 같은지 검사한다.
+- Swagger UI는 `http://localhost:4000`에서 열리므로 요청의 `Origin`이 `http://localhost:4000`이 된다. 포트가 달라 다른 출처로 보고 `403 FORBIDDEN`이 난다. **정상 동작이다.**
+- 문서 도구를 쓰려고 `APP_ORIGIN`을 API 주소로 바꾸거나 Origin 검사를 끄지 않는다.
+- `signup`·`login`·`me`는 Origin 검사가 없어서 Swagger UI에서 바로 실행해 볼 수 있다.
+
+`refresh`·`logout`은 다음 방법으로 확인한다.
+
+1. **허용된 프론트엔드 출처에서 확인**
+   - `npm run dev:api`와 `npm run dev:web`을 함께 실행한다.
+   - `http://localhost:5173`을 열고 개발자 도구 콘솔에서 아래처럼 호출한다.
+   - 아직 로그인 화면이 없으면, 첫 줄처럼 콘솔에서 먼저 로그인한다. 테스트용 계정만 쓴다.
+   - Vite 개발 서버가 `/api`를 API 서버로 전달하면서 `Origin`(`http://localhost:5173`)을 유지하므로, 실제 사용자와 같은 조건이 된다.
+
+   ```js
+   await fetch("/api/auth/login", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+       email: "<테스트 계정>",
+       password: "<테스트 비밀번호>",
+     }),
+   }).then((res) => res.status);
+   await fetch("/api/auth/refresh", {
+     method: "POST",
+     credentials: "include",
+   }).then((res) => res.status);
+   await fetch("/api/auth/logout", {
+     method: "POST",
+     credentials: "include",
+   }).then((res) => res.status);
+   ```
+
+   - 응답의 토큰 값은 기록·공유하지 않는다.
+
+2. **통합 테스트로 확인**: `npm run test:api:db`의 `test/db/auth.db.test.ts`가 실제 테스트 DB로 다음을 검증한다.
+   - `Origin`을 붙인 갱신·동시 갱신·재사용 감지·로그아웃
+   - `Origin`이 없거나 다른 출처일 때 403
+
 ## 인증 API
 
 자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 5장·8장에 있다.
