@@ -16,6 +16,7 @@ function start(env: Env) {
     }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
+    apiDocs: env.NODE_ENV !== "production",
   });
 
   const server = app.listen(env.PORT, () => {

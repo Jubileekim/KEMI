@@ -10,6 +10,8 @@ const emailSchema = z
   .string()
   .trim()
   .max(254)
+  // 문서(OpenAPI)에 이메일 형식을 표시하기 위한 메타데이터. 검증·정규화 동작은 바꾸지 않는다.
+  .meta({ format: "email" })
   .pipe(z.email({ error: "이메일 형식이 올바르지 않습니다." }))
   .transform(normalizeEmail);
 
