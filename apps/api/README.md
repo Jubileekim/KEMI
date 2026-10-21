@@ -173,19 +173,35 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 
 자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 5장·8장에 있다.
 
-| 메서드·경로              | 하는 일                                                              | 성공 응답                                                            |
-| ------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `POST /api/auth/signup`  | 이메일·비밀번호·이름·역할(`CLIENT`/`CREATOR`)로 가입하고 바로 로그인 | `201` + `{ accessToken, accessTokenExpiresIn, user }` + Refresh 쿠키 |
-| `POST /api/auth/login`   | 이메일 로그인                                                        | `200` + 위와 같음                                                    |
-| `POST /api/auth/refresh` | Refresh 쿠키로 토큰 회전 (`Origin` 검사)                             | `200` + 새 Access 토큰 + 새 쿠키                                     |
-| `POST /api/auth/logout`  | 로그인 세션 폐기, 쿠키 삭제 (`Origin` 검사)                          | `204`                                                                |
-| `GET /api/auth/me`       | `Authorization: Bearer <accessToken>`으로 현재 사용자 조회           | `200` + `{ user }`                                                   |
+| 메서드·경로                         | 하는 일                                                              | 성공 응답                                                            |
+| ----------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `POST /api/auth/signup`             | 이메일·비밀번호·이름·역할(`CLIENT`/`CREATOR`)로 가입하고 바로 로그인 | `201` + `{ accessToken, accessTokenExpiresIn, user }` + Refresh 쿠키 |
+| `POST /api/auth/login`              | 이메일 로그인                                                        | `200` + 위와 같음                                                    |
+| `POST /api/auth/refresh`            | Refresh 쿠키로 토큰 회전 (`Origin` 검사)                             | `200` + 새 Access 토큰 + 새 쿠키                                     |
+| `POST /api/auth/logout`             | 로그인 세션 폐기, 쿠키 삭제 (`Origin` 검사)                          | `204`                                                                |
+| `GET /api/auth/me`                  | `Authorization: Bearer <accessToken>`으로 현재 사용자 조회           | `200` + `{ user }`                                                   |
+| `GET /api/auth/{provider}/start`    | 소셜 로그인 시작 (`google`·`kakao`, 브라우저 이동)                   | `302` 제공자 동의 화면                                               |
+| `GET /api/auth/{provider}/callback` | 제공자 콜백. 결과를 프론트엔드 `/auth/social/callback`으로 전달      | `302` + `result=login\|signup` 또는 `error=...`                      |
+| `GET /api/auth/social/signup`       | 가입 대기 중인 소셜 계정 정보 (가입 티켓 쿠키)                       | `200` + `{ provider, suggestedName, providerEmail }`                 |
+| `POST /api/auth/social/signup`      | 역할·표시 이름으로 소셜 가입 후 바로 로그인 (`Origin` 검사)          | `201` + 회원가입과 같음                                              |
 
 - 사용자 ID는 문자열이다(`"42"`). DB는 `bigint`다.
 - Access 토큰은 15분이다. 응답 본문으로 받아 메모리에만 보관한다.
 - Refresh 토큰은 `kemi_refresh` 쿠키(`HttpOnly; Secure; SameSite=Lax; Path=/api/auth`)로만 주고받는다. 로그인 세션은 로그인 시점부터 최대 7일이고, 회전해도 연장되지 않는다.
 - 요청 제한: 가입 1시간 10회, 로그인 15분 10회, 갱신 15분 60회(IP 기준). 넘으면 `429 RATE_LIMITED`
 - 오류 코드: `VALIDATION_FAILED`(400), `INVALID_CREDENTIALS`(401), `TOKEN_EXPIRED`(401), `UNAUTHENTICATED`(401), `SESSION_REVOKED`(401), `FORBIDDEN`(403), `EMAIL_ALREADY_EXISTS`(409), `REFRESH_RACE`(409, `details.retryAfterMs`), `RATE_LIMITED`(429)
+
+### 소셜 로그인 (Google·카카오)
+
+흐름과 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 11장, 프론트엔드 연동 방법은 [소셜 로그인 연동 문서](../../docs/handoff/2026-10-21-social-login.md)에 있다.
+
+- 제공자 콘솔에 등록할 콜백 주소: `{APP_ORIGIN}/api/auth/google/callback`, `{APP_ORIGIN}/api/auth/kakao/callback`
+  - 로컬: `http://localhost:5173/api/auth/...` (Vite가 `/api`를 API 서버로 넘긴다)
+  - 배포: Vercel 도메인 (rewrite로 Render에 전달)
+- 환경 변수가 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내한다. 키 없이도 서버는 시작된다.
+- 제공자 요청은 요청마다 10초 안에 끝나야 하며, 넘으면 취소하고 `error=SOCIAL_FAILED`로 보낸다.
+- 요청 제한: 시작·콜백 각각 IP당 15분 20회(서로 따로 센다). 넘으면 `error=SOCIAL_RATE_LIMITED`로 보낸다.
+- **[미검증] 실제 Google·카카오 로그인은 아직 확인하지 않았다.** 테스트는 가짜 제공자로만 실행한다. 준비할 앱 설정·키 이름·콜백 주소는 연동 문서의 "팀원 준비 목록"에 있다.
 
 ## 프로필 API
 
@@ -220,16 +236,19 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 
 ## 환경 변수
 
-| 이름                     | 필수 | 기본값         | 설명                                                                                                                            |
-| ------------------------ | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`               |      | `development`  | `development` / `test` / `production`                                                                                           |
-| `PORT`                   |      | `4000`         | Render는 자동으로 지정한다                                                                                                      |
-| `DATABASE_URL`           | ✅   |                | 실행용 PostgreSQL 주소                                                                                                          |
-| `DATABASE_POOL_MAX`      |      | `5`            | 서버 한 대의 최대 DB 연결 수                                                                                                    |
-| `MIGRATION_DATABASE_URL` |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                                                                                       |
-| `JWT_ACCESS_SECRET`      | ✅   |                | Access 토큰 서명 키 (32자 이상)                                                                                                 |
-| `APP_ORIGIN`             | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다                                                                   |
-| `TRUST_PROXY_HOPS`       |      | `0`            | 앞단 프록시 개수. 요청 제한의 클라이언트 IP 판단에 쓴다. 배포 값은 배포 후 확인해서 정한다 (결정 기록 8장 "클라이언트 IP 판단") |
+| 이름                                       | 필수 | 기본값         | 설명                                                                                                                            |
+| ------------------------------------------ | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                 |      | `development`  | `development` / `test` / `production`                                                                                           |
+| `PORT`                                     |      | `4000`         | Render는 자동으로 지정한다                                                                                                      |
+| `DATABASE_URL`                             | ✅   |                | 실행용 PostgreSQL 주소                                                                                                          |
+| `DATABASE_POOL_MAX`                        |      | `5`            | 서버 한 대의 최대 DB 연결 수                                                                                                    |
+| `MIGRATION_DATABASE_URL`                   |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                                                                                       |
+| `JWT_ACCESS_SECRET`                        | ✅   |                | Access 토큰 서명 키 (32자 이상)                                                                                                 |
+| `APP_ORIGIN`                               | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다                                                                   |
+| `TRUST_PROXY_HOPS`                         |      | `0`            | 앞단 프록시 개수. 요청 제한의 클라이언트 IP 판단에 쓴다. 배포 값은 배포 후 확인해서 정한다 (결정 기록 8장 "클라이언트 IP 판단") |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |      |                | Google 로그인. 둘 다 넣어야 켜진다                                                                                              |
+| `KAKAO_REST_API_KEY`                       |      |                | 카카오 로그인(REST API 키). 넣으면 켜진다                                                                                       |
+| `KAKAO_CLIENT_SECRET`                      |      |                | 카카오 Client Secret. 앱에서 끈 경우에만 비운다                                                                                 |
 
 실제 값은 `.env`(커밋 금지)나 Render 대시보드의 Environment에만 넣는다. 저장소에는 `.env.example`만 둔다.
 

@@ -58,4 +58,29 @@ describe("parseEnv", () => {
       }),
     );
   });
+
+  it("소셜 로그인 키는 선택이며, 빈 값은 설정하지 않은 것으로 본다", () => {
+    const env = parseEnv({
+      ...REQUIRED,
+      GOOGLE_CLIENT_ID: "",
+      GOOGLE_CLIENT_SECRET: " ",
+      KAKAO_REST_API_KEY: "kakao-key",
+    });
+    expect(env.GOOGLE_CLIENT_ID).toBeUndefined();
+    expect(env.GOOGLE_CLIENT_SECRET).toBeUndefined();
+    expect(env.KAKAO_REST_API_KEY).toBe("kakao-key");
+    expect(env.KAKAO_CLIENT_SECRET).toBeUndefined();
+  });
+
+  it("Google 키는 ID와 Secret을 함께 넣어야 하고, 오류에 값은 나오지 않는다", () => {
+    expect(() =>
+      parseEnv({ ...REQUIRED, GOOGLE_CLIENT_ID: "google-client-id-value" }),
+    ).toThrow(/GOOGLE_CLIENT_SECRET/);
+    expect(() =>
+      parseEnv({ ...REQUIRED, GOOGLE_CLIENT_SECRET: "google-secret-value" }),
+    ).not.toThrow(/google-secret-value/);
+    expect(() =>
+      parseEnv({ ...REQUIRED, GOOGLE_CLIENT_SECRET: "google-secret-value" }),
+    ).toThrow(EnvValidationError);
+  });
 });
