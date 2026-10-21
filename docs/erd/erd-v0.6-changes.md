@@ -114,7 +114,7 @@ v0.6에서는 한 테이블이 로그인 세션과 개별 Refresh 토큰을 함�
 | `is_available`, `available_from` | 작업 가능 여부(기본 false)·시작일(date)                               |
 | `created_at`, `updated_at`       |                                                                       |
 
-- ERD v0.6의 `jsonb` 목록 대신 `text[]`를 쓴다. DB `CHECK`로 허용 값을 검사하기 위해서다.
+- ERD v0.6의 `jsonb` 목록 대신 `text[]`를 쓴다. 두 방식 모두 CHECK로 허용 값을 검사할 수 있지만, `text[]`는 열 타입만으로 문자열 배열이 보장되고 Prisma에서 `string[]`로 바로 받는다. 이유는 결정 기록 10장에 있다.
 - `skills`·`creator_skills`, 경력·링크·이미지는 다음 PR에서 추가한다.
 
 ## 접근 제어 (Supabase Data API)

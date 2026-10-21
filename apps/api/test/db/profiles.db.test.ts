@@ -168,28 +168,6 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
     expect((await getProfile(accessToken)).body).toEqual(second.body);
   });
 
-  it("null을 보내면 저장된 선택 항목을 지운다", async () => {
-    const { accessToken } = await signup("CLIENT");
-    await patchProfile(accessToken, {
-      brandName: "KEMI",
-      industry: "BEAUTY",
-      socialUrl: "https://sns.example.com/kemi",
-    });
-
-    const res = await patchProfile(accessToken, {
-      brandName: null,
-      industry: null,
-      socialUrl: null,
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body.profile).toMatchObject({
-      brandName: null,
-      industry: null,
-      socialUrl: null,
-    });
-  });
-
   it("브랜드 정보를 비워 보내도 오류 없이 저장된다", async () => {
     const { accessToken, userId } = await signup("CLIENT");
 
@@ -214,9 +192,6 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
     ["크리에이터 항목", { niche: "BEAUTY" }],
     ["공개 상태", { serviceStatus: "PUBLIC" }],
     ["너무 긴 브랜드명", { brandName: "가".repeat(51) }],
-    ["분야에 빈 문자열", { industry: "" }],
-    ["이름에 null", { name: null }],
-    ["빈 이름", { name: "  " }],
   ])("%s는 400이고 저장되지 않는다", async (_label, body) => {
     const { accessToken } = await signup("CLIENT");
 
@@ -302,25 +277,6 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     expect(row.serviceStatus).toBe("DRAFT");
   });
 
-  it("목록을 빈 배열로, 날짜를 null로 되돌릴 수 있다", async () => {
-    const { accessToken } = await signup("CREATOR");
-    await patchProfile(accessToken, {
-      contentStyles: ["BRIGHT"],
-      availableFrom: "2026-11-01",
-    });
-
-    const res = await patchProfile(accessToken, {
-      contentStyles: [],
-      availableFrom: null,
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body.profile).toMatchObject({
-      contentStyles: [],
-      availableFrom: null,
-    });
-  });
-
   it("공개 상태를 이미 바꾼 프로필도 저장으로 상태가 바뀌지 않는다", async () => {
     const { accessToken, userId } = await signup("CREATOR");
     await prisma.creatorProfile.create({
@@ -340,10 +296,6 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     ["없는 스타일", { contentStyles: ["DARK"] }],
     ["없는 제작 역할", { productionRoles: ["DIRECTING"] }],
     ["날짜 형식이 아닌 값", { availableFrom: "2026-13-01" }],
-    ["목록 대신 null", { productionRoles: null }],
-    ["작업 가능 여부에 null", { isAvailable: null }],
-    ["날짜에 빈 문자열", { availableFrom: "" }],
-    ["분야에 빈 문자열", { niche: "" }],
   ])("%s는 400이고 저장되지 않는다", async (_label, body) => {
     const { accessToken } = await signup("CREATOR");
 
@@ -352,6 +304,111 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(await prisma.creatorProfile.count()).toBe(0);
+  });
+});
+
+// 결정 기록 10장 "PATCH 값 규칙" 표와 같은 내용이다. 표를 바꾸면 여기도 함께 바꾼다.
+// CLEAR: 저장된 값을 지운다(null, 목록은 해당 없음) / REJECT: 400이고 저장된 값이 그대로다
+type Outcome = "CLEAR" | "REJECT";
+const PATCH_RULES: [
+  role: "CLIENT" | "CREATOR",
+  field: string,
+  saved: unknown,
+  blank: Outcome,
+  nullValue: Outcome,
+][] = [
+  ["CLIENT", "brandName", "KEMI", "CLEAR", "CLEAR"],
+  ["CLIENT", "introduction", "소개", "CLEAR", "CLEAR"],
+  ["CLIENT", "websiteUrl", "https://kemi.example.com", "CLEAR", "CLEAR"],
+  ["CLIENT", "socialUrl", "https://sns.example.com/kemi", "CLEAR", "CLEAR"],
+  ["CLIENT", "industry", "BEAUTY", "REJECT", "CLEAR"],
+  ["CLIENT", "name", "원래 이름", "REJECT", "REJECT"],
+  ["CREATOR", "introduction", "소개", "CLEAR", "CLEAR"],
+  ["CREATOR", "workMethod", "주 2회 촬영", "CLEAR", "CLEAR"],
+  ["CREATOR", "niche", "FOOD", "REJECT", "CLEAR"],
+  ["CREATOR", "contentStyles", ["BRIGHT"], "REJECT", "REJECT"],
+  ["CREATOR", "productionRoles", ["EDITING"], "REJECT", "REJECT"],
+  ["CREATOR", "availableFrom", "2026-11-01", "REJECT", "CLEAR"],
+  ["CREATOR", "isAvailable", true, "REJECT", "REJECT"],
+  ["CREATOR", "name", "원래 이름", "REJECT", "REJECT"],
+];
+
+// 표의 각 칸을 테스트 하나로 펼친다: 보낸 값과 기대 결과
+const PATCH_CASES = PATCH_RULES.flatMap(
+  ([role, field, saved, blank, nullValue]) =>
+    (
+      [
+        ["빈 문자열", "", blank],
+        ["공백만", "   ", blank],
+        ["null", null, nullValue],
+      ] as const
+    ).map(
+      ([label, sent, outcome]) =>
+        [role, field, label, saved, sent, outcome] as const,
+    ),
+);
+
+function valueOf(
+  body: { name: unknown; profile: Record<string, unknown> },
+  field: string,
+): unknown {
+  return field === "name" ? body.name : body.profile[field];
+}
+
+describe("PATCH 값 규칙 (결정 기록 10장 표)", () => {
+  it.each(PATCH_RULES)(
+    "%s %s: 보내지 않으면 저장된 값이 그대로다",
+    async (role, field, saved) => {
+      const { accessToken } = await signup(role);
+      await patchProfile(accessToken, { [field]: saved });
+
+      const res = await patchProfile(accessToken, {});
+
+      expect(res.status).toBe(200);
+      expect(valueOf(res.body, field)).toEqual(saved);
+    },
+  );
+
+  it.each(PATCH_CASES)(
+    "%s %s: %s → %s",
+    async (role, field, _label, saved, sent, outcome) => {
+      const { accessToken } = await signup(role);
+      expect((await patchProfile(accessToken, { [field]: saved })).status).toBe(
+        200,
+      );
+
+      const res = await patchProfile(accessToken, { [field]: sent });
+
+      if (outcome === "REJECT") {
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_FAILED");
+        expect(valueOf((await getProfile(accessToken)).body, field)).toEqual(
+          saved,
+        );
+      } else {
+        expect(res.status).toBe(200);
+        expect(valueOf(res.body, field)).toBeNull();
+      }
+    },
+  );
+
+  it("복수 선택은 []로 모두 지운다", async () => {
+    const { accessToken } = await signup("CREATOR");
+    await patchProfile(accessToken, {
+      contentStyles: ["BRIGHT"],
+      productionRoles: ["EDITING"],
+    });
+
+    const res = await patchProfile(accessToken, {
+      contentStyles: [],
+      productionRoles: [],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.profile).toMatchObject({
+      contentStyles: [],
+      productionRoles: [],
+    });
   });
 });
 

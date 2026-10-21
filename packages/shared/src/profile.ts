@@ -10,7 +10,8 @@ import {
   productionRoleSchema,
 } from "./status.js";
 
-// 선택 입력 문자열: 앞뒤 공백을 지우고, 빈 값은 "입력 안 함"(null)으로 저장한다. (빈 선택값은 오류가 아니다)
+// 자유 입력 문자열: 앞뒤 공백을 지우고, 빈 값은 "입력 안 함"(null)으로 저장한다(오류 아님).
+// 항목별 규칙은 결정 기록 10장 "PATCH 값 규칙" 표에 있다.
 function optionalText(max: number) {
   return z
     .string()
