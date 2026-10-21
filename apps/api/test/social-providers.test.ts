@@ -3,6 +3,7 @@ import {
   createGoogleProvider,
   createKakaoProvider,
   type FetchFn,
+  PROVIDER_TIMEOUT_MS,
 } from "../src/auth/social/providers.js";
 import AppError from "../src/http/app-error.js";
 
@@ -74,7 +75,9 @@ describe("Google 제공자", () => {
       },
     ]);
 
-    const profile = await createGoogleProvider(config, fetchFn).fetchProfile({
+    const profile = await createGoogleProvider(config, {
+      fetchFn,
+    }).fetchProfile({
       code: "auth-code",
       codeVerifier: "verifier",
       redirectUri: REDIRECT_URI,
@@ -106,7 +109,9 @@ describe("Google 제공자", () => {
       { body: { sub: "1", email: "user@gmail.com", email_verified: false } },
     ]);
 
-    const profile = await createGoogleProvider(config, fetchFn).fetchProfile({
+    const profile = await createGoogleProvider(config, {
+      fetchFn,
+    }).fetchProfile({
       code: "c",
       codeVerifier: "v",
       redirectUri: REDIRECT_URI,
@@ -125,7 +130,7 @@ describe("Google 제공자", () => {
     const { fetchFn } = fakeFetch(responses);
 
     await expect(
-      createGoogleProvider(config, fetchFn).fetchProfile({
+      createGoogleProvider(config, { fetchFn }).fetchProfile({
         code: "c",
         codeVerifier: "v",
         redirectUri: REDIRECT_URI,
@@ -175,7 +180,7 @@ describe("카카오 제공자", () => {
 
     const profile = await createKakaoProvider(
       { restApiKey: "kakao-key", clientSecret: "kakao-secret" },
-      fetchFn,
+      { fetchFn },
     ).fetchProfile({ code: "c", codeVerifier: "v", redirectUri: REDIRECT_URI });
 
     expect(profile).toEqual({
@@ -222,7 +227,7 @@ describe("카카오 제공자", () => {
 
       const profile = await createKakaoProvider(
         { restApiKey: "kakao-key" },
-        fetchFn,
+        { fetchFn },
       ).fetchProfile({
         code: "c",
         codeVerifier: "v",
@@ -233,4 +238,85 @@ describe("카카오 제공자", () => {
       expect(sent[0]?.body?.has("client_secret")).toBe(false);
     },
   );
+});
+
+describe("제공자 요청 제한 시간", () => {
+  const input = { code: "c", codeVerifier: "v", redirectUri: REDIRECT_URI };
+  const isProviderFailure = (err: unknown) =>
+    err instanceof AppError && err.code === "SERVICE_UNAVAILABLE";
+
+  // 응답을 보내지 않는 제공자. 요청이 취소되면(signal) 그 사실을 기록한다.
+  function hangingFetch() {
+    const signals: AbortSignal[] = [];
+    const fetchFn: FetchFn = (_input, init) => {
+      if (init?.signal) signals.push(init.signal);
+      return new Promise<Response>(() => {});
+    };
+    return { fetchFn, signals };
+  }
+
+  it("기본 제한 시간은 10초다", () => {
+    expect(PROVIDER_TIMEOUT_MS).toBe(10_000);
+  });
+
+  it("토큰 교환 응답이 오지 않으면 제한 시간 뒤 요청을 취소하고 실패한다 (Google)", async () => {
+    const { fetchFn, signals } = hangingFetch();
+    const started = Date.now();
+
+    await expect(
+      createGoogleProvider(
+        { clientId: "id", clientSecret: "secret" },
+        { fetchFn, timeoutMs: 50 },
+      ).fetchProfile(input),
+    ).rejects.toSatisfy(isProviderFailure);
+
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(signals).toHaveLength(1);
+    expect(signals[0]?.aborted).toBe(true);
+  });
+
+  it("응답 본문을 읽다가 멈춰도 제한 시간 뒤 실패한다 (카카오 사용자 정보)", async () => {
+    const signals: AbortSignal[] = [];
+    let calls = 0;
+    const fetchFn: FetchFn = async (_input, init) => {
+      if (init?.signal) signals.push(init.signal);
+      calls += 1;
+      if (calls === 1) {
+        return new Response(JSON.stringify({ access_token: "t" }));
+      }
+      // 헤더는 바로 오지만 본문이 끝나지 않는 응답
+      return new Response(new ReadableStream({ start() {} }));
+    };
+
+    await expect(
+      createKakaoProvider(
+        { restApiKey: "kakao-key" },
+        { fetchFn, timeoutMs: 50 },
+      ).fetchProfile(input),
+    ).rejects.toSatisfy(isProviderFailure);
+
+    expect(calls).toBe(2);
+    // 요청마다 제한 시간(signal)을 따로 두고, 멈춘 둘째 요청이 취소됐다.
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).not.toBe(signals[1]);
+    expect(signals[1]?.aborted).toBe(true);
+  });
+
+  it("네트워크 오류도 같은 실패로 바꾸고 원문을 드러내지 않는다", async () => {
+    const fetchFn: FetchFn = async () => {
+      throw new Error("connect ECONNREFUSED secret-detail");
+    };
+
+    const err: unknown = await createGoogleProvider(
+      { clientId: "id", clientSecret: "secret" },
+      { fetchFn },
+    )
+      .fetchProfile(input)
+      .catch((caught: unknown) => caught);
+
+    expect(isProviderFailure(err)).toBe(true);
+    expect(String(err instanceof Error ? err.message : err)).not.toContain(
+      "secret-detail",
+    );
+  });
 });

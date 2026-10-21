@@ -27,6 +27,14 @@ export interface SocialProvider {
 
 export type FetchFn = typeof fetch;
 
+// 제공자 요청 하나(연결·응답 헤더·본문 읽기 전체)의 제한 시간 [제안]
+export const PROVIDER_TIMEOUT_MS = 10_000;
+
+export interface ProviderOptions {
+  fetchFn?: FetchFn;
+  timeoutMs?: number;
+}
+
 function providerFailed(): AppError {
   return new AppError(
     503,
@@ -35,14 +43,38 @@ function providerFailed(): AppError {
   );
 }
 
-async function readJson<T>(
-  response: Response,
+// 제공자에 요청하고 JSON 응답을 검사한다. 제한 시간이 지나면 signal로 실제 HTTP 요청(본문 읽기 포함)을 취소하고,
+// 제공자가 signal을 따르지 않더라도 기다리지 않고 실패로 끝낸다. 실패는 모두 같은 오류로 바꾼다(응답 원문은 남기지 않는다).
+async function requestJson<T>(
+  fetchFn: FetchFn,
+  url: string,
+  init: RequestInit,
   schema: z.ZodType<T>,
+  timeoutMs: number,
 ): Promise<T> {
-  if (!response.ok) throw providerFailed();
-  const result = schema.safeParse(await response.json());
-  if (!result.success) throw providerFailed();
-  return result.data;
+  const signal = AbortSignal.timeout(timeoutMs);
+  const timedOut = new Promise<never>((_resolve, reject) => {
+    signal.addEventListener("abort", () => reject(providerFailed()), {
+      once: true,
+    });
+  });
+  try {
+    const response = await Promise.race([
+      fetchFn(url, { ...init, signal }),
+      timedOut,
+    ]);
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw providerFailed();
+    }
+    const body: unknown = await Promise.race([response.json(), timedOut]);
+    const result = schema.safeParse(body);
+    if (!result.success) throw providerFailed();
+    return result.data;
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw providerFailed();
+  }
 }
 
 const tokenResponseSchema = z.object({ access_token: z.string().min(1) });
@@ -68,7 +100,7 @@ const googleUserSchema = z.object({
 // Google OpenID Connect (Authorization Code + PKCE)
 export function createGoogleProvider(
   { clientId, clientSecret }: GoogleConfig,
-  fetchFn: FetchFn = fetch,
+  { fetchFn = fetch, timeoutMs = PROVIDER_TIMEOUT_MS }: ProviderOptions = {},
 ): SocialProvider {
   return {
     provider: "GOOGLE",
@@ -86,8 +118,10 @@ export function createGoogleProvider(
       return url.toString();
     },
     async fetchProfile({ code, codeVerifier, redirectUri }) {
-      const token = await readJson(
-        await fetchFn("https://oauth2.googleapis.com/token", {
+      const token = await requestJson(
+        fetchFn,
+        "https://oauth2.googleapis.com/token",
+        {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
@@ -98,15 +132,17 @@ export function createGoogleProvider(
             code,
             code_verifier: codeVerifier,
           }),
-        }),
+        },
         tokenResponseSchema,
+        timeoutMs,
       );
       // 토큰을 서버가 Google에서 직접(HTTPS) 받았으므로 userinfo 응답을 그대로 신뢰한다.
-      const user = await readJson(
-        await fetchFn("https://openidconnect.googleapis.com/v1/userinfo", {
-          headers: { Authorization: `Bearer ${token.access_token}` },
-        }),
+      const user = await requestJson(
+        fetchFn,
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        { headers: { Authorization: `Bearer ${token.access_token}` } },
         googleUserSchema,
+        timeoutMs,
       );
       return {
         providerUserId: user.sub,
@@ -140,7 +176,7 @@ const kakaoUserSchema = z.object({
 // kakao_account.email·is_email_valid·is_email_verified, kakao_account.profile.nickname(모두 선택, 동의항목 필요).
 export function createKakaoProvider(
   { restApiKey, clientSecret }: KakaoConfig,
-  fetchFn: FetchFn = fetch,
+  { fetchFn = fetch, timeoutMs = PROVIDER_TIMEOUT_MS }: ProviderOptions = {},
 ): SocialProvider {
   return {
     provider: "KAKAO",
@@ -162,25 +198,31 @@ export function createKakaoProvider(
         code,
       });
       if (clientSecret) body.set("client_secret", clientSecret);
-      const token = await readJson(
-        await fetchFn("https://kauth.kakao.com/oauth/token", {
+      const token = await requestJson(
+        fetchFn,
+        "https://kauth.kakao.com/oauth/token",
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
           },
           body,
-        }),
+        },
         tokenResponseSchema,
+        timeoutMs,
       );
-      const user = await readJson(
-        // 문서(사용자 정보 조회)에 Content-Type이 필수로 적혀 있어 함께 보낸다.
-        await fetchFn("https://kapi.kakao.com/v2/user/me", {
+      // 문서(사용자 정보 조회)에 Content-Type이 필수로 적혀 있어 함께 보낸다.
+      const user = await requestJson(
+        fetchFn,
+        "https://kapi.kakao.com/v2/user/me",
+        {
           headers: {
             Authorization: `Bearer ${token.access_token}`,
             "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
           },
-        }),
+        },
         kakaoUserSchema,
+        timeoutMs,
       );
       const account = user.kakao_account;
       return {

@@ -194,6 +194,8 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
   - 로컬: `http://localhost:5173/api/auth/...` (Vite가 `/api`를 API 서버로 넘긴다)
   - 배포: Vercel 도메인 (rewrite로 Render에 전달)
 - 환경 변수가 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내한다. 키 없이도 서버는 시작된다.
+- 제공자 요청은 요청마다 10초 안에 끝나야 하며, 넘으면 취소하고 `error=SOCIAL_FAILED`로 보낸다.
+- 요청 제한: 시작·콜백 각각 IP당 15분 20회(서로 따로 센다). 넘으면 `error=SOCIAL_RATE_LIMITED`로 보낸다.
 - **[미검증] 실제 Google·카카오 로그인은 아직 확인하지 않았다.** 테스트는 가짜 제공자로만 실행한다. 준비할 앱 설정·키 이름·콜백 주소는 연동 문서의 "팀원 준비 목록"에 있다.
 
 ## 프로필 API

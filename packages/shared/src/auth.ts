@@ -78,10 +78,12 @@ export type SocialProviderPath = (typeof SOCIAL_PROVIDER_PATHS)[number];
 // - error=...: 아래 값 중 하나
 // SOCIAL_CANCELLED: 사용자가 동의를 취소함 / SOCIAL_FAILED: 검증·통신 실패(다시 시도)
 // SOCIAL_UNAVAILABLE: 서버에 해당 제공자 설정이 없음 / FORBIDDEN: 이용 제한·탈퇴 회원
+// SOCIAL_RATE_LIMITED: 시작 또는 콜백 요청이 너무 많음(잠시 후 다시 시도)
 export const SOCIAL_CALLBACK_ERRORS = [
   "SOCIAL_CANCELLED",
   "SOCIAL_FAILED",
   "SOCIAL_UNAVAILABLE",
+  "SOCIAL_RATE_LIMITED",
   "FORBIDDEN",
 ] as const;
 export type SocialCallbackError = (typeof SOCIAL_CALLBACK_ERRORS)[number];

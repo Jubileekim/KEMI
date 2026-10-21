@@ -1,14 +1,17 @@
 import request, { type Response } from "supertest";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeJwt, SignJWT } from "jose";
 import {
   OAUTH_STATE_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
   SOCIAL_SIGNUP_COOKIE_NAME,
 } from "../../src/auth/auth.router.js";
-import type {
-  SocialProfile,
-  SocialProvider,
+import { SOCIAL_RATE_LIMITS } from "../../src/auth/rate-limits.js";
+import {
+  createGoogleProvider,
+  type FetchFn,
+  type SocialProfile,
+  type SocialProvider,
 } from "../../src/auth/social/providers.js";
 import {
   createTestApp,
@@ -531,5 +534,117 @@ describe("가입 티켓 수명", () => {
 
     expect(again.status).toBe(409);
     expect(await prisma.user.count()).toBe(1);
+  });
+});
+
+// 같은 요청을 순서대로 n번 보낸다(요청 제한 횟수를 정확히 세기 위해).
+async function sequentially<T>(times: number, send: (n: number) => Promise<T>) {
+  const results: T[] = [];
+  await Array.from({ length: times }, (_, n) => n).reduce(
+    (previous, n) =>
+      previous.then(async () => {
+        results.push(await send(n));
+      }),
+    Promise.resolve(),
+  );
+  return results;
+}
+
+describe("소셜 로그인 요청 제한", () => {
+  it(`시작과 콜백은 따로 센다: 로그인 ${SOCIAL_RATE_LIMITS.start / 2}번(시작+콜백) 뒤에도 다음 시작이 막히지 않는다`, async () => {
+    // 시작·콜백이 같은 카운터를 쓰면 이 횟수에서 한도(start)를 다 써서 다음 시작이 막힌다.
+    await sequentially(SOCIAL_RATE_LIMITS.start / 2, async (n) => {
+      const callback = await googleCallback(
+        { ...GOOGLE_USER, providerUserId: `flow-${n}` },
+        `flow-code-${n}`,
+      );
+      expect(appRedirectOf(callback).get("result")).toBe("signup");
+    });
+
+    const next = await request(app).get("/api/auth/google/start");
+
+    expect(next.status).toBe(302);
+    expect(new URL(String(next.headers.location)).origin).toBe(
+      "https://provider.test",
+    );
+  });
+
+  it("시작 한도를 다 써도 콜백은 그대로 처리되고, 넘친 시작은 안내 화면으로 간다", async () => {
+    profilesByCode.set("code-after-limit", GOOGLE_USER);
+    const { state, stateCookie } = await startGoogle();
+    await sequentially(SOCIAL_RATE_LIMITS.start - 1, () =>
+      request(app).get("/api/auth/google/start"),
+    );
+
+    const limited = await request(app).get("/api/auth/google/start");
+    const callback = await request(app)
+      .get("/api/auth/google/callback")
+      .query({ code: "code-after-limit", state })
+      .set("Cookie", stateCookie);
+
+    expect(appRedirectOf(limited).get("error")).toBe("SOCIAL_RATE_LIMITED");
+    expect(appRedirectOf(callback).get("result")).toBe("signup");
+  });
+
+  it("콜백 한도를 넘으면 JSON 오류가 아니라 안내 화면으로 보내고 state 쿠키를 지운다", async () => {
+    const { stateCookie } = await startGoogle();
+    await sequentially(SOCIAL_RATE_LIMITS.callback, () =>
+      request(app)
+        .get("/api/auth/google/callback")
+        .query({ code: "x", state: "wrong" })
+        .set("Cookie", stateCookie),
+    );
+
+    const limited = await request(app)
+      .get("/api/auth/google/callback")
+      .query({ code: "x", state: "wrong" })
+      .set("Cookie", stateCookie);
+
+    expect(appRedirectOf(limited).get("error")).toBe("SOCIAL_RATE_LIMITED");
+    expect(cookieOf(limited, OAUTH_STATE_COOKIE_NAME)).toMatch(
+      new RegExp(`^${OAUTH_STATE_COOKIE_NAME}=;`),
+    );
+    expect(limited.headers.ratelimit).toBeDefined();
+  });
+});
+
+describe("제공자 응답 지연", () => {
+  it("제공자가 응답하지 않으면 제한 시간 뒤 요청을 취소하고 SOCIAL_FAILED로 보낸다 (토큰·원문 미기록)", async () => {
+    const signals: AbortSignal[] = [];
+    const hanging: FetchFn = (_input, init) => {
+      if (init?.signal) signals.push(init.signal);
+      return new Promise<globalThis.Response>(() => {});
+    };
+    const slowApp = createTestApp({
+      prisma,
+      socialProviders: {
+        google: createGoogleProvider(
+          { clientId: "test-client", clientSecret: "test-client-secret" },
+          { fetchFn: hanging, timeoutMs: 100 },
+        ),
+      },
+    });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const start = await request(slowApp).get("/api/auth/google/start");
+      const state = new URL(String(start.headers.location)).searchParams.get(
+        "state",
+      );
+
+      const res = await request(slowApp)
+        .get("/api/auth/google/callback")
+        .query({ code: "secret-auth-code", state })
+        .set("Cookie", pairOf(start, OAUTH_STATE_COOKIE_NAME) ?? "");
+
+      expect(appRedirectOf(res).get("error")).toBe("SOCIAL_FAILED");
+      expect(signals).toHaveLength(1);
+      expect(signals[0]?.aborted).toBe(true);
+      expect(await prisma.user.count()).toBe(0);
+      const logged = errors.mock.calls.flat().map(String).join("\n");
+      expect(logged).not.toContain("secret-auth-code");
+      expect(logged).not.toContain("test-client-secret");
+    } finally {
+      errors.mockRestore();
+    }
   });
 });

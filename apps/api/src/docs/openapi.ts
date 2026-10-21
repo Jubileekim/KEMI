@@ -223,15 +223,15 @@ const openApiDocument = {
         tags: ["auth"],
         summary: "소셜 로그인 시작 (브라우저 이동)",
         description:
-          "fetch가 아니라 브라우저 주소 이동으로 연다. 제공자 동의 화면으로 302 이동하고, state·PKCE 값을 `kemi_oauth_state` 쿠키(10분)에 담는다. 서버에 제공자 설정이 없으면 프론트엔드로 `error=SOCIAL_UNAVAILABLE`과 함께 돌려보낸다. 요청 제한: 로그인과 같음.",
+          "fetch가 아니라 브라우저 주소 이동으로 연다. 제공자 동의 화면으로 302 이동하고, state·PKCE 값을 `kemi_oauth_state` 쿠키(10분)에 담는다. 서버에 제공자 설정이 없으면 프론트엔드로 `error=SOCIAL_UNAVAILABLE`과 함께 돌려보낸다. 요청 제한: IP당 15분 20회, 콜백과 따로 센다 [제안]. 넘으면 429 JSON 대신 프론트엔드로 `error=SOCIAL_RATE_LIMITED`와 함께 보낸다.",
         parameters: [providerParam],
         responses: {
           302: {
-            description: "제공자 동의 화면 또는 프론트엔드(설정 없음)로 이동",
+            description:
+              "제공자 동의 화면, 또는 프론트엔드(설정 없음 `SOCIAL_UNAVAILABLE`, 요청 제한 `SOCIAL_RATE_LIMITED`)로 이동",
             headers: { Location: { schema: { type: "string" } } },
           },
           404: errorResponse("지원하지 않는 제공자 (`NOT_FOUND`)"),
-          429: rateLimited,
         },
       },
     },
@@ -240,7 +240,7 @@ const openApiDocument = {
         tags: ["auth"],
         summary: "소셜 로그인 콜백 (제공자가 호출)",
         description:
-          "제공자 콘솔에 `{APP_ORIGIN}/api/auth/{provider}/callback`으로 등록한다. state가 쿠키와 같아야 한다. 같은 이메일의 기존 회원과 자동으로 병합하지 않는다. Access 토큰은 주소에 싣지 않으며, `result=login`이면 프론트엔드가 `POST /api/auth/refresh`로 받는다.",
+          "제공자 콘솔에 `{APP_ORIGIN}/api/auth/{provider}/callback`으로 등록한다. state가 쿠키와 같아야 한다. 같은 이메일의 기존 회원과 자동으로 병합하지 않는다. Access 토큰은 주소에 싣지 않으며, `result=login`이면 프론트엔드가 `POST /api/auth/refresh`로 받는다. 제공자 요청(토큰 교환·회원 정보)은 요청마다 10초 안에 끝나야 하며, 넘으면 요청을 취소하고 `error=SOCIAL_FAILED`로 보낸다 [제안]. 요청 제한: IP당 15분 20회, 시작과 따로 센다. 넘으면 `error=SOCIAL_RATE_LIMITED`로 보낸다.",
         parameters: [
           providerParam,
           { name: "code", in: "query", schema: { type: "string" } },
@@ -250,7 +250,6 @@ const openApiDocument = {
         responses: {
           302: socialRedirect,
           404: errorResponse("지원하지 않는 제공자 (`NOT_FOUND`)"),
-          429: rateLimited,
         },
       },
     },

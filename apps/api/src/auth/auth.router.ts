@@ -67,8 +67,21 @@ export function createAuthRouter(
 ): Router {
   const router = Router();
   router.use(cookieParser());
-  // 라우터(앱)마다 따로 센다.
-  const limits = createAuthRateLimits();
+  // 제공자에 등록하는 콜백 주소. Vercel rewrite로 프론트엔드 도메인의 /api/*가 이 서버로 온다.
+  const callbackUri = (provider: string) =>
+    `${appOrigin}/api/auth/${provider}/callback`;
+  // 결과는 항상 프론트엔드의 고정 경로로 돌려보낸다(다른 주소로 보내지 않는다).
+  const redirectToApp = (res: Response, params: Record<string, string>) => {
+    const url = new URL("/auth/social/callback", appOrigin);
+    url.search = new URLSearchParams(params).toString();
+    res.redirect(302, url.toString());
+  };
+
+  // 라우터(앱)마다 따로 센다. 소셜 로그인 경로가 제한에 걸리면 state 쿠키를 지우고 안내 화면으로 보낸다.
+  const limits = createAuthRateLimits((res) => {
+    res.clearCookie(OAUTH_STATE_COOKIE_NAME, REFRESH_COOKIE_OPTIONS);
+    redirectToApp(res, { error: "SOCIAL_RATE_LIMITED" });
+  });
 
   // 쿠키만으로 동작하는 요청(refresh·logout)은 우리 프론트엔드에서 온 것만 받는다(CSRF 방어).
   const requireAppOrigin = (req: Request) => {
@@ -110,23 +123,13 @@ export function createAuthRouter(
   });
 
   // ─── 소셜 로그인 (Google·카카오) ───
-  // 제공자에 등록하는 콜백 주소. Vercel rewrite로 프론트엔드 도메인의 /api/*가 이 서버로 온다.
-  const callbackUri = (provider: string) =>
-    `${appOrigin}/api/auth/${provider}/callback`;
-  // 결과는 항상 프론트엔드의 고정 경로로 돌려보낸다(다른 주소로 보내지 않는다).
-  const redirectToApp = (res: Response, params: Record<string, string>) => {
-    const url = new URL("/auth/social/callback", appOrigin);
-    url.search = new URLSearchParams(params).toString();
-    res.redirect(302, url.toString());
-  };
-
   // 없는 제공자 이름은 서비스에서 404로 처리한다.
   const providerOf = (req: Request) => {
     const { provider } = req.params;
     return typeof provider === "string" ? provider : "";
   };
 
-  router.get("/:provider/start", limits.login, async (req, res) => {
+  router.get("/:provider/start", limits.socialStart, async (req, res) => {
     const provider = providerOf(req);
     try {
       const { redirectUrl, stateCookie } = await authService.startSocial(
@@ -141,7 +144,7 @@ export function createAuthRouter(
     }
   });
 
-  router.get("/:provider/callback", limits.login, async (req, res) => {
+  router.get("/:provider/callback", limits.socialCallback, async (req, res) => {
     // state 쿠키는 한 번만 쓴다.
     res.clearCookie(OAUTH_STATE_COOKIE_NAME, REFRESH_COOKIE_OPTIONS);
     const provider = providerOf(req);
