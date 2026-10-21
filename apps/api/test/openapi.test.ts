@@ -12,6 +12,20 @@ describe("OpenAPI 문서", () => {
     ).resolves.toBeDefined();
   });
 
+  it.each(["/api/auth/signup", "/api/auth/login"] as const)(
+    "%s 요청 본문의 email은 이메일 형식·최대 254자로 표시된다",
+    (path) => {
+      const served = JSON.parse(JSON.stringify(openApiDocument));
+      const { schema } =
+        served.paths[path].post.requestBody.content["application/json"];
+      expect(schema.properties.email).toEqual({
+        type: "string",
+        format: "email",
+        maxLength: 254,
+      });
+    },
+  );
+
   // 문서에 적힌 모든 경로·메서드가 실제 라우터에 있는지 확인한다(DB 없이 끝나는 요청으로).
   it("문서의 모든 경로가 실제로 존재한다 (404가 아님)", async () => {
     const app = createTestApp();
