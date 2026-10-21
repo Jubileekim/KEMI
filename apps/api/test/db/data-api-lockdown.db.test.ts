@@ -15,38 +15,56 @@ class ProbeResult extends Error {
   }
 }
 
-const AUTH_TABLES = [
+// 마이그레이션으로 만드는 앱 테이블. 새 테이블을 추가하면 여기에도 넣는다(빠지면 첫 테스트가 실패한다).
+const APP_TABLES = [
   "users",
   "auth_identities",
   "auth_sessions",
   "auth_refresh_tokens",
+  "client_profiles",
+  "creator_profiles",
 ];
 const DATA_API_ROLES = ["anon", "authenticated"];
 // PostgreSQL 17의 테이블 권한 전체. MAINTAIN은 information_schema에 나오지 않으므로 직접 포함해 검사한다.
 const ALL_TABLE_PRIVILEGES =
   "SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN";
 
-describe("인증 테이블의 Data API 접근 차단", () => {
-  it("4개 테이블 모두 RLS가 켜져 있다", async () => {
+describe("앱 테이블의 Data API 접근 차단", () => {
+  it("public의 앱 테이블은 목록과 같고, 모두 RLS가 켜져 있다", async () => {
     const rows = await prisma.$queryRaw<
       { relname: string; relrowsecurity: boolean }[]
     >`SELECT relname, relrowsecurity FROM pg_class
-      WHERE relnamespace = 'public'::regnamespace AND relname = ANY(${AUTH_TABLES})
+      WHERE relnamespace = 'public'::regnamespace AND relkind = 'r'
+        AND relname <> '_prisma_migrations'
       ORDER BY relname`;
 
-    expect(rows).toHaveLength(4);
+    expect(rows.map((row) => row.relname)).toEqual([...APP_TABLES].sort());
     expect(rows.every((row) => row.relrowsecurity)).toBe(true);
   });
 
-  it("anon·authenticated는 인증 테이블·시퀀스에 어떤 권한도 없다", async () => {
+  it("anon·authenticated는 앱 테이블에 어떤 권한도 없다", async () => {
     const rows = await prisma.$queryRaw<{ granted: bigint }[]>`
       SELECT count(*) AS granted FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
-      CROSS JOIN unnest(${AUTH_TABLES}::text[]) AS t(name)
+      CROSS JOIN unnest(${APP_TABLES}::text[]) AS t(name)
       WHERE has_table_privilege(r.role, 'public.' || t.name,
-              ${ALL_TABLE_PRIVILEGES})
-         OR has_sequence_privilege(r.role, 'public.' || t.name || '_id_seq',
-              'USAGE, SELECT, UPDATE')`;
+              ${ALL_TABLE_PRIVILEGES})`;
 
+    expect(rows[0]?.granted).toBe(0n);
+  });
+
+  it("anon·authenticated는 public의 시퀀스에 어떤 권한도 없다", async () => {
+    const rows = await prisma.$queryRaw<
+      { sequences: bigint; granted: bigint }[]
+    >`
+      SELECT count(DISTINCT s.oid) AS sequences,
+             count(*) FILTER (WHERE has_sequence_privilege(r.role, s.oid,
+               'USAGE, SELECT, UPDATE')) AS granted
+      FROM unnest(${DATA_API_ROLES}::text[]) AS r(role)
+      CROSS JOIN pg_class s
+      WHERE s.relnamespace = 'public'::regnamespace AND s.relkind = 'S'`;
+
+    // 검사할 시퀀스가 실제로 있는지도 확인한다(없으면 항상 통과하므로).
+    expect(rows[0]?.sequences).toBeGreaterThan(0n);
     expect(rows[0]?.granted).toBe(0n);
   });
 

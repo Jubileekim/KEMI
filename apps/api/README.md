@@ -182,6 +182,23 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 - 요청 제한: 가입 1시간 10회, 로그인 15분 10회, 갱신 15분 60회(IP 기준). 넘으면 `429 RATE_LIMITED`
 - 오류 코드: `VALIDATION_FAILED`(400), `INVALID_CREDENTIALS`(401), `TOKEN_EXPIRED`(401), `UNAUTHENTICATED`(401), `SESSION_REVOKED`(401), `FORBIDDEN`(403), `EMAIL_ALREADY_EXISTS`(409), `REFRESH_RACE`(409, `details.retryAfterMs`), `RATE_LIMITED`(429)
 
+## 프로필 API
+
+자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 10장에 있다. 두 경로 모두 `Authorization: Bearer <accessToken>`이 필요하다.
+
+| 메서드·경로              | 하는 일                                   | 성공 응답                             |
+| ------------------------ | ----------------------------------------- | ------------------------------------- |
+| `GET /api/profiles/me`   | 본인 프로필 조회 (저장 전이면 빈 기본값)  | `200` + `{ name, profile }`           |
+| `PATCH /api/profiles/me` | 보낸 항목만 저장. `name`은 회원 표시 이름 | `200` + 저장 결과 (`GET`과 같은 형식) |
+
+- `profile.type`이 `CLIENT`면 의뢰인, `CREATOR`면 크리에이터 형식이다. 요청 본문도 로그인한 역할의 형식만 받는다.
+- 보내지 않은 항목은 그대로다. 자유 입력 칸(문자열·주소)의 빈 문자열은 `null`로 저장하고, 선택지·날짜는 `null`로 지운다. 항목별 규칙은 결정 기록 10장 "PATCH 값 규칙" 표에 있다.
+- 모르는 항목·다른 역할 항목·`serviceStatus`는 `400 VALIDATION_FAILED`다.
+- 크리에이터의 `serviceStatus`는 `DRAFT`로 시작하며 저장으로 바뀌지 않는다. 공개·비공개는 패키지 PR에서 만든다.
+- 관리자 계정은 `403 FORBIDDEN`이다. 이용 제한·탈퇴 회원은 상태가 바뀌기 전에 받은 토큰으로도 `403 FORBIDDEN`이다.
+- 선택지 값과 화면 표시 이름 제안: [프로필 선택지 공유 문서](../../docs/handoff/2026-10-21-profile-options.md)
+- 이번 구현은 PROFILE-01·02의 텍스트·선택 항목까지다. 로고·이미지·경력·링크·공개 전환은 후속이다(결정 기록 10장 표).
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
@@ -291,7 +308,10 @@ apps/api/
 │  ├─ app.ts               # Express 앱 조립 (테스트에서 의존성 주입)
 │  ├─ server.ts            # 환경 변수 검증 → DB 연결 → 서버 시작·종료 처리
 │  ├─ config/env.ts        # Zod 환경 변수 검증
-│  ├─ http/                # AppError·공통 오류 처리
+│  ├─ auth/                # 회원가입·로그인·토큰
+│  ├─ profiles/            # 역할별 본인 프로필
+│  ├─ docs/                # OpenAPI 문서·Swagger UI
+│  ├─ http/                # AppError·공통 오류 처리·Bearer 토큰 읽기
 │  ├─ lib/prisma.ts        # Prisma Client (pg 어댑터)
 │  ├─ routes/              # API 라우터
 │  └─ generated/           # Prisma 생성 코드 (커밋하지 않음)
