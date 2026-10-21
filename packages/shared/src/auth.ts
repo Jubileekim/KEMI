@@ -67,3 +67,37 @@ export interface AuthTokenResponse {
 export interface MeResponse {
   user: AuthUser;
 }
+
+// 소셜 로그인 경로의 제공자 이름 (/api/auth/{provider}/start)
+export const SOCIAL_PROVIDER_PATHS = ["google", "kakao"] as const;
+export type SocialProviderPath = (typeof SOCIAL_PROVIDER_PATHS)[number];
+
+// 소셜 로그인 콜백 뒤 서버가 프론트엔드 `/auth/social/callback`으로 보낼 때 붙이는 값
+// - result=login: 기존 회원. Refresh 쿠키가 설정됐으므로 POST /api/auth/refresh로 Access 토큰을 받는다.
+// - result=signup: 처음 온 소셜 계정. 역할·표시 이름을 받아 POST /api/auth/social/signup으로 가입한다.
+// - error=...: 아래 값 중 하나
+// SOCIAL_CANCELLED: 사용자가 동의를 취소함 / SOCIAL_FAILED: 검증·통신 실패(다시 시도)
+// SOCIAL_UNAVAILABLE: 서버에 해당 제공자 설정이 없음 / FORBIDDEN: 이용 제한·탈퇴 회원
+// SOCIAL_RATE_LIMITED: 시작 또는 콜백 요청이 너무 많음(잠시 후 다시 시도)
+export const SOCIAL_CALLBACK_ERRORS = [
+  "SOCIAL_CANCELLED",
+  "SOCIAL_FAILED",
+  "SOCIAL_UNAVAILABLE",
+  "SOCIAL_RATE_LIMITED",
+  "FORBIDDEN",
+] as const;
+export type SocialCallbackError = (typeof SOCIAL_CALLBACK_ERRORS)[number];
+
+// 소셜 가입: 이메일·비밀번호 없이 역할과 표시 이름만 받는다.
+export const socialSignupRequestSchema = signupRequestSchema.pick({
+  name: true,
+  role: true,
+});
+export type SocialSignupRequest = z.input<typeof socialSignupRequestSchema>;
+
+// 가입 화면에 보여줄 소셜 계정 정보. 제공자 이메일은 표시용이며 로그인 이메일로 쓰지 않는다.
+export interface SocialSignupPendingResponse {
+  provider: SocialProviderPath;
+  suggestedName: string | null;
+  providerEmail: string | null;
+}

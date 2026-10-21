@@ -655,7 +655,7 @@ ERD v0.6은 콘텐츠 스타일·제작 역할을 `jsonb`로 적었다. 이 PR�
 - 프로필 PK는 `user_id`다(회원당 프로필 1개).
 - 마이그레이션 `20261021005250_role_profiles`에 두 테이블의 RLS를 함께 켰다(8장 Data API 규칙).
 
-**팀 공용 DB 적용 범위 (리뷰·병합 후, 아직 적용하지 않음)**
+**팀 공용 DB 적용 범위 (2026-10-21 적용 완료 — [이슈 #15](https://github.com/Jubileekim/KEMI/issues/15))**
 
 PR #13이 리뷰·병합된 뒤, 이슈에 아래 범위를 공유하고 동의를 받은 다음 적용한다. 순서는 8장 절차와 같다.
 
@@ -690,7 +690,113 @@ PR #13이 리뷰·병합된 뒤, 이슈에 아래 범위를 공유하고 동의�
   - 의뢰인·크리에이터가 각각 제한·탈퇴되면 기존 토큰으로 조회·수정 403, 저장된 값 유지
   - CHECK가 직접 쓰기를 거부
 - 엄격 검사·빈 값 변환·관리자 차단·이름 저장·주소 형식 검사·RLS·인증의 회원 상태 확인을 일부러 빼면 해당 테스트가 실패하는 것을 확인했다.
-- [검증 필요] 팀 공용 Supabase 적용 (위 범위)
+- 팀 공용 Supabase 적용: 완료 (이슈 #15). 적용 전 읽기 전용 점검과 적용 후 확인 모두 예상과 같았다.
+
+## 11. 소셜 로그인 (Google·카카오)
+
+1장(이메일과 소셜 계정)과 5장(쿠키·OAuth)의 확정·제안 사항을 구현한다. DB 구조는 바꾸지 않는다(`auth_identities`는 첫 마이그레이션에 있다).
+
+> **[미검증] 실제 Google·카카오 로그인은 아직 한 번도 확인하지 않았다.** 제공자 앱·키·콜백 주소가 없어 가짜 제공자로만 테스트했다. 팀원이 준비할 항목은 [소셜 로그인 연동 문서](../handoff/2026-10-21-social-login.md)의 "팀원 준비 목록"에 있다.
+
+**범위**
+
+- 포함: Google·카카오 로그인 시작·콜백, 처음 온 소셜 계정의 역할·표시 이름 입력 후 가입, 기존 소셜 계정 로그인
+- 제외: 기존 회원에 소셜 계정 연결(1장: MVP 제외), 소셜 계정 연결 해제, 제공자 토큰 보관(로그인 확인에만 쓰고 저장하지 않는다)
+
+**흐름 [제안]**
+
+1. 프론트엔드가 브라우저를 `GET /api/auth/{provider}/start`로 이동시킨다(fetch가 아님).
+2. 서버는 `state`(CSRF 방지)와 PKCE `code_verifier`를 만들어 서명한 JWT로 `kemi_oauth_state` 쿠키(10분)에 담고, 제공자 동의 화면으로 302 이동한다.
+3. 제공자가 `{APP_ORIGIN}/api/auth/{provider}/callback`으로 돌려보낸다. 서버는 쿠키를 지우고 다음을 확인한다.
+   - 쿠키 서명·만료·용도가 맞고, 쿠키의 제공자와 경로의 제공자가 같고, 쿼리 `state`가 쿠키 값과 같다. 아니면 제공자에 코드를 보내지 않고 `SOCIAL_FAILED`다.
+   - `error=access_denied`면 `SOCIAL_CANCELLED`다.
+4. 서버가 코드를 제공자 토큰으로 바꾸고 회원 정보를 받는다. `(provider, provider_user_id)`로 소셜 계정을 찾는다.
+   - **있음**: 회원 상태가 `ACTIVE`면 로그인 세션을 만들고 Refresh 쿠키를 설정한 뒤 프론트엔드 `/auth/social/callback?result=login`으로 보낸다. Access 토큰은 주소에 싣지 않는다. 프론트엔드가 `POST /api/auth/refresh`로 받는다. 이용 제한·탈퇴 회원이면 `error=FORBIDDEN`이고 세션을 만들지 않는다.
+   - **없음**: 아직 회원을 만들지 않는다. 제공자 회원 정보를 서명한 가입 티켓 쿠키(`kemi_social_signup`, 10분)에 담아 `?result=signup`으로 보낸다.
+5. 프론트엔드는 `GET /api/auth/social/signup`으로 이름 후보를 받아 가입 화면을 보여주고, 사용자가 확인한 역할·표시 이름을 `POST /api/auth/social/signup`으로 보낸다(`Origin` 검사). 서버는 회원과 소셜 계정을 한 번에 만들고 회원가입과 같은 응답을 준다.
+
+- 결과는 항상 `APP_ORIGIN`의 고정 경로 `/auth/social/callback`으로만 보낸다. 요청에서 받은 주소로 보내지 않는다(오픈 리다이렉트 방지).
+- 중간 단계 값은 DB에 저장하지 않는다. `JWT_ACCESS_SECRET`으로 서명하되 `audience`(`kemi:oauth-state`, `kemi:social-signup`)로 용도를 나눠, Access 토큰·state 쿠키·가입 티켓을 서로 바꿔 쓸 수 없게 한다.
+- 두 쿠키 모두 `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`다. 제공자에서 돌아오는 요청은 최상위 GET 이동이라 `Lax` 쿠키가 실린다.
+
+**계정 규칙 [확정 · 1장]**
+
+- 같은 이메일이라는 이유로 기존 회원과 병합하지 않는다. 같은 이메일의 이메일 회원이 있어도 소셜 가입은 별도 회원이 된다.
+- 소셜 가입 회원은 `users.email`·`password_hash`가 `NULL`이다. 이메일·비밀번호 로그인을 할 수 없다.
+- 제공자 이메일은 `auth_identities.provider_email`에만 저장하며, 제공자가 확인한 이메일만 저장한다.
+  - Google: `email_verified`가 `true`일 때
+  - 카카오: `is_email_valid`와 `is_email_verified`가 모두 `true`일 때
+
+**가입 티켓(신규 가입용 임시 인증 정보)의 수명 [제안]**
+
+| 항목      | 동작                                                                                                                                                                                                                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 만료      | 발급 후 10분(JWT `exp`, 쿠키 `Max-Age=600`). 지나면 조회·가입 모두 `401 UNAUTHENTICATED`이고 회원을 만들지 않는다. state 쿠키도 같은 10분이며, 지나면 제공자에 코드를 보내지 않고 `SOCIAL_FAILED`다                                 |
+| 일회성    | 가입에 성공하면 쿠키를 지운다. 쿠키 값을 다시 보내도 같은 `(provider, provider_user_id)`가 이미 있어 `409 CONFLICT`다. 회원은 삭제하지 않으므로(탈퇴도 상태만 바뀜) 한 번 쓴 티켓으로 다시 가입할 수 없다                           |
+| 동시 사용 | 같은 티켓으로 동시에 가입하면 회원·소셜 계정 생성이 한 트랜잭션이고, 두 번째 요청은 UNIQUE 인덱스에서 첫 번째 커밋을 기다린 뒤 실패해 통째로 되돌려진다. 결과는 `201` 하나와 나머지 `409`이고 회원·소셜 계정·세션은 하나씩만 남는다 |
+
+- 티켓은 서버에 저장하지 않는 서명 토큰이라, "사용됨" 표시를 따로 두지 않고 DB의 UNIQUE 제약으로 한 번만 쓰이게 한다. 가입 전 조회(`GET /api/auth/social/signup`)는 읽기만 하므로 만료 전까지 여러 번 불러도 된다.
+- state 쿠키의 일회성은 콜백에서 쿠키를 지우는 것과 10분 만료로 지킨다. 제공자의 인가 코드도 제공자 쪽에서 한 번만 쓸 수 있다.
+
+**제공자별 차이 [검증 필요]**
+
+| 항목      | Google                                     | 카카오                                                             |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| 동의 화면 | `accounts.google.com/o/oauth2/v2/auth`     | `kauth.kakao.com/oauth/authorize`                                  |
+| 토큰 교환 | `oauth2.googleapis.com/token`              | `kauth.kakao.com/oauth/token`                                      |
+| 회원 정보 | `openidconnect.googleapis.com/v1/userinfo` | `kapi.kakao.com/v2/user/me`                                        |
+| 식별 값   | `sub`                                      | `id` (숫자 → 문자열로 저장)                                        |
+| PKCE      | 사용 (`S256`)                              | 사용 안 함. 카카오 REST API 문서에 PKCE 항목이 없어 `state`만 쓴다 |
+| 비밀 값   | Client Secret 필수                         | Client Secret: 카카오 앱에서 기본 사용. 끈 앱이면 보내지 않는다    |
+
+- 위 주소·필드는 2026-10-21 공식 문서 기준이다.
+- 카카오 응답 필드는 카카오 개발자 문서 "사용자 정보 조회"(한국어 REST API 문서) 원문과 대조했다(2026-10-21).
+  - `id`: `Long`, 회원번호, 필수
+  - `kakao_account.email`: 대표 이메일 (선택, 동의항목 "카카오계정(이메일)")
+  - `kakao_account.is_email_valid`: `false`면 이메일이 다른 카카오계정에 사용돼 만료된 것
+  - `kakao_account.is_email_verified`: 인증된 이메일 여부
+  - `kakao_account.profile.nickname`: 닉네임 (선택, 동의항목 "닉네임" 또는 "프로필 정보")
+  - 요청: `GET`, `Authorization: Bearer ${ACCESS_TOKEN}`, `Content-Type: application/x-www-form-urlencoded;charset=utf-8`(문서상 필수라 함께 보낸다)
+  - 토큰 요청 본문은 `grant_type`, `client_id`, `redirect_uri`, `code`, `client_secret`뿐이고 `code_verifier`·PKCE 항목은 없다.
+- [미검증] 실제 응답은 키를 받은 뒤 확인한다. 동의항목을 켜지 않으면 이메일·닉네임이 오지 않으며, 이때도 가입은 된다(이름은 사용자가 입력).
+- 회원 정보 응답이 예상 형식과 다르면 `SOCIAL_FAILED`로 처리한다. 제공자 응답 내용은 기록하지 않는다(토큰이 들어 있을 수 있음).
+
+**제공자 요청 제한 시간 [제안 · PR #14 리뷰 반영]**
+
+- 토큰 교환·회원 정보 요청마다 10초(`PROVIDER_TIMEOUT_MS`) 안에 끝나야 한다. 연결, 응답 헤더, 본문 읽기를 모두 포함한다.
+- 시간이 지나면 `AbortSignal`로 실제 HTTP 요청(본문 읽기 포함)을 취소한다. 제공자가 취소에 응하지 않아도 기다리지 않는다.
+- 결과는 기존 실패 흐름과 같다: 프론트엔드 `/auth/social/callback?error=SOCIAL_FAILED`
+- 네트워크 오류·타임아웃 메시지와 제공자 응답 원문, 인가 코드, Client Secret은 로그와 응답에 남기지 않는다. 로그에는 제공자 이름만 남긴다.
+
+**요청 제한 [제안 · PR #14 리뷰 반영]**
+
+| 경로                                | 제한                   | 넘으면                                                       |
+| ----------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| `GET /api/auth/{provider}/start`    | IP당 15분 20회         | 프론트엔드 `/auth/social/callback?error=SOCIAL_RATE_LIMITED` |
+| `GET /api/auth/{provider}/callback` | IP당 15분 20회         | 위와 같음. state 쿠키도 지운다                               |
+| `POST /api/auth/social/signup`      | 회원가입과 같은 카운터 | `429 RATE_LIMITED` JSON (화면의 fetch 요청)                  |
+
+- 시작과 콜백은 서로 다른 카운터다. 처음에는 둘 다 이메일 로그인 제한(`login`)을 같이 써서, 소셜 로그인 한 번에 두 번 차감됐다(리뷰 지적). 이제 이메일 로그인 횟수와도 섞이지 않는다.
+- 시작·콜백은 브라우저 이동이라, 제한에 걸리면 JSON 오류 화면 대신 프론트엔드 안내 화면으로 보낸다.
+
+**설정**
+
+- 환경 변수: `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`(둘 다), `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`(선택). 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내하며, 서버는 키 없이도 시작된다.
+- 제공자 콘솔에 등록할 콜백 주소
+  - 로컬: `http://localhost:5173/api/auth/{google|kakao}/callback` (Vite 프록시)
+  - 배포: `https://<Vercel 도메인>/api/auth/{google|kakao}/callback` (Vercel rewrite)
+- [미검증] 실제 키·콜백 주소 등록이 아직 없다. 팀원 준비 목록(연동 문서)을 마친 뒤 로컬과 배포 환경에서 성공·취소·재로그인·탈퇴 회원 차단을 확인한다.
+
+**검증**
+
+- 제공자 어댑터 단위 테스트 9개: 동의 화면 주소, 토큰 교환 요청 내용, 확인된 이메일만 저장, 응답 형식 오류
+- 가짜 제공자로 DB 테스트 26개
+  - state 불일치·쿠키 없음·위조·다른 제공자 쿠키·만료, 취소, 통신 실패
+  - 가입 티켓: 10분 만료, 만료 티켓 401, 재사용 409, 동시 가입 3건 중 1건만 성공, 탈퇴 후에도 재사용 불가
+  - 처음 온 계정은 가입 전까지 회원을 만들지 않음, 가입 후 같은 계정 재로그인
+  - 같은 이메일 자동 병합 없음, 이용 제한 회원 차단
+  - 티켓 없음 401, 다른 Origin 403, ADMIN 400, 티켓 재사용 409, 용도가 다른 토큰 거부
+- state 비교, 제공자 일치, 회원 상태 확인, `audience` 검사, `Origin` 검사, Google 이메일 확인 여부, 만료 검사(1시간 허용 오차), 티켓 유효 시간, 중복 가입 409 처리를 일부러 바꾸면 해당 테스트가 실패하는 것을 확인했다. 바꾼 코드는 모두 되돌렸고 최종 diff에 남지 않았음을 확인했다.
 
 ## 다음 작업
 
@@ -705,7 +811,9 @@ PR #13이 리뷰·병합된 뒤, 이슈에 아래 범위를 공유하고 동의�
 | 가입·로그인·갱신 요청 제한(429)                            | 완료 — PR #4 병합. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                                |
 | 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
 | 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
-| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                                         |
+| 의뢰인·크리에이터 프로필 수정 API                          | 일부 완료 — PR #13 병합. PROFILE-01·02의 텍스트·선택 항목 (10장). 로고·이미지·경력·링크·서비스 공개(PROFILE-03·04)는 후속      |
+| 팀 공용 Supabase DB에 프로필 마이그레이션 적용             | 완료 — `20261021005250_role_profiles` 적용·검증 ([이슈 #15](https://github.com/Jubileekim/KEMI/issues/15), 2026-10-21)         |
+| 소셜 로그인 (Google·카카오)                                | PR #14 (리뷰 대기). **실제 제공자 로그인 미검증** — 앱·키·콜백 주소 등록 필요 (11장, 연동 문서 "팀원 준비 목록")               |
 | shared 상태값 enum과 CHECK 일치 테스트                     | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                       |
 | Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                                         |
 | Swagger/OpenAPI 문서                                       | 완료 — PR #11 병합. health·인증 API 문서와 Swagger UI(운영 환경 제외)                                                          |
