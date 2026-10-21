@@ -239,14 +239,16 @@ const openApiDocument = {
         tags: ["profiles"],
         summary: "본인 프로필 저장 (부분 수정)",
         description:
-          "보낸 항목만 바꾼다. 역할에 맞는 형식만 받으며, 모르는 항목(다른 역할 항목·`serviceStatus` 포함)은 400이다. 보내지 않은 항목은 그대로다. 자유 입력 문자열·주소는 빈 문자열·공백만이면 null로 저장하고, null로도 지운다. 선택지(`industry`·`niche`)·날짜는 null로 지우며 빈 문자열은 400이다. 복수 선택은 목록 전체를 보내고 []로 비운다(빈 문자열·null은 400). `isAvailable`·`name`은 빈 문자열·null이 400이다. `name`은 회원 표시 이름을 바꾼다. 저장해도 제작 서비스는 공개되지 않는다.",
+          "보낸 항목만 바꾼다. 요청 형식은 로그인한 역할의 것만 받으며(두 형식 중 무엇을 쓸지는 토큰의 역할로 정해진다), 모르는 항목(다른 역할 항목·`serviceStatus` 포함)은 400이다. 보내지 않은 항목은 그대로다. 자유 입력 문자열·주소는 빈 문자열·공백만이면 null로 저장하고, null로도 지운다. 선택지(`industry`·`niche`)·날짜는 null로 지우며 빈 문자열은 400이다. 복수 선택은 목록 전체를 보내고 []로 비운다(빈 문자열·null은 400). `isAvailable`·`name`은 빈 문자열·null이 400이다. `name`은 회원 표시 이름을 바꾼다. 저장해도 제작 서비스는 공개되지 않는다.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
-                oneOf: [
+                // name·introduction 같은 공통 항목만 보내면 두 형식을 모두 만족하므로 oneOf가 아니라 anyOf다.
+                // 역할에 맞는 형식인지는 서버가 로그인한 역할로 판단한다(다른 역할 항목은 400).
+                anyOf: [
                   {
                     title: "의뢰인 (CLIENT)",
                     ...requestSchema(clientProfileUpdateSchema),
