@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createApp } from "../../src/app.js";
 import { createAuthService } from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
+import { createProfileService } from "../../src/profiles/profile.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -29,13 +30,15 @@ export function createTestApp({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
     DATABASE_POOL_MAX: 1,
   });
+  const client = prisma ?? unusedPrisma;
   return createApp({
     checkDatabase,
     authService: createAuthService({
-      prisma: prisma ?? unusedPrisma,
+      prisma: client,
       accessTokenSecret: TEST_ACCESS_SECRET,
       beforeRotationCommit,
     }),
+    profileService: createProfileService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

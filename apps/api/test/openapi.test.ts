@@ -37,10 +37,13 @@ describe("OpenAPI 문서", () => {
 
     const results = await Promise.all(
       operations.map(async ({ path, method }) => {
+        const agent = request(app);
         const res =
-          method === "post"
-            ? await request(app).post(path).send({})
-            : await request(app).get(path);
+          method === "get"
+            ? await agent.get(path)
+            : await (
+                method === "patch" ? agent.patch(path) : agent.post(path)
+              ).send({});
         return { path, method, status: res.status };
       }),
     );

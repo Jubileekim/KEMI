@@ -7,6 +7,7 @@ import {
   Router,
 } from "express";
 import AppError from "../http/app-error.js";
+import readBearerToken from "../http/bearer-token.js";
 import type { AuthResult, AuthService } from "./auth.service.js";
 import createAuthRateLimits from "./rate-limits.js";
 
@@ -23,11 +24,6 @@ const REFRESH_COOKIE_OPTIONS: CookieOptions = {
 function readRefreshCookie(req: Request): string | undefined {
   const value: unknown = req.cookies[REFRESH_COOKIE_NAME];
   return typeof value === "string" ? value : undefined;
-}
-
-function readBearerToken(req: Request): string | undefined {
-  const header = req.get("authorization");
-  return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 }
 
 function sendAuthResult(res: Response, status: number, result: AuthResult) {

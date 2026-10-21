@@ -32,8 +32,10 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  identities AuthIdentity[]
-  sessions   AuthSession[]
+  identities     AuthIdentity[]
+  sessions       AuthSession[]
+  clientProfile  ClientProfile?
+  creatorProfile CreatorProfile?
 
   @@map("users")
 }
@@ -88,4 +90,43 @@ model AuthRefreshToken {
 
   @@index([sessionId])
   @@map("auth_refresh_tokens")
+}
+
+// ─── 역할별 프로필 ────────────────────────────────────────────
+// 회원 1명당 역할에 맞는 프로필 하나. 역할 일치는 서버에서 검사한다.
+// 선택값(분야·스타일·역할·공개 상태)의 허용 목록은 마이그레이션 CHECK와 @kemi/shared가 같게 유지한다.
+
+// 의뢰인 프로필 (PROFILE-01). 브랜드 정보는 모두 선택이다. 로고는 파일 기능에서 추가한다.
+model ClientProfile {
+  userId       BigInt   @id @map("user_id")
+  brandName    String?  @map("brand_name")
+  introduction String?
+  industry     String?
+  websiteUrl   String?  @map("website_url")
+  socialUrl    String?  @map("social_url")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("client_profiles")
+}
+
+// 크리에이터 프로필 (PROFILE-02). 저장만으로 공개하지 않는다(service_status 기본 DRAFT).
+model CreatorProfile {
+  userId          BigInt    @id @map("user_id")
+  introduction    String?
+  niche           String?
+  contentStyles   String[]  @default([]) @map("content_styles")
+  productionRoles String[]  @default([]) @map("production_roles")
+  workMethod      String?   @map("work_method")
+  serviceStatus   String    @default("DRAFT") @map("service_status")
+  isAvailable     Boolean   @default(false) @map("is_available")
+  availableFrom   DateTime? @map("available_from") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("creator_profiles")
 }

@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { createAuthService } from "./auth/auth.service.js";
 import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
+import { createProfileService } from "./profiles/profile.service.js";
 
 function start(env: Env) {
   const prisma = createPrismaClient(env);
@@ -14,6 +15,7 @@ function start(env: Env) {
       prisma,
       accessTokenSecret: env.JWT_ACCESS_SECRET,
     }),
+    profileService: createProfileService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

@@ -22,3 +22,41 @@ export const SESSION_REVOKE_REASONS = [
 ] as const;
 export const sessionRevokeReasonSchema = z.enum(SESSION_REVOKE_REASONS);
 export type SessionRevokeReason = z.infer<typeof sessionRevokeReasonSchema>;
+
+// ─── 프로필 ────────────────────────────────────────────────────
+// 제작 서비스 공개 상태. 저장만으로 공개되지 않으며, PUBLIC 전환은 대표 패키지 조건(P04)과 함께 별도 기능에서 한다.
+export const CREATOR_SERVICE_STATUSES = ["DRAFT", "PUBLIC", "PRIVATE"] as const;
+export const creatorServiceStatusSchema = z.enum(CREATOR_SERVICE_STATUSES);
+export type CreatorServiceStatus = z.infer<typeof creatorServiceStatusSchema>;
+
+// 본인 제작 역할 (PRD 6.2·7.4: 기획·출연·촬영·편집)
+export const PRODUCTION_ROLES = [
+  "PLANNING",
+  "ON_CAMERA",
+  "FILMING",
+  "EDITING",
+] as const;
+export const productionRoleSchema = z.enum(PRODUCTION_ROLES);
+export type ProductionRole = z.infer<typeof productionRoleSchema>;
+
+// [제안] 제품·제작 분야와 콘텐츠 스타일 선택값은 아직 미확정(D21)이다. ERD v0.5의 값을 임시로 쓴다.
+// 바꿀 때는 이 배열과 DB CHECK 제약을 같은 PR에서 함께 고친다.
+export const PRODUCT_CATEGORIES = [
+  "BEAUTY",
+  "FOOD",
+  "LIFESTYLE",
+  "TECH",
+  "OTHER",
+] as const;
+export const productCategorySchema = z.enum(PRODUCT_CATEGORIES);
+export type ProductCategory = z.infer<typeof productCategorySchema>;
+
+export const CONTENT_STYLES = [
+  "MODERN",
+  "BRIGHT",
+  "EMOTIONAL",
+  "PROFESSIONAL",
+  "OTHER",
+] as const;
+export const contentStyleSchema = z.enum(CONTENT_STYLES);
+export type ContentStyle = z.infer<typeof contentStyleSchema>;

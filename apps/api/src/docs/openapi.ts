@@ -1,6 +1,12 @@
 import {
+  clientProfileUpdateSchema,
+  CONTENT_STYLES,
+  CREATOR_SERVICE_STATUSES,
+  creatorProfileUpdateSchema,
   ERROR_CODES,
   loginRequestSchema,
+  PRODUCT_CATEGORIES,
+  PRODUCTION_ROLES,
   signupRequestSchema,
   USER_ROLES,
   USER_STATUSES,
@@ -43,6 +49,26 @@ const cookieOnlyRequest = {
     "Refresh 쿠키(`kemi_refresh`)로만 동작한다. `Origin` 헤더가 프론트엔드 주소(`APP_ORIGIN`)와 같아야 한다.",
 };
 
+const bearerErrors = {
+  401: errorResponse(
+    "토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`)",
+  ),
+};
+
+const myProfileResponse = {
+  description: "표시 이름과 역할별 프로필. 저장한 적이 없으면 빈 기본값.",
+  content: {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/MyProfileResponse" },
+    },
+  },
+};
+
+const nullableEnum = (values: readonly string[]) => ({
+  type: ["string", "null"],
+  enum: [...values, null],
+});
+
 const openApiDocument = {
   openapi: "3.1.0",
   info: {
@@ -55,6 +81,7 @@ const openApiDocument = {
   tags: [
     { name: "health", description: "서버·DB 상태 확인" },
     { name: "auth", description: "이메일 회원가입·로그인·토큰 갱신" },
+    { name: "profiles", description: "역할별 본인 프로필" },
   ],
   paths: {
     "/health": {
@@ -190,10 +217,54 @@ const openApiDocument = {
               },
             },
           },
-          401: errorResponse(
-            "토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`)",
-          ),
+          ...bearerErrors,
           403: errorResponse("이용 제한된 계정 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/profiles/me": {
+      get: {
+        tags: ["profiles"],
+        summary: "본인 프로필 조회",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: myProfileResponse,
+          ...bearerErrors,
+          403: errorResponse("관리자 계정 또는 이용 제한된 계정 (`FORBIDDEN`)"),
+        },
+      },
+      patch: {
+        tags: ["profiles"],
+        summary: "본인 프로필 저장 (부분 수정)",
+        description:
+          '보낸 항목만 바꾼다. 역할에 맞는 형식만 받으며, 모르는 항목(다른 역할 항목·`serviceStatus` 포함)은 400이다. 선택 문자열의 빈 값("")은 null로 저장한다. `name`은 회원 표시 이름을 바꾼다. 저장해도 제작 서비스는 공개되지 않는다.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                oneOf: [
+                  {
+                    title: "의뢰인 (CLIENT)",
+                    ...requestSchema(clientProfileUpdateSchema),
+                  },
+                  {
+                    title: "크리에이터 (CREATOR)",
+                    ...requestSchema(creatorProfileUpdateSchema),
+                  },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          200: myProfileResponse,
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("관리자 계정 또는 이용 제한된 계정 (`FORBIDDEN`)"),
         },
       },
     },
@@ -252,6 +323,73 @@ const openApiDocument = {
         type: "object",
         required: ["user"],
         properties: { user: { $ref: "#/components/schemas/AuthUser" } },
+      },
+      ClientProfile: {
+        type: "object",
+        required: [
+          "type",
+          "brandName",
+          "introduction",
+          "industry",
+          "websiteUrl",
+          "socialUrl",
+        ],
+        properties: {
+          type: { const: "CLIENT" },
+          brandName: { type: ["string", "null"] },
+          introduction: { type: ["string", "null"] },
+          industry: nullableEnum(PRODUCT_CATEGORIES),
+          websiteUrl: { type: ["string", "null"] },
+          socialUrl: { type: ["string", "null"] },
+        },
+      },
+      CreatorProfile: {
+        type: "object",
+        required: [
+          "type",
+          "introduction",
+          "niche",
+          "contentStyles",
+          "productionRoles",
+          "workMethod",
+          "serviceStatus",
+          "isAvailable",
+          "availableFrom",
+        ],
+        properties: {
+          type: { const: "CREATOR" },
+          introduction: { type: ["string", "null"] },
+          niche: nullableEnum(PRODUCT_CATEGORIES),
+          contentStyles: {
+            type: "array",
+            items: { type: "string", enum: [...CONTENT_STYLES] },
+          },
+          productionRoles: {
+            type: "array",
+            items: { type: "string", enum: [...PRODUCTION_ROLES] },
+          },
+          workMethod: { type: ["string", "null"] },
+          serviceStatus: {
+            type: "string",
+            enum: [...CREATOR_SERVICE_STATUSES],
+            description: "처음에는 DRAFT. 프로필 저장으로는 바뀌지 않는다.",
+          },
+          isAvailable: { type: "boolean" },
+          availableFrom: { type: ["string", "null"], format: "date" },
+        },
+      },
+      MyProfileResponse: {
+        type: "object",
+        required: ["name", "profile"],
+        properties: {
+          name: { type: "string", description: "회원 표시 이름" },
+          profile: {
+            oneOf: [
+              { $ref: "#/components/schemas/ClientProfile" },
+              { $ref: "#/components/schemas/CreatorProfile" },
+            ],
+          },
+        },
       },
       HealthResponse: {
         type: "object",

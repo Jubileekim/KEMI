@@ -1,8 +1,9 @@
-# ERD v0.6 변경 명세 (회원·인증 영역)
+# ERD v0.6 변경 명세 (회원·인증·프로필 영역)
 
 - 기준: 통합 ERD v0.6 (2026-10-16, `KEMI_ERD_v0.6.html`)
 - 근거: [결정 기록](../decisions/2026-10-19-backend-setup.md) 1장(이메일·소셜 계정), 5장(인증 토큰)
 - 상태: [확정 · 구현] 팀 결정을 반영한 설계다. `apps/api/prisma/schema.prisma`와 마이그레이션 `20261019051147_auth_tables`에 반영했다(CHECK 제약 포함).
+- 프로필 영역은 [결정 기록](../decisions/2026-10-19-backend-setup.md) 10장 기준이며, 마이그레이션 `20261021005250_role_profiles`에 반영했다. 선택지 값은 [제안 · D21 미확정]이다.
 - 원본 ERD HTML은 고치지 않았다. 다음 ERD 버전(v0.7)을 만들 때 이 명세를 반영한다.
 
 ## 공통 규칙
@@ -86,11 +87,42 @@ v0.6에서는 한 테이블이 로그인 세션과 개별 Refresh 토큰을 함�
 - `INDEX (session_id)`
 - 행은 삭제하지 않는다. 회전 이력을 보존한다.
 
+## client_profiles — 의뢰인 프로필 (PROFILE-01)
+
+| 컬럼                        | 설명                                     |
+| --------------------------- | ---------------------------------------- |
+| `user_id` bigint PK·FK      | 회원 (회원당 1개, `ON DELETE RESTRICT`)  |
+| `brand_name`                | 브랜드명 (선택, API에서 최대 50자 검사)  |
+| `introduction`              | 소개 (선택, API에서 최대 1000자 검사)    |
+| `industry`                  | 제품 분야 (선택). `CHECK`로 허용 값 검사 |
+| `website_url`, `social_url` | 자사몰·공식 SNS 주소 (선택, http/https)  |
+| `created_at`, `updated_at`  |                                          |
+
+- 모든 항목이 선택이다. 행이 없어도 의뢰 기능을 막지 않는다(P02).
+- 로고는 파일 기능과 함께 추가한다.
+
+## creator_profiles — 크리에이터 프로필 (PROFILE-02)
+
+| 컬럼                             | 설명                                                                  |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `user_id` bigint PK·FK           | 회원 (회원당 1개, `ON DELETE RESTRICT`)                               |
+| `introduction`, `work_method`    | 소개·작업 방식 (선택, API에서 최대 1000자 검사)                       |
+| `niche`                          | 분야 (선택). `CHECK`로 허용 값 검사                                   |
+| `content_styles` text[]          | 콘텐츠 스타일 (복수). 기본 빈 배열, `NULL` 불가, `CHECK (<@ 허용 값)` |
+| `production_roles` text[]        | 제작 역할 (복수). 위와 같음                                           |
+| `service_status`                 | `DRAFT`(기본)·`PUBLIC`·`PRIVATE`. 프로필 저장으로는 바뀌지 않는다     |
+| `is_available`, `available_from` | 작업 가능 여부(기본 false)·시작일(date)                               |
+| `created_at`, `updated_at`       |                                                                       |
+
+- ERD v0.6의 `jsonb` 목록 대신 `text[]`를 쓴다. DB `CHECK`로 허용 값을 검사하기 위해서다.
+- `skills`·`creator_skills`, 경력·링크·이미지는 다음 PR에서 추가한다.
+
 ## 접근 제어 (Supabase Data API)
 
 마이그레이션 `20261019070424_auth_data_api_lockdown`에서 처리한다. 첫 마이그레이션은 수정하지 않았다.
 
 - `users`, `auth_identities`, `auth_sessions`, `auth_refresh_tokens` 모두 RLS를 켠다. 정책은 두지 않는다.
+- `client_profiles`, `creator_profiles`도 만드는 마이그레이션(`20261021005250_role_profiles`)에서 RLS를 켠다. 기본 권한 변경 덕분에 두 역할의 권한은 처음부터 없다.
 - `anon`·`authenticated` 역할의 테이블·시퀀스 권한을 회수한다.
 - 서버(Express·Prisma)만 테이블 소유자 역할로 접근한다.
 
@@ -101,6 +133,8 @@ users 1 ─── 0..N auth_identities
 users 1 ─── 0..N auth_sessions
 auth_sessions 1 ─── 1..N auth_refresh_tokens
 auth_refresh_tokens 0..1 ─── 0..1 auth_refresh_tokens (replaced_by_id)
+users 1 ─── 0..1 client_profiles
+users 1 ─── 0..1 creator_profiles
 ```
 
 ## 다른 영역의 변경
