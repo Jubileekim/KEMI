@@ -1,5 +1,9 @@
 import {
   AUTH_PROVIDERS,
+  CONTENT_STYLES,
+  CREATOR_SERVICE_STATUSES,
+  PRODUCT_CATEGORIES,
+  PRODUCTION_ROLES,
   SESSION_REVOKE_REASONS,
   USER_ROLES,
   USER_STATUSES,
@@ -29,6 +33,11 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["users_status_check", USER_STATUSES],
     ["auth_identities_provider_check", AUTH_PROVIDERS],
     ["auth_sessions_revoke_reason_check", SESSION_REVOKE_REASONS],
+    ["client_profiles_industry_check", PRODUCT_CATEGORIES],
+    ["creator_profiles_niche_check", PRODUCT_CATEGORIES],
+    ["creator_profiles_content_styles_check", CONTENT_STYLES],
+    ["creator_profiles_production_roles_check", PRODUCTION_ROLES],
+    ["creator_profiles_service_status_check", CREATOR_SERVICE_STATUSES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

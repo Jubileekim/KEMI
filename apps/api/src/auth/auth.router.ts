@@ -11,6 +11,7 @@ import {
   Router,
 } from "express";
 import AppError from "../http/app-error.js";
+import readBearerToken from "../http/bearer-token.js";
 import type { AuthResult, AuthService } from "./auth.service.js";
 import createAuthRateLimits from "./rate-limits.js";
 import SocialCallbackFailure from "./social/social-callback-failure.js";
@@ -41,11 +42,6 @@ function readCookie(req: Request, name: string): string | undefined {
 
 function readRefreshCookie(req: Request): string | undefined {
   return readCookie(req, REFRESH_COOKIE_NAME);
-}
-
-function readBearerToken(req: Request): string | undefined {
-  const header = req.get("authorization");
-  return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 }
 
 function setRefreshCookie(res: Response, result: AuthResult) {

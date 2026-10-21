@@ -9,6 +9,7 @@ import {
 } from "./auth/social/providers.js";
 import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
+import { createProfileService } from "./profiles/profile.service.js";
 
 // 환경 변수가 있는 제공자만 켠다.
 function socialProvidersOf(env: Env): SocialProviders {
@@ -40,6 +41,7 @@ function start(env: Env) {
       accessTokenSecret: env.JWT_ACCESS_SECRET,
       socialProviders: socialProvidersOf(env),
     }),
+    profileService: createProfileService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

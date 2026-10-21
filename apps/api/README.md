@@ -196,6 +196,23 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 - 환경 변수가 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내한다. 키 없이도 서버는 시작된다.
 - **[미검증] 실제 Google·카카오 로그인은 아직 확인하지 않았다.** 테스트는 가짜 제공자로만 실행한다. 준비할 앱 설정·키 이름·콜백 주소는 연동 문서의 "팀원 준비 목록"에 있다.
 
+## 프로필 API
+
+자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 10장에 있다. 두 경로 모두 `Authorization: Bearer <accessToken>`이 필요하다.
+
+| 메서드·경로              | 하는 일                                   | 성공 응답                             |
+| ------------------------ | ----------------------------------------- | ------------------------------------- |
+| `GET /api/profiles/me`   | 본인 프로필 조회 (저장 전이면 빈 기본값)  | `200` + `{ name, profile }`           |
+| `PATCH /api/profiles/me` | 보낸 항목만 저장. `name`은 회원 표시 이름 | `200` + 저장 결과 (`GET`과 같은 형식) |
+
+- `profile.type`이 `CLIENT`면 의뢰인, `CREATOR`면 크리에이터 형식이다. 요청 본문도 로그인한 역할의 형식만 받는다.
+- 보내지 않은 항목은 그대로다. 자유 입력 칸(문자열·주소)의 빈 문자열은 `null`로 저장하고, 선택지·날짜는 `null`로 지운다. 항목별 규칙은 결정 기록 10장 "PATCH 값 규칙" 표에 있다.
+- 모르는 항목·다른 역할 항목·`serviceStatus`는 `400 VALIDATION_FAILED`다.
+- 크리에이터의 `serviceStatus`는 `DRAFT`로 시작하며 저장으로 바뀌지 않는다. 공개·비공개는 패키지 PR에서 만든다.
+- 관리자 계정은 `403 FORBIDDEN`이다. 이용 제한·탈퇴 회원은 상태가 바뀌기 전에 받은 토큰으로도 `403 FORBIDDEN`이다.
+- 선택지 값과 화면 표시 이름 제안: [프로필 선택지 공유 문서](../../docs/handoff/2026-10-21-profile-options.md)
+- 이번 구현은 PROFILE-01·02의 텍스트·선택 항목까지다. 로고·이미지·경력·링크·공개 전환은 후속이다(결정 기록 10장 표).
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
@@ -281,10 +298,10 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 - GitHub Actions(PostgreSQL 서비스)에서 타입 검사·단위 테스트·DB 테스트·빌드 통과
 - 안전장치: `TEST_DATABASE_URL`이 없거나 `_test`가 아닌 DB를 가리키면 DB 테스트가 시작되지 않음
 - 테스트 DB(17.11)에 첫 마이그레이션(`20261019051147_auth_tables`) 적용, 인증 DB 테스트 통과 (회원가입·로그인·회전·최대 수명·재사용 감지·동시 갱신·로그아웃·CHECK와 shared 상태값 일치)
+- 팀 개발용 Supabase 연결과 마이그레이션 3개 적용·검증, Data API 꺼짐 확인 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5))
 
 **아직 확인하지 않은 것**
 
-- 실제 Supabase DB 연결과 마이그레이션 적용: 미검증. 버전이 같다는 것만 확인했다. 접속 정보가 준비되면 `/health/ready` 200과 `prisma migrate deploy`부터 확인한다.
 - Render 배포와 헬스 체크 동작
 - Vercel rewrite를 거친 `/api/*` 호출
 - 실제 브라우저에서의 Refresh 쿠키 동작 (`Secure` 쿠키는 `http://localhost`에서는 대부분의 브라우저가 허용하지만, 프론트엔드 연동 때 확인한다)
@@ -308,7 +325,10 @@ apps/api/
 │  ├─ app.ts               # Express 앱 조립 (테스트에서 의존성 주입)
 │  ├─ server.ts            # 환경 변수 검증 → DB 연결 → 서버 시작·종료 처리
 │  ├─ config/env.ts        # Zod 환경 변수 검증
-│  ├─ http/                # AppError·공통 오류 처리
+│  ├─ auth/                # 회원가입·로그인·토큰
+│  ├─ profiles/            # 역할별 본인 프로필
+│  ├─ docs/                # OpenAPI 문서·Swagger UI
+│  ├─ http/                # AppError·공통 오류 처리·Bearer 토큰 읽기
 │  ├─ lib/prisma.ts        # Prisma Client (pg 어댑터)
 │  ├─ routes/              # API 라우터
 │  └─ generated/           # Prisma 생성 코드 (커밋하지 않음)

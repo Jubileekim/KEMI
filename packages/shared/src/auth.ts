@@ -30,10 +30,13 @@ export const SIGNUP_ROLES = [
   "CREATOR",
 ] as const satisfies readonly UserRole[];
 
+// 표시 이름 2~20자 (users.name). 가입과 프로필 수정에서 같은 규칙을 쓴다.
+export const displayNameSchema = z.string().trim().min(2).max(20);
+
 export const signupRequestSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  name: z.string().trim().min(2).max(20),
+  name: displayNameSchema,
   role: z.enum(SIGNUP_ROLES),
 });
 export type SignupRequest = z.input<typeof signupRequestSchema>;
