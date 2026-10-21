@@ -1,4 +1,8 @@
-import type { AuthTokenResponse, MeResponse } from "@kemi/shared";
+import type {
+  AuthTokenResponse,
+  MeResponse,
+  SocialSignupPendingResponse,
+} from "@kemi/shared";
 import cookieParser from "cookie-parser";
 import {
   type CookieOptions,
@@ -9,6 +13,8 @@ import {
 import AppError from "../http/app-error.js";
 import type { AuthResult, AuthService } from "./auth.service.js";
 import createAuthRateLimits from "./rate-limits.js";
+import SocialCallbackFailure from "./social/social-callback-failure.js";
+import { SOCIAL_TICKET_TTL_SECONDS } from "./social/tickets.js";
 
 export const REFRESH_COOKIE_NAME = "kemi_refresh";
 
@@ -20,9 +26,21 @@ const REFRESH_COOKIE_OPTIONS: CookieOptions = {
   path: "/api/auth",
 };
 
-function readRefreshCookie(req: Request): string | undefined {
-  const value: unknown = req.cookies[REFRESH_COOKIE_NAME];
+// 소셜 로그인 중간 단계 쿠키 (10분). 콜백·가입 요청도 /api/auth 아래라 경로를 같게 둔다.
+export const OAUTH_STATE_COOKIE_NAME = "kemi_oauth_state";
+export const SOCIAL_SIGNUP_COOKIE_NAME = "kemi_social_signup";
+const SOCIAL_COOKIE_OPTIONS: CookieOptions = {
+  ...REFRESH_COOKIE_OPTIONS,
+  maxAge: SOCIAL_TICKET_TTL_SECONDS * 1000,
+};
+
+function readCookie(req: Request, name: string): string | undefined {
+  const value: unknown = req.cookies[name];
   return typeof value === "string" ? value : undefined;
+}
+
+function readRefreshCookie(req: Request): string | undefined {
+  return readCookie(req, REFRESH_COOKIE_NAME);
 }
 
 function readBearerToken(req: Request): string | undefined {
@@ -30,11 +48,15 @@ function readBearerToken(req: Request): string | undefined {
   return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 }
 
-function sendAuthResult(res: Response, status: number, result: AuthResult) {
+function setRefreshCookie(res: Response, result: AuthResult) {
   res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
     ...REFRESH_COOKIE_OPTIONS,
     maxAge: result.sessionExpiresAt.getTime() - Date.now(),
   });
+}
+
+function sendAuthResult(res: Response, status: number, result: AuthResult) {
+  setRefreshCookie(res, result);
   const body: AuthTokenResponse = {
     accessToken: result.accessToken,
     accessTokenExpiresIn: result.accessTokenExpiresIn,
@@ -89,6 +111,85 @@ export function createAuthRouter(
     await authService.logout(readRefreshCookie(req));
     res.clearCookie(REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTIONS);
     res.status(204).end();
+  });
+
+  // ─── 소셜 로그인 (Google·카카오) ───
+  // 제공자에 등록하는 콜백 주소. Vercel rewrite로 프론트엔드 도메인의 /api/*가 이 서버로 온다.
+  const callbackUri = (provider: string) =>
+    `${appOrigin}/api/auth/${provider}/callback`;
+  // 결과는 항상 프론트엔드의 고정 경로로 돌려보낸다(다른 주소로 보내지 않는다).
+  const redirectToApp = (res: Response, params: Record<string, string>) => {
+    const url = new URL("/auth/social/callback", appOrigin);
+    url.search = new URLSearchParams(params).toString();
+    res.redirect(302, url.toString());
+  };
+
+  // 없는 제공자 이름은 서비스에서 404로 처리한다.
+  const providerOf = (req: Request) => {
+    const { provider } = req.params;
+    return typeof provider === "string" ? provider : "";
+  };
+
+  router.get("/:provider/start", limits.login, async (req, res) => {
+    const provider = providerOf(req);
+    try {
+      const { redirectUrl, stateCookie } = await authService.startSocial(
+        provider,
+        callbackUri(provider),
+      );
+      res.cookie(OAUTH_STATE_COOKIE_NAME, stateCookie, SOCIAL_COOKIE_OPTIONS);
+      res.redirect(302, redirectUrl);
+    } catch (err) {
+      if (!(err instanceof SocialCallbackFailure)) throw err;
+      redirectToApp(res, { error: err.reason });
+    }
+  });
+
+  router.get("/:provider/callback", limits.login, async (req, res) => {
+    // state 쿠키는 한 번만 쓴다.
+    res.clearCookie(OAUTH_STATE_COOKIE_NAME, REFRESH_COOKIE_OPTIONS);
+    const provider = providerOf(req);
+    try {
+      const result = await authService.finishSocial(
+        provider,
+        req.query,
+        readCookie(req, OAUTH_STATE_COOKIE_NAME),
+        callbackUri(provider),
+      );
+      if (result.kind === "login") {
+        // Access 토큰은 주소에 싣지 않는다. 프론트엔드가 refresh로 받는다.
+        setRefreshCookie(res, result.auth);
+        redirectToApp(res, { result: "login" });
+      } else {
+        res.cookie(
+          SOCIAL_SIGNUP_COOKIE_NAME,
+          result.signupTicket,
+          SOCIAL_COOKIE_OPTIONS,
+        );
+        redirectToApp(res, { result: "signup" });
+      }
+    } catch (err) {
+      if (!(err instanceof SocialCallbackFailure)) throw err;
+      redirectToApp(res, { error: err.reason });
+    }
+  });
+
+  router.get("/social/signup", async (req, res) => {
+    const body: SocialSignupPendingResponse =
+      await authService.readSocialSignup(
+        readCookie(req, SOCIAL_SIGNUP_COOKIE_NAME),
+      );
+    res.json(body);
+  });
+
+  router.post("/social/signup", limits.signup, async (req, res) => {
+    requireAppOrigin(req);
+    const result = await authService.completeSocialSignup(
+      readCookie(req, SOCIAL_SIGNUP_COOKIE_NAME),
+      req.body,
+    );
+    res.clearCookie(SOCIAL_SIGNUP_COOKIE_NAME, REFRESH_COOKIE_OPTIONS);
+    sendAuthResult(res, 201, result);
   });
 
   router.get("/me", async (req, res) => {

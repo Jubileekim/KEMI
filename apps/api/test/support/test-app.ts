@@ -1,10 +1,13 @@
 import type { Express } from "express";
 import { createApp } from "../../src/app.js";
-import { createAuthService } from "../../src/auth/auth.service.js";
+import {
+  createAuthService,
+  type SocialProviders,
+} from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
-const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
+export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
 
 interface TestAppOptions {
   // DB 테스트는 테스트 DB 클라이언트를 넘긴다. 단위 테스트는 생략하면 접속하지 않는 클라이언트를 쓴다.
@@ -13,6 +16,7 @@ interface TestAppOptions {
   beforeRotationCommit?: () => Promise<void>;
   trustProxyHops?: number;
   apiDocs?: boolean;
+  socialProviders?: SocialProviders;
 }
 
 // 단위 테스트용: 주소만 있고 실제로 쿼리하지 않으므로 접속하지 않는다.
@@ -24,6 +28,7 @@ export function createTestApp({
   beforeRotationCommit,
   trustProxyHops,
   apiDocs,
+  socialProviders,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -35,6 +40,7 @@ export function createTestApp({
       prisma: prisma ?? unusedPrisma,
       accessTokenSecret: TEST_ACCESS_SECRET,
       beforeRotationCommit,
+      socialProviders,
     }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,

@@ -570,6 +570,72 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | ERD v0.6 상태값                                          | text (CHECK 언급 없음)               | text + CHECK + shared Zod enum                                                                    |
 | 공통 작업 기준 · Plan1                                   | 프로필 API를 회원가입과 같은 날 구현 | 프로필 수정 API는 다음 프로필 PR로 분리                                                           |
 
+## 11. 소셜 로그인 (Google·카카오)
+
+1장(이메일과 소셜 계정)과 5장(쿠키·OAuth)의 확정·제안 사항을 구현한다. DB 구조는 바꾸지 않는다(`auth_identities`는 첫 마이그레이션에 있다).
+
+**범위**
+
+- 포함: Google·카카오 로그인 시작·콜백, 처음 온 소셜 계정의 역할·표시 이름 입력 후 가입, 기존 소셜 계정 로그인
+- 제외: 기존 회원에 소셜 계정 연결(1장: MVP 제외), 소셜 계정 연결 해제, 제공자 토큰 보관(로그인 확인에만 쓰고 저장하지 않는다)
+
+**흐름 [제안]**
+
+1. 프론트엔드가 브라우저를 `GET /api/auth/{provider}/start`로 이동시킨다(fetch가 아님).
+2. 서버는 `state`(CSRF 방지)와 PKCE `code_verifier`를 만들어 서명한 JWT로 `kemi_oauth_state` 쿠키(10분)에 담고, 제공자 동의 화면으로 302 이동한다.
+3. 제공자가 `{APP_ORIGIN}/api/auth/{provider}/callback`으로 돌려보낸다. 서버는 쿠키를 지우고 다음을 확인한다.
+   - 쿠키 서명·만료·용도가 맞고, 쿠키의 제공자와 경로의 제공자가 같고, 쿼리 `state`가 쿠키 값과 같다. 아니면 제공자에 코드를 보내지 않고 `SOCIAL_FAILED`다.
+   - `error=access_denied`면 `SOCIAL_CANCELLED`다.
+4. 서버가 코드를 제공자 토큰으로 바꾸고 회원 정보를 받는다. `(provider, provider_user_id)`로 소셜 계정을 찾는다.
+   - **있음**: 회원 상태가 `ACTIVE`면 로그인 세션을 만들고 Refresh 쿠키를 설정한 뒤 프론트엔드 `/auth/social/callback?result=login`으로 보낸다. Access 토큰은 주소에 싣지 않는다. 프론트엔드가 `POST /api/auth/refresh`로 받는다. 이용 제한·탈퇴 회원이면 `error=FORBIDDEN`이고 세션을 만들지 않는다.
+   - **없음**: 아직 회원을 만들지 않는다. 제공자 회원 정보를 서명한 가입 티켓 쿠키(`kemi_social_signup`, 10분)에 담아 `?result=signup`으로 보낸다.
+5. 프론트엔드는 `GET /api/auth/social/signup`으로 이름 후보를 받아 가입 화면을 보여주고, 사용자가 확인한 역할·표시 이름을 `POST /api/auth/social/signup`으로 보낸다(`Origin` 검사). 서버는 회원과 소셜 계정을 한 번에 만들고 회원가입과 같은 응답을 준다.
+
+- 결과는 항상 `APP_ORIGIN`의 고정 경로 `/auth/social/callback`으로만 보낸다. 요청에서 받은 주소로 보내지 않는다(오픈 리다이렉트 방지).
+- 중간 단계 값은 DB에 저장하지 않는다. `JWT_ACCESS_SECRET`으로 서명하되 `audience`(`kemi:oauth-state`, `kemi:social-signup`)로 용도를 나눠, Access 토큰·state 쿠키·가입 티켓을 서로 바꿔 쓸 수 없게 한다.
+- 두 쿠키 모두 `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`다. 제공자에서 돌아오는 요청은 최상위 GET 이동이라 `Lax` 쿠키가 실린다.
+
+**계정 규칙 [확정 · 1장]**
+
+- 같은 이메일이라는 이유로 기존 회원과 병합하지 않는다. 같은 이메일의 이메일 회원이 있어도 소셜 가입은 별도 회원이 된다.
+- 소셜 가입 회원은 `users.email`·`password_hash`가 `NULL`이다. 이메일·비밀번호 로그인을 할 수 없다.
+- 제공자 이메일은 `auth_identities.provider_email`에만 저장하며, 제공자가 확인한 이메일만 저장한다.
+  - Google: `email_verified`가 `true`일 때
+  - 카카오: `is_email_valid`와 `is_email_verified`가 모두 `true`일 때
+- 같은 가입 티켓으로 두 번 가입하면(다른 탭 등) `(provider, provider_user_id)` UNIQUE 때문에 `409 CONFLICT`다.
+
+**제공자별 차이 [검증 필요]**
+
+| 항목      | Google                                     | 카카오                                                             |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| 동의 화면 | `accounts.google.com/o/oauth2/v2/auth`     | `kauth.kakao.com/oauth/authorize`                                  |
+| 토큰 교환 | `oauth2.googleapis.com/token`              | `kauth.kakao.com/oauth/token`                                      |
+| 회원 정보 | `openidconnect.googleapis.com/v1/userinfo` | `kapi.kakao.com/v2/user/me`                                        |
+| 식별 값   | `sub`                                      | `id` (숫자 → 문자열로 저장)                                        |
+| PKCE      | 사용 (`S256`)                              | 사용 안 함. 카카오 REST API 문서에 PKCE 항목이 없어 `state`만 쓴다 |
+| 비밀 값   | Client Secret 필수                         | Client Secret: 카카오 앱에서 기본 사용. 끈 앱이면 보내지 않는다    |
+
+- 위 주소·필드는 2026-10-21 공식 문서 기준이다. 카카오 회원 정보 응답 필드는 문서 요약으로 확인했으므로, 실제 키로 연동할 때 다시 확인한다.
+- 회원 정보 응답이 예상 형식과 다르면 `SOCIAL_FAILED`로 처리한다. 제공자 응답 내용은 기록하지 않는다(토큰이 들어 있을 수 있음).
+
+**설정**
+
+- 환경 변수: `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`(둘 다), `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`(선택). 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내하며, 서버는 키 없이도 시작된다.
+- 제공자 콘솔에 등록할 콜백 주소
+  - 로컬: `http://localhost:5173/api/auth/{google|kakao}/callback` (Vite 프록시)
+  - 배포: `https://<Vercel 도메인>/api/auth/{google|kakao}/callback` (Vercel rewrite)
+- [검증 필요] 실제 키·콜백 주소 등록이 아직 없다. 키를 받은 뒤 로컬과 배포 환경에서 성공·취소·재로그인을 확인한다.
+
+**검증**
+
+- 제공자 어댑터 단위 테스트 9개: 동의 화면 주소, 토큰 교환 요청 내용, 확인된 이메일만 저장, 응답 형식 오류
+- 가짜 제공자로 DB 테스트 21개
+  - state 불일치·쿠키 없음·위조·다른 제공자 쿠키, 취소, 통신 실패
+  - 처음 온 계정은 가입 전까지 회원을 만들지 않음, 가입 후 같은 계정 재로그인
+  - 같은 이메일 자동 병합 없음, 이용 제한 회원 차단
+  - 티켓 없음 401, 다른 Origin 403, ADMIN 400, 티켓 재사용 409, 용도가 다른 토큰 거부
+- state 비교, 제공자 일치, 회원 상태 확인, `audience` 검사, `Origin` 검사, Google 이메일 확인 여부를 일부러 빼면 해당 테스트가 실패하는 것을 확인했다.
+
 ## 다음 작업
 
 | 작업                                                       | 처리                                                                                               |

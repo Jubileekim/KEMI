@@ -1,7 +1,32 @@
 import { createApp } from "./app.js";
-import { createAuthService } from "./auth/auth.service.js";
+import {
+  createAuthService,
+  type SocialProviders,
+} from "./auth/auth.service.js";
+import {
+  createGoogleProvider,
+  createKakaoProvider,
+} from "./auth/social/providers.js";
 import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
+
+// 환경 변수가 있는 제공자만 켠다.
+function socialProvidersOf(env: Env): SocialProviders {
+  const providers: SocialProviders = {};
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    providers.google = createGoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    });
+  }
+  if (env.KAKAO_REST_API_KEY) {
+    providers.kakao = createKakaoProvider({
+      restApiKey: env.KAKAO_REST_API_KEY,
+      clientSecret: env.KAKAO_CLIENT_SECRET,
+    });
+  }
+  return providers;
+}
 
 function start(env: Env) {
   const prisma = createPrismaClient(env);
@@ -13,6 +38,7 @@ function start(env: Env) {
     authService: createAuthService({
       prisma,
       accessTokenSecret: env.JWT_ACCESS_SECRET,
+      socialProviders: socialProvidersOf(env),
     }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,

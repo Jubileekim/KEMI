@@ -1,7 +1,10 @@
 import {
   ERROR_CODES,
   loginRequestSchema,
+  SOCIAL_CALLBACK_ERRORS,
+  SOCIAL_PROVIDER_PATHS,
   signupRequestSchema,
+  socialSignupRequestSchema,
   USER_ROLES,
   USER_STATUSES,
 } from "@kemi/shared";
@@ -41,6 +44,18 @@ const rateLimited = errorResponse(
 const cookieOnlyRequest = {
   description:
     "Refresh 쿠키(`kemi_refresh`)로만 동작한다. `Origin` 헤더가 프론트엔드 주소(`APP_ORIGIN`)와 같아야 한다.",
+};
+
+const providerParam = {
+  name: "provider",
+  in: "path",
+  required: true,
+  schema: { type: "string", enum: [...SOCIAL_PROVIDER_PATHS] },
+};
+
+const socialRedirect = {
+  description: `프론트엔드 \`/auth/social/callback\`으로 이동. 쿼리는 \`result=login\`(Refresh 쿠키 설정됨), \`result=signup\`(가입 티켓 쿠키 설정됨) 또는 \`error=${SOCIAL_CALLBACK_ERRORS.join("|")}\` 중 하나다.`,
+  headers: { Location: { schema: { type: "string" } } },
 };
 
 const openApiDocument = {
@@ -176,6 +191,89 @@ const openApiDocument = {
         },
       },
     },
+    "/api/auth/{provider}/start": {
+      get: {
+        tags: ["auth"],
+        summary: "소셜 로그인 시작 (브라우저 이동)",
+        description:
+          "fetch가 아니라 브라우저 주소 이동으로 연다. 제공자 동의 화면으로 302 이동하고, state·PKCE 값을 `kemi_oauth_state` 쿠키(10분)에 담는다. 서버에 제공자 설정이 없으면 프론트엔드로 `error=SOCIAL_UNAVAILABLE`과 함께 돌려보낸다. 요청 제한: 로그인과 같음.",
+        parameters: [providerParam],
+        responses: {
+          302: {
+            description: "제공자 동의 화면 또는 프론트엔드(설정 없음)로 이동",
+            headers: { Location: { schema: { type: "string" } } },
+          },
+          404: errorResponse("지원하지 않는 제공자 (`NOT_FOUND`)"),
+          429: rateLimited,
+        },
+      },
+    },
+    "/api/auth/{provider}/callback": {
+      get: {
+        tags: ["auth"],
+        summary: "소셜 로그인 콜백 (제공자가 호출)",
+        description:
+          "제공자 콘솔에 `{APP_ORIGIN}/api/auth/{provider}/callback`으로 등록한다. state가 쿠키와 같아야 한다. 같은 이메일의 기존 회원과 자동으로 병합하지 않는다. Access 토큰은 주소에 싣지 않으며, `result=login`이면 프론트엔드가 `POST /api/auth/refresh`로 받는다.",
+        parameters: [
+          providerParam,
+          { name: "code", in: "query", schema: { type: "string" } },
+          { name: "state", in: "query", schema: { type: "string" } },
+          { name: "error", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          302: socialRedirect,
+          404: errorResponse("지원하지 않는 제공자 (`NOT_FOUND`)"),
+          429: rateLimited,
+        },
+      },
+    },
+    "/api/auth/social/signup": {
+      get: {
+        tags: ["auth"],
+        summary: "소셜 가입 대기 정보 조회",
+        description:
+          "`result=signup`으로 돌아온 뒤 가입 화면에 보여줄 제공자·이름 후보·제공자 이메일. 가입 티켓 쿠키(`kemi_social_signup`, 10분)가 필요하다.",
+        responses: {
+          200: {
+            description: "가입 대기 중인 소셜 계정",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/SocialSignupPendingResponse",
+                },
+              },
+            },
+          },
+          401: errorResponse("가입 티켓 없음·만료 (`UNAUTHENTICATED`)"),
+        },
+      },
+      post: {
+        tags: ["auth"],
+        summary: "소셜 가입 완료 후 바로 로그인",
+        description:
+          "가입 티켓 쿠키로 동작하며 `Origin` 헤더가 프론트엔드 주소와 같아야 한다. 로그인 이메일·비밀번호 없이 가입하며, 제공자 이메일은 소셜 계정 정보로만 저장한다. 요청 제한: 가입과 같음.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(socialSignupRequestSchema),
+            },
+          },
+        },
+        responses: {
+          201: authTokenResponse("가입·로그인 성공."),
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          401: errorResponse("가입 티켓 없음·만료·위조 (`UNAUTHENTICATED`)"),
+          403: errorResponse("허용되지 않은 Origin (`FORBIDDEN`)"),
+          409: errorResponse(
+            "이 소셜 계정으로 이미 가입함 (`CONFLICT`). 소셜 로그인을 다시 시작한다.",
+          ),
+          429: rateLimited,
+        },
+      },
+    },
     "/api/auth/me": {
       get: {
         tags: ["auth"],
@@ -246,6 +344,22 @@ const openApiDocument = {
             description: "초 단위 (900 = 15분)",
           },
           user: { $ref: "#/components/schemas/AuthUser" },
+        },
+      },
+      SocialSignupPendingResponse: {
+        type: "object",
+        required: ["provider", "suggestedName", "providerEmail"],
+        properties: {
+          provider: { type: "string", enum: [...SOCIAL_PROVIDER_PATHS] },
+          suggestedName: {
+            type: ["string", "null"],
+            description:
+              "제공자 이름. 가입 화면의 기본값으로만 쓴다(2~20자 아닐 수 있음).",
+          },
+          providerEmail: {
+            type: ["string", "null"],
+            description: "제공자가 확인한 이메일. 로그인 이메일이 아니다.",
+          },
         },
       },
       MeResponse: {

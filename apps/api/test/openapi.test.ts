@@ -36,7 +36,9 @@ describe("OpenAPI 문서", () => {
     expect(operations.length).toBeGreaterThan(0);
 
     const results = await Promise.all(
-      operations.map(async ({ path, method }) => {
+      operations.map(async ({ path: documented, method }) => {
+        // 경로 변수는 실제 값으로 바꿔 부른다.
+        const path = documented.replace("{provider}", "google");
         const res =
           method === "post"
             ? await request(app).post(path).send({})

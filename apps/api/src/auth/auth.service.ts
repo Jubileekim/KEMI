@@ -1,13 +1,26 @@
 import {
+  type AuthProvider,
   type AuthUser,
   loginRequestSchema,
+  type SocialProviderPath,
+  SOCIAL_PROVIDER_PATHS,
+  type SocialSignupPendingResponse,
   signupRequestSchema,
+  socialSignupRequestSchema,
   userRoleSchema,
   userStatusSchema,
 } from "@kemi/shared";
 import bcrypt from "bcrypt";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
+import type { SocialProvider } from "./social/providers.js";
+import SocialCallbackFailure from "./social/social-callback-failure.js";
+import {
+  createOAuthState,
+  createSignupTicket,
+  readOAuthState,
+  readSignupTicket,
+} from "./social/tickets.js";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   createRefreshToken,
@@ -25,6 +38,36 @@ const REFRESH_RETRY_AFTER_MS = 500;
 // 회전 경합에서 진 요청을 트랜잭션 밖으로 알리는 표시
 class RotationConflict extends Error {}
 
+// 경로 이름(google) → DB 값(GOOGLE)
+const PROVIDER_OF = {
+  google: "GOOGLE",
+  kakao: "KAKAO",
+} as const satisfies Record<SocialProviderPath, AuthProvider>;
+
+function toProviderPath(value: string): SocialProviderPath {
+  const path = SOCIAL_PROVIDER_PATHS.find((candidate) => candidate === value);
+  if (!path) {
+    throw new AppError(404, "NOT_FOUND", "지원하지 않는 소셜 로그인입니다.");
+  }
+  return path;
+}
+
+export type SocialProviders = Partial<
+  Record<SocialProviderPath, SocialProvider>
+>;
+
+export type SocialCallbackResult =
+  | { kind: "login"; auth: AuthResult }
+  | { kind: "signup"; signupTicket: string };
+
+function socialTicketMissing(): AppError {
+  return new AppError(
+    401,
+    "UNAUTHENTICATED",
+    "소셜 로그인 정보가 없거나 만료되었습니다. 다시 시도해주세요.",
+  );
+}
+
 export interface AuthResult {
   accessToken: string;
   accessTokenExpiresIn: number;
@@ -37,6 +80,8 @@ export interface AuthResult {
 export interface AuthServiceOptions {
   prisma: PrismaClient;
   accessTokenSecret: string;
+  // 설정된 소셜 로그인 제공자. 설정이 없는 제공자는 SOCIAL_UNAVAILABLE로 돌려보낸다.
+  socialProviders?: SocialProviders;
   // 테스트 전용: 회전 트랜잭션 안에서 토큰 행을 잠근 뒤, 커밋 직전에 호출된다.
   // 동시 요청이 실제로 겹치는지 확인하거나, 중간 실패 시 롤백되는지 확인하는 데 쓴다.
   beforeRotationCommit?: () => Promise<void>;
@@ -85,6 +130,7 @@ function assertActive(user: UserRow): void {
 export function createAuthService({
   prisma,
   accessTokenSecret,
+  socialProviders = {},
   beforeRotationCommit,
 }: AuthServiceOptions) {
   const secret = new TextEncoder().encode(accessTokenSecret);
@@ -301,7 +347,150 @@ export function createAuthService({
     return toAuthUser(session.user);
   }
 
-  return { signup, login, refresh, logout, authenticate };
+  // 소셜 로그인 시작: 제공자 동의 화면 주소와 state 쿠키 값을 만든다.
+  async function startSocial(
+    providerPath: string,
+    redirectUri: string,
+  ): Promise<{ redirectUrl: string; stateCookie: string }> {
+    const path = toProviderPath(providerPath);
+    const provider = socialProviders[path];
+    if (!provider) throw new SocialCallbackFailure("SOCIAL_UNAVAILABLE");
+    const { cookie, state, codeChallenge } = await createOAuthState(
+      path,
+      secret,
+    );
+    return {
+      redirectUrl: provider.authorizeUrl({ state, codeChallenge, redirectUri }),
+      stateCookie: cookie,
+    };
+  }
+
+  // 소셜 로그인 콜백: state 확인 → 제공자 회원 정보 → 기존 회원이면 로그인, 처음이면 가입 티켓
+  async function finishSocial(
+    providerPath: string,
+    query: { code?: unknown; state?: unknown; error?: unknown },
+    stateCookie: string | undefined,
+    redirectUri: string,
+  ): Promise<SocialCallbackResult> {
+    const path = toProviderPath(providerPath);
+    const saved = await readOAuthState(stateCookie, secret);
+    if (
+      !saved ||
+      saved.provider !== path ||
+      typeof query.state !== "string" ||
+      query.state !== saved.state
+    ) {
+      throw new SocialCallbackFailure("SOCIAL_FAILED");
+    }
+    if (query.error !== undefined) {
+      throw new SocialCallbackFailure(
+        query.error === "access_denied" ? "SOCIAL_CANCELLED" : "SOCIAL_FAILED",
+      );
+    }
+    const provider = socialProviders[path];
+    if (!provider) throw new SocialCallbackFailure("SOCIAL_UNAVAILABLE");
+    if (typeof query.code !== "string" || query.code === "") {
+      throw new SocialCallbackFailure("SOCIAL_FAILED");
+    }
+
+    const profile = await provider
+      .fetchProfile({
+        code: query.code,
+        codeVerifier: saved.codeVerifier,
+        redirectUri,
+      })
+      .catch(() => {
+        // 제공자 응답 내용(토큰 포함 가능)은 기록하지 않는다.
+        console.error(`social profile fetch failed: ${path}`);
+        throw new SocialCallbackFailure("SOCIAL_FAILED");
+      });
+
+    const identity = await prisma.authIdentity.findUnique({
+      where: {
+        provider_providerUserId: {
+          provider: PROVIDER_OF[path],
+          providerUserId: profile.providerUserId,
+        },
+      },
+      include: { user: true },
+    });
+    if (identity) {
+      if (identity.user.status !== "ACTIVE") {
+        throw new SocialCallbackFailure("FORBIDDEN");
+      }
+      return { kind: "login", auth: await startSession(identity.user) };
+    }
+    return {
+      kind: "signup",
+      signupTicket: await createSignupTicket(
+        { provider: path, profile },
+        secret,
+      ),
+    };
+  }
+
+  async function readSocialSignup(
+    signupTicket: string | undefined,
+  ): Promise<SocialSignupPendingResponse> {
+    const ticket = await readSignupTicket(signupTicket, secret);
+    if (!ticket) throw socialTicketMissing();
+    return {
+      provider: ticket.provider,
+      suggestedName: ticket.profile.name,
+      providerEmail: ticket.profile.email,
+    };
+  }
+
+  // 소셜 가입: users.email·password_hash 없이 만든다. 제공자 이메일은 auth_identities에만 저장한다.
+  async function completeSocialSignup(
+    signupTicket: string | undefined,
+    input: unknown,
+  ): Promise<AuthResult> {
+    const ticket = await readSignupTicket(signupTicket, secret);
+    if (!ticket) throw socialTicketMissing();
+    const { name, role } = socialSignupRequestSchema.parse(input);
+    try {
+      const user = await prisma.user.create({
+        data: {
+          name,
+          role,
+          identities: {
+            create: {
+              provider: PROVIDER_OF[ticket.provider],
+              providerUserId: ticket.profile.providerUserId,
+              providerEmail: ticket.profile.email,
+            },
+          },
+        },
+      });
+      return await startSession(user);
+    } catch (err) {
+      // 같은 소셜 계정으로 다른 탭에서 먼저 가입한 경우
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new AppError(
+          409,
+          "CONFLICT",
+          "이미 가입된 소셜 계정입니다. 다시 로그인해주세요.",
+        );
+      }
+      throw err;
+    }
+  }
+
+  return {
+    signup,
+    login,
+    refresh,
+    logout,
+    authenticate,
+    startSocial,
+    finishSocial,
+    readSocialSignup,
+    completeSocialSignup,
+  };
 }
 
 export type AuthService = ReturnType<typeof createAuthService>;
