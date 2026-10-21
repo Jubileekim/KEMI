@@ -13,9 +13,12 @@ Express 5 · TypeScript · Prisma 7 · Supabase PostgreSQL 백엔드.
 
 ```bash
 npm install
+npm run prisma:generate -w @kemi/api     # Prisma Client 생성 (생성 파일은 Git에 포함하지 않는다)
 cp apps/api/.env.example apps/api/.env   # 값 채우기 (아래 "DB 연결 주소" 참고)
 npm run dev:api
 ```
+
+- `npm install`과 `dev:api`는 Prisma Client를 만들지 않는다. 처음 받았을 때와 `schema.prisma`가 바뀐 브랜치로 옮겼을 때 `prisma:generate`를 다시 실행한다.
 
 - 서버 주소: `http://localhost:4000`
 - `GET /health` → `200 {"status":"ok", ...}`
@@ -52,11 +55,13 @@ npm run dev:api
 ### DB 테스트 실행 (로컬 Docker)
 
 ```bash
+# 저장소 루트에서 시작
 cd apps/api
 cp .env.test.example .env.test
 npm run test:db:up
 npm run test:db
 npm run test:db:down
+cd ../..   # 저장소 루트로 돌아온다
 ```
 
 - `test:db:up`은 `docker-compose.test.yml`의 PostgreSQL 17.11 컨테이너(팀 개발용 Supabase와 같은 버전)를 포트 `54329`로 띄운다. 데이터는 메모리에만 있어서, 컨테이너를 내리면 사라진다.

@@ -55,22 +55,27 @@
 자세한 내용은 [API README](../../apps/api/README.md) "처음 실행하기"·"명령어"·"테스트"에 있다. 요약은 다음과 같다.
 
 ```bash
-# 저장소 루트, Node 24 (.nvmrc) · npm 11
+# 시작 위치: 저장소 루트. Node 24 (.nvmrc) · npm 11
 npm install
+npm run prisma:generate -w @kemi/api            # Prisma Client 생성 (생성 파일은 Git에 없다)
 cp apps/api/.env.example apps/api/.env          # 값은 아래 환경 변수 표 참고
 npm run dev:api                                 # http://localhost:4000, GET /health
 
-# 테스트
+# 테스트 (저장소 루트에서 시작)
 npm run test:api                                # 단위 테스트 (DB 불필요)
-cd apps/api && cp .env.test.example .env.test
+cd apps/api                                     # 여기부터 apps/api
+cp .env.test.example .env.test
 npm run test:db:up                              # Docker PostgreSQL 17.11 (포트 54329, 메모리 저장)
 npm run test:db                                 # DB 테스트 (TEST_DATABASE_URL만 사용, 원격 DB 차단)
 npm run test:db:down
+cd ../..                                        # 저장소 루트로 돌아온다
 
-# 검사·빌드 (루트, CI와 같은 순서)
+# 검사·빌드 (저장소 루트, CI와 같은 순서)
 npm run format:check && npm run lint && npm run typecheck
 npm run build:api                               # 린트 경고가 하나라도 있으면 실패
 ```
+
+- `prisma:generate`는 처음 받았을 때와 `schema.prisma`가 바뀐 브랜치로 옮겼을 때 실행한다. `npm install`과 `dev:api`에는 생성 단계가 없다. 린트·타입 검사·빌드·DB 테스트(`test:db`)는 실행 전에 스스로 생성하지만, 단위 테스트(`test:api`)는 생성하지 않는다.
 
 - **Docker Desktop**: 이 PC를 재시작하면 Docker Desktop이 꺼져 있을 수 있다. 켠 뒤 `test:db:up`을 다시 실행한다.
 - **테스트 DB 데이터**: 메모리에만 있어 컨테이너가 바뀌면 비어 있다. DB 테스트를 시작할 때 Supabase 역할 재현과 마이그레이션 적용이 자동으로 다시 된다.
@@ -202,7 +207,7 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
    - 같은 이름의 테이블·제약이 없는지
    - 기본 권한
    - `migrate status`에서 이번 마이그레이션 1개만 대기인지
-3. `npm run db:deploy`(`prisma migrate deploy`)로 적용한다. `migrate dev`·`reset`은 쓰지 않는다.
+3. 저장소 루트에서 `npm run db:deploy -w @kemi/api`(`prisma migrate deploy`)로 적용한다. `apps/api`에서는 `npm run db:deploy`다. `migrate dev`·`reset`은 쓰지 않는다.
 4. 적용 후 확인
    - 이력
    - RLS·CHECK·인덱스
