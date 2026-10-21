@@ -75,6 +75,7 @@ describe("OpenAPI 문서", () => {
       operations.map(async ({ path: documented, method }) => {
         // 경로 변수는 실제 값으로 바꿔 부른다.
         const path = documented
+          .replace("{provider}", "google")
           .replace("{packageId}", "1")
           .replace("{creatorId}", "1");
         const agent = request(app);
