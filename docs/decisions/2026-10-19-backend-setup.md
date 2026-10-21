@@ -506,11 +506,11 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 팀 개발용 Supabase 적용 상태 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5))
 
-| 마이그레이션                             | 내용                                                                                                                                                | 상태                       |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `20261019051147_auth_tables`             | 인증 테이블 4개와 CHECK 제약                                                                                                                        | 적용 (2026-10-19)          |
-| `20261019070424_auth_data_api_lockdown`  | 인증 테이블 RLS 명시 적용, `anon`·`authenticated`의 테이블·시퀀스 권한 회수, 앞으로 만들 테이블·시퀀스의 기본 권한 회수 (아래 "Data API 접근 차단") | 적용 (2026-10-19)          |
-| `20261019074729_prisma_history_lockdown` | `_prisma_migrations`의 `anon`·`authenticated` 권한 회수                                                                                             | 미적용 (리뷰·병합 후 적용) |
+| 마이그레이션                             | 내용                                                                                                                                                | 상태              |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `20261019051147_auth_tables`             | 인증 테이블 4개와 CHECK 제약                                                                                                                        | 적용 (2026-10-19) |
+| `20261019070424_auth_data_api_lockdown`  | 인증 테이블 RLS 명시 적용, `anon`·`authenticated`의 테이블·시퀀스 권한 회수, 앞으로 만들 테이블·시퀀스의 기본 권한 회수 (아래 "Data API 접근 차단") | 적용 (2026-10-19) |
+| `20261019074729_prisma_history_lockdown` | `_prisma_migrations`의 `anon`·`authenticated` 권한 회수                                                                                             | 적용 (2026-10-19) |
 
 - 데이터 변경: 새 테이블을 만들고 권한만 바꾼다. 기존 데이터와 마이그레이션 이력은 바꾸지 않는다.
 
@@ -524,7 +524,10 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 - **자동 RLS(확인됨):**
   - `ensure_rls` 이벤트 트리거(`public.rls_auto_enable`)가 `public`의 새 테이블에 RLS를 켠다(ENABLE, FORCE 아님).
   - 다만 켜는 데 실패하면 로그만 남기고 계속 진행한다.
-- **Data API 활성화 여부(미확인):** Data API가 켜져 있는지, 어떤 스키마를 노출하는지는 DB에서 확인할 수 없다(`authenticator` 역할에 `pgrst.db_schemas` 설정이 없음, 호스팅 플랫폼 설정에 있음). 그래서 "권한이 있으니 지금 외부에서 접근 가능하다"고 단정하지 않는다. 대시보드의 **Project Settings → Data API**에서 활성화 여부와 노출 스키마를 확인한다.
+- **Data API 활성화 여부(확인됨: 꺼져 있음):** Data API가 켜져 있는지, 어떤 스키마를 노출하는지는 DB에서 확인할 수 없다(`authenticator` 역할에 `pgrst.db_schemas` 설정이 없음, 호스팅 플랫폼 설정에 있음).
+  - 대시보드 **Project Settings → Data API**에서 꺼져 있는 것을 확인했다(2026-10-19, 이슈 #5).
+  - 지금은 anon 키로 `public` 테이블에 접근하는 경로가 없다. DB 쪽 차단(RLS·권한 0)은 나중에 Data API를 켜는 경우를 대비한 것이다.
+  - Data API를 켜려면, 먼저 노출할 스키마와 테이블별 권한·RLS 정책을 마이그레이션 PR로 정한다.
 
 이번 마이그레이션이 하는 일:
 
@@ -572,20 +575,21 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 ## 다음 작업
 
-| 작업                                                       | 처리                                                                                               |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                             |
-| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                             |
-| Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음 |
-| TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                        |
-| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                    |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | `feat/auth-email` PR (리뷰 대기). 테스트 DB에서 마이그레이션 적용과 인증 DB 테스트 22개 통과       |
-| 가입·로그인·갱신 요청 제한(429)                            | `feat/auth-email` PR에 추가. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인          |
-| 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 미완료 — 적용 전 대상 DB와 변경 내용을 팀원에게 공유 (8장 절차)                                    |
-| 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                        |
-| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                             |
-| shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                |
-| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                             |
-| Swagger/OpenAPI 문서                                       | `feat/openapi-docs` PR: 기존 health·인증 API 문서와 Swagger UI(운영 환경 제외)                     |
-| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                       |
-| 실제 Supabase DB 연결·마이그레이션 적용                    | 미검증 — 접속 정보 준비 후 `/health/ready` 200과 `migrate deploy` 확인                             |
+| 작업                                                       | 처리                                                                                                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                                         |
+| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                                                         |
+| Prettier (기본 설정)                                       | 완료 — PR #3 병합. CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                                                  |
+| TypeScript 5.9.3 고정                                      | 완료 — PR #3 병합. `package.json`과 lockfile 모두 반영                                                                         |
+| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                                                |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | 완료 — PR #4 병합. 이후 Data API 차단(PR #8·#9) 포함 DB 테스트 27개 통과                                                       |
+| 가입·로그인·갱신 요청 제한(429)                            | 완료 — PR #4 병합. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                                |
+| 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
+| 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
+| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                                         |
+| shared 상태값 enum과 CHECK 일치 테스트                     | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                       |
+| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                                         |
+| Swagger/OpenAPI 문서                                       | 완료 — PR #11 병합. health·인증 API 문서와 Swagger UI(운영 환경 제외)                                                          |
+| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                                                   |
+| 팀 개발용 Supabase DB 연결·`/health/ready` 확인            | 완료 — 로컬 API에서 개발용 Supabase로 `/health/ready` 200 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5)) |
+| 배포 환경(Render)에서 DB 연결·`/health/ready` 확인         | 미검증 — Render 배포 후 확인 (절차서 2단계)                                                                                    |
