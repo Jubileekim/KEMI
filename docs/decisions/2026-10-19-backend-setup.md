@@ -575,20 +575,21 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 
 ## 다음 작업
 
-| 작업                                                       | 처리                                                                                                   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                 |
-| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                                 |
-| Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음     |
-| TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                            |
-| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                        |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | `feat/auth-email` PR (리뷰 대기). 테스트 DB에서 마이그레이션 적용과 인증 DB 테스트 22개 통과           |
-| 가입·로그인·갱신 요청 제한(429)                            | `feat/auth-email` PR에 추가. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인              |
-| 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19) |
-| 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                            |
-| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                 |
-| shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                    |
-| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                 |
-| Swagger/OpenAPI 문서 뼈대                                  | 결정 필요 (PR #1 보완 또는 별도 이슈)                                                                  |
-| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                           |
-| 실제 Supabase DB 연결·마이그레이션 적용                    | 미검증 — 접속 정보 준비 후 `/health/ready` 200과 `migrate deploy` 확인                                 |
+| 작업                                                       | 처리                                                                                                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                                         |
+| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                                                         |
+| Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                             |
+| TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                                                    |
+| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                                                |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | `feat/auth-email` PR (리뷰 대기). 테스트 DB에서 마이그레이션 적용과 인증 DB 테스트 22개 통과                                   |
+| 가입·로그인·갱신 요청 제한(429)                            | `feat/auth-email` PR에 추가. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                      |
+| 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
+| 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
+| 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                                         |
+| shared 상태값 enum과 CHECK 일치 테스트                     | 첫 테이블 PR에 포함                                                                                                            |
+| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                                         |
+| Swagger/OpenAPI 문서 뼈대                                  | 결정 필요 (PR #1 보완 또는 별도 이슈)                                                                                          |
+| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                                                   |
+| 팀 개발용 Supabase DB 연결·`/health/ready` 확인            | 완료 — 로컬 API에서 개발용 Supabase로 `/health/ready` 200 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5)) |
+| 배포 환경(Render)에서 DB 연결·`/health/ready` 확인         | 미검증 — Render 배포 후 확인 (절차서 2단계)                                                                                    |
