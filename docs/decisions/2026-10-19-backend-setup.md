@@ -579,11 +579,11 @@ ERD v0.6의 `auth_sessions` 한 테이블을 둘로 나눈다. ERD 변경 명세
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                                         |
 | ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                                                         |
-| Prettier (기본 설정)                                       | `chore/prettier-ts-pin` PR (리뷰 대기). CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                             |
-| TypeScript 5.9.3 고정                                      | `chore/prettier-ts-pin` PR (리뷰 대기). `package.json`과 lockfile 모두 반영                                                    |
+| Prettier (기본 설정)                                       | 완료 — PR #3 병합. CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                                                  |
+| TypeScript 5.9.3 고정                                      | 완료 — PR #3 병합. `package.json`과 lockfile 모두 반영                                                                         |
 | 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                                                |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | `feat/auth-email` PR (리뷰 대기). 테스트 DB에서 마이그레이션 적용과 인증 DB 테스트 22개 통과                                   |
-| 가입·로그인·갱신 요청 제한(429)                            | `feat/auth-email` PR에 추가. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                      |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | 완료 — PR #4 병합. 이후 Data API 차단(PR #8·#9) 포함 DB 테스트 27개 통과                                                       |
+| 가입·로그인·갱신 요청 제한(429)                            | 완료 — PR #4 병합. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                                |
 | 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
 | 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
 | 의뢰인·크리에이터 프로필 수정 API                          | 인증 PR 다음 프로필 PR                                                                                                         |
