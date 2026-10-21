@@ -199,6 +199,26 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 - 선택지 값과 화면 표시 이름 제안: [프로필 선택지 공유 문서](../../docs/handoff/2026-10-21-profile-options.md)
 - 이번 구현은 PROFILE-01·02의 텍스트·선택 항목까지다. 로고·이미지·경력·링크·공개 전환은 후속이다(결정 기록 10장 표).
 
+## 패키지·제작 서비스 공개 API
+
+자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 12장에 있다. 공개 조회 외에는 크리에이터의 `Authorization: Bearer <accessToken>`이 필요하다.
+
+| 메서드·경로                                       | 하는 일                                   | 성공 응답                             |
+| ------------------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| `GET /api/packages/me`                            | 본인 패키지(삭제 제외)와 서비스 상태      | `200` + `{ serviceStatus, packages }` |
+| `POST /api/packages/me`                           | 패키지 만들기 (기본 비공개)               | `201` + 위와 같음                     |
+| `PATCH /api/packages/me/{packageId}`              | 수정·공개 전환 (보낸 항목만)              | `200` + 위와 같음                     |
+| `DELETE /api/packages/me/{packageId}`             | 삭제 (목록에서 숨김, 되살릴 수 없음)      | `200` + 위와 같음                     |
+| `PUT /api/packages/me/{packageId}/representative` | 대표 지정 (공개 패키지만)                 | `200` + 위와 같음                     |
+| `PUT /api/profiles/me/service-status`             | 서비스 공개·비공개 `{ status }`           | `200` + 위와 같음                     |
+| `GET /api/creators/{creatorId}/packages`          | 공개 서비스의 공개 패키지 (로그인 불필요) | `200` + `{ creatorId, packages }`     |
+
+- 모든 변경 응답은 바뀐 뒤의 전체 목록과 서비스 상태다. 첫 공개 패키지의 자동 대표 지정, 마지막 공개 패키지를 내렸을 때의 서비스 자동 비공개가 함께 반영된다.
+- 오류 코드: `PACKAGE_LIMIT_EXCEEDED`(최대 3개 [제안]), `REPRESENTATIVE_REQUIRED`(다른 공개 패키지가 있는 대표를 비공개·삭제), `SERVICE_REQUIREMENTS_MISSING`(`details.missing`에 빠진 항목)
+- 같은 크리에이터의 변경은 `creator_profiles` 행 잠금으로 하나씩 실행된다. 동시에 요청해도 대표가 둘이 되거나 대표 없이 공개되지 않는다.
+- 금액·기간·개수 같은 값의 범위는 [제안]이며 `@kemi/shared`의 `PACKAGE_LIMITS`에 모여 있다.
+- 파일 업로드(영상·썸네일)는 포함하지 않는다(별도 작업).
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
@@ -310,6 +330,7 @@ apps/api/
 │  ├─ config/env.ts        # Zod 환경 변수 검증
 │  ├─ auth/                # 회원가입·로그인·토큰
 │  ├─ profiles/            # 역할별 본인 프로필
+│  ├─ packages/            # 서비스 패키지·제작 서비스 공개
 │  ├─ docs/                # OpenAPI 문서·Swagger UI
 │  ├─ http/                # AppError·공통 오류 처리·Bearer 토큰 읽기
 │  ├─ lib/prisma.ts        # Prisma Client (pg 어댑터)

@@ -3,6 +3,8 @@ import { createAuthRouter } from "./auth/auth.router.js";
 import type { AuthService } from "./auth/auth.service.js";
 import createDocsRouter from "./docs/docs.router.js";
 import { errorHandler, notFoundHandler } from "./http/error-handler.js";
+import createPackageRouter from "./packages/package.router.js";
+import type { PackageService } from "./packages/package.service.js";
 import createProfileRouter from "./profiles/profile.router.js";
 import type { ProfileService } from "./profiles/profile.service.js";
 import { createHealthRouter, type DatabaseCheck } from "./routes/health.js";
@@ -11,6 +13,7 @@ export interface AppDependencies {
   checkDatabase: DatabaseCheck;
   authService: AuthService;
   profileService: ProfileService;
+  packageService: PackageService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -23,6 +26,7 @@ export function createApp({
   checkDatabase,
   authService,
   profileService,
+  packageService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -38,6 +42,7 @@ export function createApp({
   app.use(createHealthRouter(checkDatabase));
   app.use("/api/auth", createAuthRouter(authService, appOrigin));
   app.use("/api/profiles", createProfileRouter(authService, profileService));
+  app.use("/api", createPackageRouter(authService, packageService));
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }

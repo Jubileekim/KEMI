@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createApp } from "../../src/app.js";
 import { createAuthService } from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
+import { createPackageService } from "../../src/packages/package.service.js";
 import { createProfileService } from "../../src/profiles/profile.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
@@ -39,6 +40,7 @@ export function createTestApp({
       beforeRotationCommit,
     }),
     profileService: createProfileService({ prisma: client }),
+    packageService: createPackageService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

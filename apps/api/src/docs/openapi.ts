@@ -5,8 +5,13 @@ import {
   creatorProfileUpdateSchema,
   ERROR_CODES,
   loginRequestSchema,
+  PACKAGE_LIMITS,
+  packageCreateSchema,
+  packageUpdateSchema,
   PRODUCT_CATEGORIES,
   PRODUCTION_ROLES,
+  SERVICE_REQUIREMENTS,
+  serviceStatusUpdateSchema,
   signupRequestSchema,
   USER_ROLES,
   USER_STATUSES,
@@ -55,6 +60,30 @@ const bearerErrors = {
   ),
 };
 
+const myPackagesResponse = (description: string) => ({
+  description,
+  content: {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/MyPackagesResponse" },
+    },
+  },
+});
+
+const creatorOnly = errorResponse(
+  "크리에이터가 아님, 또는 이용 제한·탈퇴된 계정 (`FORBIDDEN`)",
+);
+
+const idParam = (name: string) => ({
+  name,
+  in: "path",
+  required: true,
+  schema: { type: "string", pattern: "^\\d+$" },
+});
+
+const representativeRequired = errorResponse(
+  "다른 공개 패키지가 있는 대표 패키지 (`REPRESENTATIVE_REQUIRED`). 먼저 다른 패키지를 대표로 지정한다.",
+);
+
 const myProfileResponse = {
   description: "표시 이름과 역할별 프로필. 저장한 적이 없으면 빈 기본값.",
   content: {
@@ -82,6 +111,10 @@ const openApiDocument = {
     { name: "health", description: "서버·DB 상태 확인" },
     { name: "auth", description: "이메일 회원가입·로그인·토큰 갱신" },
     { name: "profiles", description: "역할별 본인 프로필" },
+    {
+      name: "packages",
+      description: "서비스 패키지와 제작 서비스 공개·비공개 (크리에이터)",
+    },
   ],
   paths: {
     "/health": {
@@ -274,6 +307,149 @@ const openApiDocument = {
         },
       },
     },
+    "/api/packages/me": {
+      get: {
+        tags: ["packages"],
+        summary: "본인 패키지 목록과 서비스 상태",
+        description: "삭제한 패키지는 나오지 않는다. 비공개 패키지는 나온다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: myPackagesResponse("본인 패키지와 서비스 상태"),
+          ...bearerErrors,
+          403: creatorOnly,
+        },
+      },
+      post: {
+        tags: ["packages"],
+        summary: "패키지 만들기 (PACK-01)",
+        description: `\`isPublic\`을 빼면 비공개로 만든다. 대표 패키지가 없을 때 공개 패키지를 만들면 대표가 된다. 삭제하지 않은 패키지는 최대 ${PACKAGE_LIMITS.maxPackages}개다 [제안].`,
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(packageCreateSchema) },
+          },
+        },
+        responses: {
+          201: myPackagesResponse("만든 뒤의 패키지 목록과 서비스 상태"),
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: creatorOnly,
+          409: errorResponse("최대 개수 초과 (`PACKAGE_LIMIT_EXCEEDED`)"),
+        },
+      },
+    },
+    "/api/packages/me/{packageId}": {
+      patch: {
+        tags: ["packages"],
+        summary: "패키지 수정·공개 전환 (PACK-02)",
+        description:
+          "보낸 항목만 바꾸고, 객체 항목(`specification` 등)은 통째로 바꾼다. 이미 보낸 요청·계약의 금액과 조건은 요청 쪽에 따로 저장되므로 바뀌지 않는다. 마지막 공개 패키지를 비공개로 바꾸면 공개 중인 서비스가 비공개가 된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(packageUpdateSchema) },
+          },
+        },
+        responses: {
+          200: myPackagesResponse("수정 뒤의 패키지 목록과 서비스 상태"),
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: creatorOnly,
+          404: errorResponse("본인 패키지가 아니거나 삭제됨 (`NOT_FOUND`)"),
+          409: representativeRequired,
+        },
+      },
+      delete: {
+        tags: ["packages"],
+        summary: "패키지 삭제",
+        description:
+          "목록에서 사라지고 되살릴 수 없다. 요청·계약이 참조할 수 있어 기록은 서버에 남는다. 마지막 공개 패키지를 삭제하면 공개 중인 서비스가 비공개가 된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        responses: {
+          200: myPackagesResponse("삭제 뒤의 패키지 목록과 서비스 상태"),
+          ...bearerErrors,
+          403: creatorOnly,
+          404: errorResponse(
+            "본인 패키지가 아니거나 이미 삭제됨 (`NOT_FOUND`)",
+          ),
+          409: representativeRequired,
+        },
+      },
+    },
+    "/api/packages/me/{packageId}/representative": {
+      put: {
+        tags: ["packages"],
+        summary: "대표 패키지 지정 (PACK-03)",
+        description:
+          "기존 대표는 대표가 아니게 된다. 공개 패키지만 대표가 될 수 있다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        responses: {
+          200: myPackagesResponse("지정 뒤의 패키지 목록과 서비스 상태"),
+          ...bearerErrors,
+          403: creatorOnly,
+          404: errorResponse("본인 패키지가 아니거나 삭제됨 (`NOT_FOUND`)"),
+          409: errorResponse("비공개 패키지 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/profiles/me/service-status": {
+      put: {
+        tags: ["packages"],
+        summary: "제작 서비스 공개·비공개 (PROFILE-03·04)",
+        description: `\`PUBLIC\`은 공개 조건을 모두 채워야 한다. 빠진 항목은 \`details.missing\`(${SERVICE_REQUIREMENTS.join(", ")} 중 일부)으로 알려준다 [제안 · D01]. \`PRIVATE\`은 공개했던 서비스에만 쓸 수 있으며 기존 거래는 영향받지 않는다.`,
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(serviceStatusUpdateSchema),
+            },
+          },
+        },
+        responses: {
+          200: myPackagesResponse("바뀐 서비스 상태와 패키지 목록"),
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: creatorOnly,
+          409: errorResponse(
+            "공개 조건 미충족 (`SERVICE_REQUIREMENTS_MISSING`, `details.missing`) 또는 공개한 적 없는 서비스의 비공개 요청 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/creators/{creatorId}/packages": {
+      get: {
+        tags: ["packages"],
+        summary: "크리에이터의 공개 패키지",
+        description:
+          "로그인 없이 조회할 수 있다 [제안]. 공개 서비스의 공개 패키지만 대표가 먼저 오도록 돌려준다. 비공개·초안 서비스나 이용 제한 회원은 404다.",
+        parameters: [idParam("creatorId")],
+        responses: {
+          200: {
+            description: "공개 패키지 목록",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/CreatorPackagesResponse",
+                },
+              },
+            },
+          },
+          404: errorResponse("공개된 제작 서비스 없음 (`NOT_FOUND`)"),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -394,6 +570,101 @@ const openApiDocument = {
               { $ref: "#/components/schemas/ClientProfile" },
               { $ref: "#/components/schemas/CreatorProfile" },
             ],
+          },
+        },
+      },
+      ServicePackage: {
+        type: "object",
+        required: [
+          "id",
+          "title",
+          "description",
+          "basePrice",
+          "currency",
+          "specification",
+          "includedScope",
+          "excludedScope",
+          "requiredMaterials",
+          "deliveryDays",
+          "revisionLimit",
+          "revisionScope",
+          "sourceDelivery",
+          "usageTerms",
+          "isPublic",
+          "isRepresentative",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string", pattern: "^\\d+$" },
+          title: { type: "string" },
+          description: { type: "string" },
+          basePrice: { type: "integer", description: "원 단위 기본 금액" },
+          currency: { const: "KRW" },
+          specification: {
+            type: "object",
+            required: [
+              "videoCount",
+              "lengthSeconds",
+              "aspectRatio",
+              "resolution",
+              "format",
+            ],
+            properties: {
+              videoCount: { type: "integer" },
+              lengthSeconds: { type: ["integer", "null"] },
+              aspectRatio: { type: ["string", "null"] },
+              resolution: { type: ["string", "null"] },
+              format: { type: ["string", "null"] },
+            },
+          },
+          includedScope: { type: "string" },
+          excludedScope: { type: "string" },
+          requiredMaterials: { type: "array", items: { type: "string" } },
+          deliveryDays: { type: "integer", description: "달력일" },
+          revisionLimit: { type: "integer" },
+          revisionScope: { type: "string" },
+          sourceDelivery: {
+            type: "object",
+            required: ["provided", "note"],
+            properties: {
+              provided: { type: "boolean" },
+              note: { type: ["string", "null"] },
+            },
+          },
+          usageTerms: {
+            type: "object",
+            required: ["note"],
+            properties: { note: { type: ["string", "null"] } },
+          },
+          isPublic: { type: "boolean" },
+          isRepresentative: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      MyPackagesResponse: {
+        type: "object",
+        required: ["serviceStatus", "packages"],
+        properties: {
+          serviceStatus: {
+            type: "string",
+            enum: [...CREATOR_SERVICE_STATUSES],
+          },
+          packages: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ServicePackage" },
+          },
+        },
+      },
+      CreatorPackagesResponse: {
+        type: "object",
+        required: ["creatorId", "packages"],
+        properties: {
+          creatorId: { type: "string", pattern: "^\\d+$" },
+          packages: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ServicePackage" },
           },
         },
       },

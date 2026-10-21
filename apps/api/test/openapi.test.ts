@@ -72,14 +72,21 @@ describe("OpenAPI 문서", () => {
     expect(operations.length).toBeGreaterThan(0);
 
     const results = await Promise.all(
-      operations.map(async ({ path, method }) => {
+      operations.map(async ({ path: documented, method }) => {
+        // 경로 변수는 실제 값으로 바꿔 부른다.
+        const path = documented
+          .replace("{packageId}", "1")
+          .replace("{creatorId}", "1");
         const agent = request(app);
-        const res =
-          method === "get"
-            ? await agent.get(path)
-            : await (
-                method === "patch" ? agent.patch(path) : agent.post(path)
-              ).send({});
+        const send = {
+          get: () => agent.get(path),
+          delete: () => agent.delete(path),
+          post: () => agent.post(path).send({}),
+          patch: () => agent.patch(path).send({}),
+          put: () => agent.put(path).send({}),
+        }[method];
+        if (!send) throw new Error(`테스트에서 다루지 않는 메서드: ${method}`);
+        const res = await send();
         return { path, method, status: res.status };
       }),
     );

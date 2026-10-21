@@ -24,7 +24,7 @@ export const sessionRevokeReasonSchema = z.enum(SESSION_REVOKE_REASONS);
 export type SessionRevokeReason = z.infer<typeof sessionRevokeReasonSchema>;
 
 // ─── 프로필 ────────────────────────────────────────────────────
-// 제작 서비스 공개 상태. 저장만으로 공개되지 않으며, PUBLIC 전환은 대표 패키지 조건(P04)과 함께 별도 기능에서 한다.
+// 제작 서비스 공개 상태. 프로필 저장으로는 바뀌지 않고, 공개·비공개 API(PUT /api/profiles/me/service-status)로만 바뀐다.
 export const CREATOR_SERVICE_STATUSES = ["DRAFT", "PUBLIC", "PRIVATE"] as const;
 export const creatorServiceStatusSchema = z.enum(CREATOR_SERVICE_STATUSES);
 export type CreatorServiceStatus = z.infer<typeof creatorServiceStatusSchema>;

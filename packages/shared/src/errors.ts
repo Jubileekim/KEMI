@@ -12,6 +12,12 @@ export const ERROR_CODES = [
   "FORBIDDEN",
   "NOT_FOUND",
   "CONFLICT",
+  // 패키지 최대 개수 초과
+  "PACKAGE_LIMIT_EXCEEDED",
+  // 다른 공개 패키지가 있어 대표 패키지를 비공개·삭제할 수 없음 (대표를 먼저 바꿔야 함)
+  "REPRESENTATIVE_REQUIRED",
+  // 서비스 공개 조건 미충족. details.missing에 빠진 항목
+  "SERVICE_REQUIREMENTS_MISSING",
   "SERVICE_UNAVAILABLE",
   "INTERNAL_ERROR",
 ] as const;

@@ -126,7 +126,38 @@ model CreatorProfile {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  packages ServicePackage[]
 
   @@map("creator_profiles")
+}
+
+// 서비스 패키지 (PACK-01~03). 삭제는 deleted_at으로 표시만 한다(요청·계약이 참조할 수 있어 행을 지우지 않는다).
+// 대표 하나·대표는 공개·삭제 시 비공개 같은 규칙은 마이그레이션 SQL의 CHECK·부분 UNIQUE 인덱스로 강제한다.
+model ServicePackage {
+  id                BigInt    @id @default(autoincrement())
+  creatorId         BigInt    @map("creator_id")
+  title             String
+  description       String
+  basePrice         BigInt    @map("base_price")
+  currency          String    @default("KRW") @db.Char(3)
+  specification     Json
+  includedScope     String    @map("included_scope")
+  excludedScope     String    @map("excluded_scope")
+  requiredMaterials Json      @map("required_materials")
+  deliveryDays      Int       @map("delivery_days")
+  revisionLimit     Int       @map("revision_limit")
+  revisionScope     String    @map("revision_scope")
+  sourceDelivery    Json      @map("source_delivery")
+  usageTerms        Json      @map("usage_terms")
+  isPublic          Boolean   @default(false) @map("is_public")
+  isRepresentative  Boolean   @default(false) @map("is_representative")
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [userId], onDelete: Restrict)
+
+  @@index([creatorId])
+  @@map("service_packages")
 }

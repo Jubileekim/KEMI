@@ -126,6 +126,31 @@ v0.6에서는 한 테이블이 로그인 세션과 개별 Refresh 토큰을 함�
 - `anon`·`authenticated` 역할의 테이블·시퀀스 권한을 회수한다.
 - 서버(Express·Prisma)만 테이블 소유자 역할로 접근한다.
 
+## service_packages — 서비스 패키지 (PACK-01~03)
+
+마이그레이션 `20261021090000_service_packages`. 규칙은 [결정 기록](../decisions/2026-10-19-backend-setup.md) 12장.
+
+| 컬럼                                    | ERD v0.6과 비교 | 설명                                                             |
+| --------------------------------------- | --------------- | ---------------------------------------------------------------- |
+| `id` bigint PK, `creator_id` FK         | 같음            | `creator_profiles.user_id`, `ON DELETE RESTRICT`                 |
+| `title`, `description`                  | 같음            |                                                                  |
+| `base_price` bigint, `currency` char(3) | 같음            | `CHECK (base_price > 0)`, `CHECK (currency = 'KRW')`             |
+| `specification` jsonb                   | 같음            | `{ videoCount, lengthSeconds, aspectRatio, resolution, format }` |
+| `included_scope`, `excluded_scope`      | 같음            | 제외 작업이 없으면 빈 문자열                                     |
+| `required_materials` jsonb              | 같음            | 문자열 배열                                                      |
+| `delivery_days`, `revision_limit`       | 같음            | `CHECK (delivery_days >= 1 AND revision_limit >= 0)`             |
+| `revision_scope`                        | 같음            |                                                                  |
+| `source_delivery`, `usage_terms` jsonb  | 같음            | `{ provided, note }`, `{ note }`                                 |
+| `is_public`, `is_representative`        | 같음            | 기본 false                                                       |
+| `deleted_at`                            | **추가**        | 삭제 표시. 행을 지우지 않아 요청·계약 참조와 당시 조건이 남는다  |
+| `created_at`, `updated_at`              | 같음            |                                                                  |
+
+- `UNIQUE (creator_id) WHERE is_representative AND deleted_at IS NULL`: 삭제되지 않은 대표는 크리에이터당 하나
+- `CHECK (NOT is_representative OR (is_public AND deleted_at IS NULL))`: 대표는 공개·미삭제
+- `CHECK (deleted_at IS NULL OR NOT is_public)`: 삭제한 패키지는 비공개
+- jsonb 열은 `jsonb_typeof`로 객체·배열 형태만 검사하고, 세부 형태는 API가 검사한다.
+- RLS를 켠다(정책 없음).
+
 ## 관계 요약
 
 ```text
@@ -135,6 +160,7 @@ auth_sessions 1 ─── 1..N auth_refresh_tokens
 auth_refresh_tokens 0..1 ─── 0..1 auth_refresh_tokens (replaced_by_id)
 users 1 ─── 0..1 client_profiles
 users 1 ─── 0..1 creator_profiles
+creator_profiles 1 ─── 0..N service_packages
 ```
 
 ## 다른 영역의 변경
