@@ -72,18 +72,48 @@ describe("프로필 접근 권한", () => {
     expect(res.body.error.code).toBe("FORBIDDEN");
   });
 
-  it("이용 제한된 계정은 403이고 저장되지 않는다", async () => {
-    const { accessToken, userId } = await signup("CLIENT");
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: "RESTRICTED" },
-    });
+  // 상태가 바뀌기 전에 발급된 Access 토큰(아직 만료 전)으로도 조회·수정할 수 없어야 한다.
+  it.each([
+    ["CLIENT", "RESTRICTED", { brandName: "바뀐 이름" }],
+    ["CLIENT", "WITHDRAWN", { brandName: "바뀐 이름" }],
+    ["CREATOR", "RESTRICTED", { introduction: "바뀐 소개" }],
+    ["CREATOR", "WITHDRAWN", { introduction: "바뀐 소개" }],
+  ] as const)(
+    "%s 회원이 %s가 되면 기존 토큰으로 조회·수정 모두 403이고 저장된 값이 그대로다",
+    async (role, status, change) => {
+      const { accessToken, userId } = await signup(role);
+      const saved = await patchProfile(accessToken, {
+        name: "원래 이름",
+        introduction: "원래 소개",
+      });
+      expect(saved.status).toBe(200);
+      await prisma.user.update({ where: { id: userId }, data: { status } });
 
-    expect(
-      (await patchProfile(accessToken, { brandName: "KEMI" })).status,
-    ).toBe(403);
-    expect(await prisma.clientProfile.count()).toBe(0);
-  });
+      const read = await getProfile(accessToken);
+      const write = await patchProfile(accessToken, {
+        ...change,
+        name: "바뀐 이름",
+      });
+
+      expect(read.status).toBe(403);
+      expect(read.body.error.code).toBe("FORBIDDEN");
+      expect(read.body.profile).toBeUndefined();
+      expect(write.status).toBe(403);
+      expect(write.body.error.code).toBe("FORBIDDEN");
+      const user = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      expect(user.name).toBe("원래 이름");
+      const profile =
+        role === "CLIENT"
+          ? await prisma.clientProfile.findUniqueOrThrow({ where: { userId } })
+          : await prisma.creatorProfile.findUniqueOrThrow({
+              where: { userId },
+            });
+      expect(profile.introduction).toBe("원래 소개");
+      if ("brandName" in profile) expect(profile.brandName).toBeNull();
+    },
+  );
 });
 
 describe("의뢰인 프로필 (PROFILE-01)", () => {
@@ -138,6 +168,28 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
     expect((await getProfile(accessToken)).body).toEqual(second.body);
   });
 
+  it("null을 보내면 저장된 선택 항목을 지운다", async () => {
+    const { accessToken } = await signup("CLIENT");
+    await patchProfile(accessToken, {
+      brandName: "KEMI",
+      industry: "BEAUTY",
+      socialUrl: "https://sns.example.com/kemi",
+    });
+
+    const res = await patchProfile(accessToken, {
+      brandName: null,
+      industry: null,
+      socialUrl: null,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.profile).toMatchObject({
+      brandName: null,
+      industry: null,
+      socialUrl: null,
+    });
+  });
+
   it("브랜드 정보를 비워 보내도 오류 없이 저장된다", async () => {
     const { accessToken, userId } = await signup("CLIENT");
 
@@ -162,6 +214,9 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
     ["크리에이터 항목", { niche: "BEAUTY" }],
     ["공개 상태", { serviceStatus: "PUBLIC" }],
     ["너무 긴 브랜드명", { brandName: "가".repeat(51) }],
+    ["분야에 빈 문자열", { industry: "" }],
+    ["이름에 null", { name: null }],
+    ["빈 이름", { name: "  " }],
   ])("%s는 400이고 저장되지 않는다", async (_label, body) => {
     const { accessToken } = await signup("CLIENT");
 
@@ -286,6 +341,9 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     ["없는 제작 역할", { productionRoles: ["DIRECTING"] }],
     ["날짜 형식이 아닌 값", { availableFrom: "2026-13-01" }],
     ["목록 대신 null", { productionRoles: null }],
+    ["작업 가능 여부에 null", { isAvailable: null }],
+    ["날짜에 빈 문자열", { availableFrom: "" }],
+    ["분야에 빈 문자열", { niche: "" }],
   ])("%s는 400이고 저장되지 않는다", async (_label, body) => {
     const { accessToken } = await signup("CREATOR");
 

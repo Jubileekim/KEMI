@@ -230,14 +230,16 @@ const openApiDocument = {
         responses: {
           200: myProfileResponse,
           ...bearerErrors,
-          403: errorResponse("관리자 계정 또는 이용 제한된 계정 (`FORBIDDEN`)"),
+          403: errorResponse(
+            "관리자 계정, 또는 이용 제한·탈퇴된 계정(상태 변경 전에 받은 토큰 포함) (`FORBIDDEN`)",
+          ),
         },
       },
       patch: {
         tags: ["profiles"],
         summary: "본인 프로필 저장 (부분 수정)",
         description:
-          '보낸 항목만 바꾼다. 역할에 맞는 형식만 받으며, 모르는 항목(다른 역할 항목·`serviceStatus` 포함)은 400이다. 선택 문자열의 빈 값("")은 null로 저장한다. `name`은 회원 표시 이름을 바꾼다. 저장해도 제작 서비스는 공개되지 않는다.',
+          '보낸 항목만 바꾼다. 역할에 맞는 형식만 받으며, 모르는 항목(다른 역할 항목·`serviceStatus` 포함)은 400이다. 보내지 않은 항목은 그대로다. 자유 입력 문자열·주소의 빈 값("")은 null로 저장한다. 선택지(`industry`·`niche`)·날짜는 null로 지우며 ""는 400이다. 복수 선택은 목록 전체를 보내고 []로 비운다(null은 400). `name`은 회원 표시 이름을 바꾼다. 저장해도 제작 서비스는 공개되지 않는다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -264,7 +266,9 @@ const openApiDocument = {
             "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
           ),
           ...bearerErrors,
-          403: errorResponse("관리자 계정 또는 이용 제한된 계정 (`FORBIDDEN`)"),
+          403: errorResponse(
+            "관리자 계정, 또는 이용 제한·탈퇴된 계정(상태 변경 전에 받은 토큰 포함) (`FORBIDDEN`)",
+          ),
         },
       },
     },

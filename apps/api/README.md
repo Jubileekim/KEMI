@@ -192,9 +192,12 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 | `PATCH /api/profiles/me` | 보낸 항목만 저장. `name`은 회원 표시 이름 | `200` + 저장 결과 (`GET`과 같은 형식) |
 
 - `profile.type`이 `CLIENT`면 의뢰인, `CREATOR`면 크리에이터 형식이다. 요청 본문도 로그인한 역할의 형식만 받는다.
-- 빈 문자열은 `null`로 저장한다. 모르는 항목·다른 역할 항목·`serviceStatus`는 `400 VALIDATION_FAILED`다.
+- 보내지 않은 항목은 그대로다. 자유 입력 칸(문자열·주소)의 빈 문자열은 `null`로 저장하고, 선택지·날짜는 `null`로 지운다. 항목별 규칙은 결정 기록 10장 "PATCH 값 규칙" 표에 있다.
+- 모르는 항목·다른 역할 항목·`serviceStatus`는 `400 VALIDATION_FAILED`다.
 - 크리에이터의 `serviceStatus`는 `DRAFT`로 시작하며 저장으로 바뀌지 않는다. 공개·비공개는 패키지 PR에서 만든다.
-- 관리자 계정은 `403 FORBIDDEN`이다.
+- 관리자 계정은 `403 FORBIDDEN`이다. 이용 제한·탈퇴 회원은 상태가 바뀌기 전에 받은 토큰으로도 `403 FORBIDDEN`이다.
+- 선택지 값과 화면 표시 이름 제안: [프로필 선택지 공유 문서](../../docs/handoff/2026-10-21-profile-options.md)
+- 이번 구현은 PROFILE-01·02의 텍스트·선택 항목까지다. 로고·이미지·경력·링크·공개 전환은 후속이다(결정 기록 10장 표).
 
 ## API 경로 규칙
 
