@@ -10,6 +10,7 @@ interface SentRequest {
   url: string;
   body: URLSearchParams | undefined;
   authorization: string | null;
+  contentType: string | null;
 }
 
 // 순서대로 준비한 응답을 돌려주고, 보낸 요청을 기록하는 가짜 fetch
@@ -23,6 +24,7 @@ function fakeFetch(responses: { status?: number; body: unknown }[]) {
       url: String(input),
       body: init?.body instanceof URLSearchParams ? init.body : undefined,
       authorization: new Headers(init?.headers).get("authorization"),
+      contentType: new Headers(init?.headers).get("content-type"),
     });
     return new Response(JSON.stringify(next.body), {
       status: next.status ?? 200,
@@ -191,6 +193,9 @@ describe("카카오 제공자", () => {
     });
     expect(sent[1]?.url).toBe("https://kapi.kakao.com/v2/user/me");
     expect(sent[1]?.authorization).toBe("Bearer kakao-access");
+    expect(sent[1]?.contentType).toBe(
+      "application/x-www-form-urlencoded;charset=utf-8",
+    );
   });
 
   it.each([

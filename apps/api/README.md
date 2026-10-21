@@ -194,7 +194,7 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
   - 로컬: `http://localhost:5173/api/auth/...` (Vite가 `/api`를 API 서버로 넘긴다)
   - 배포: Vercel 도메인 (rewrite로 Render에 전달)
 - 환경 변수가 없는 제공자는 `error=SOCIAL_UNAVAILABLE`로 안내한다. 키 없이도 서버는 시작된다.
-- 테스트는 가짜 제공자로 실행한다. 실제 Google·카카오 연동은 키가 준비된 뒤 확인한다.
+- **[미검증] 실제 Google·카카오 로그인은 아직 확인하지 않았다.** 테스트는 가짜 제공자로만 실행한다. 준비할 앱 설정·키 이름·콜백 주소는 연동 문서의 "팀원 준비 목록"에 있다.
 
 ## API 경로 규칙
 

@@ -1,6 +1,6 @@
 import request, { type Response } from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { SignJWT } from "jose";
+import { decodeJwt, SignJWT } from "jose";
 import {
   OAUTH_STATE_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
@@ -411,5 +411,125 @@ describe("소셜 가입", () => {
 
     expect(res.status).toBe(401);
     expect(await prisma.user.count()).toBe(0);
+  });
+});
+
+// 신규 가입용 임시 인증 정보(가입 티켓)의 만료·일회성·동시 재사용
+describe("가입 티켓 수명", () => {
+  // 테스트용 서명 키로 가입 티켓과 같은 형식의 토큰을 만든다. 만료 시각만 바꿔 쓴다.
+  function signTicket(expiresAt: number) {
+    return new SignJWT({
+      provider: "google",
+      pid: "google-sub-expired",
+      email: null,
+      name: "만료",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setAudience("kemi:social-signup")
+      .setIssuedAt(expiresAt - 600)
+      .setExpirationTime(expiresAt)
+      .sign(new TextEncoder().encode(TEST_ACCESS_SECRET));
+  }
+
+  it("가입 티켓과 쿠키의 유효 시간은 10분이다", async () => {
+    const callback = await googleCallback(GOOGLE_USER);
+    const ticket = pairOf(callback, SOCIAL_SIGNUP_COOKIE_NAME) ?? "";
+    const { iat, exp } = decodeJwt(ticket.split("=")[1] ?? "");
+
+    expect((exp ?? 0) - (iat ?? 0)).toBe(600);
+    expect(cookieOf(callback, SOCIAL_SIGNUP_COOKIE_NAME)).toContain(
+      "Max-Age=600",
+    );
+  });
+
+  it("만료된 가입 티켓은 조회·가입 모두 401이고 회원을 만들지 않는다", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await signTicket(now - 1);
+    const valid = await signTicket(now + 60);
+    const cookie = (token: string) => `${SOCIAL_SIGNUP_COOKIE_NAME}=${token}`;
+
+    // 같은 형식의 유효한 티켓은 통과하므로, 실패 이유는 만료뿐이다.
+    expect(
+      (
+        await request(app)
+          .get("/api/auth/social/signup")
+          .set("Cookie", cookie(valid))
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get("/api/auth/social/signup")
+          .set("Cookie", cookie(expired))
+      ).status,
+    ).toBe(401);
+    const res = await request(app)
+      .post("/api/auth/social/signup")
+      .set("Origin", TEST_APP_ORIGIN)
+      .set("Cookie", cookie(expired))
+      .send({ name: "새 회원", role: "CLIENT" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
+    expect(await prisma.user.count()).toBe(0);
+  });
+
+  it("만료된 state 쿠키로는 콜백이 SOCIAL_FAILED이고 제공자에 코드를 보내지 않는다", async () => {
+    profilesByCode.set("code", GOOGLE_USER);
+    const now = Math.floor(Date.now() / 1000);
+    const expiredState = await new SignJWT({
+      provider: "google",
+      state: "expired-state",
+      cv: "verifier",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setAudience("kemi:oauth-state")
+      .setIssuedAt(now - 601)
+      .setExpirationTime(now - 1)
+      .sign(new TextEncoder().encode(TEST_ACCESS_SECRET));
+
+    const res = await request(app)
+      .get("/api/auth/google/callback")
+      .query({ code: "code", state: "expired-state" })
+      .set("Cookie", `${OAUTH_STATE_COOKIE_NAME}=${expiredState}`);
+
+    expect(appRedirectOf(res).get("error")).toBe("SOCIAL_FAILED");
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("같은 가입 티켓으로 동시에 가입해도 회원·소셜 계정·세션은 하나만 생긴다", async () => {
+    const callback = await googleCallback(GOOGLE_USER);
+    const ticket = pairOf(callback, SOCIAL_SIGNUP_COOKIE_NAME) ?? "";
+    const post = (name: string) =>
+      request(app)
+        .post("/api/auth/social/signup")
+        .set("Origin", TEST_APP_ORIGIN)
+        .set("Cookie", ticket)
+        .send({ name, role: "CLIENT" });
+
+    const results = await Promise.all([
+      post("첫 번째"),
+      post("두 번째"),
+      post("세 번째"),
+    ]);
+
+    expect(results.map((res) => res.status).sort()).toEqual([201, 409, 409]);
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.authIdentity.count()).toBe(1);
+    expect(await prisma.authSession.count()).toBe(1);
+  });
+
+  it("가입에 쓴 티켓은 회원이 탈퇴 상태가 돼도 새 가입에 다시 쓸 수 없다", async () => {
+    const { ticket } = await signupWithGoogle();
+    await prisma.user.updateMany({ data: { status: "WITHDRAWN" } });
+
+    const again = await request(app)
+      .post("/api/auth/social/signup")
+      .set("Origin", TEST_APP_ORIGIN)
+      .set("Cookie", ticket)
+      .send({ name: "다시 가입", role: "CLIENT" });
+
+    expect(again.status).toBe(409);
+    expect(await prisma.user.count()).toBe(1);
   });
 });

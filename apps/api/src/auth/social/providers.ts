@@ -136,6 +136,8 @@ const kakaoUserSchema = z.object({
 });
 
 // 카카오 로그인 REST API. 문서에 PKCE가 없어 state만 쓴다(codeChallenge·codeVerifier는 보내지 않는다).
+// 응답 필드는 카카오 개발자 문서 "사용자 정보 조회" 원문과 대조했다(2026-10-21): id(Long, 필수),
+// kakao_account.email·is_email_valid·is_email_verified, kakao_account.profile.nickname(모두 선택, 동의항목 필요).
 export function createKakaoProvider(
   { restApiKey, clientSecret }: KakaoConfig,
   fetchFn: FetchFn = fetch,
@@ -171,8 +173,12 @@ export function createKakaoProvider(
         tokenResponseSchema,
       );
       const user = await readJson(
+        // 문서(사용자 정보 조회)에 Content-Type이 필수로 적혀 있어 함께 보낸다.
         await fetchFn("https://kapi.kakao.com/v2/user/me", {
-          headers: { Authorization: `Bearer ${token.access_token}` },
+          headers: {
+            Authorization: `Bearer ${token.access_token}`,
+            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+          },
         }),
         kakaoUserSchema,
       );
