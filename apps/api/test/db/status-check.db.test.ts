@@ -4,9 +4,13 @@ import {
   CREATOR_SERVICE_STATUSES,
   PRODUCT_CATEGORIES,
   PRODUCTION_ROLES,
+  PROJECT_CLOSE_REASONS,
   SESSION_REVOKE_REASONS,
   USER_ROLES,
   USER_STATUSES,
+  PROJECT_STATUSES,
+  VIDEO_PURPOSES,
+  VIDEO_STYLES,
 } from "@kemi/shared";
 import { afterAll, describe, expect, it } from "vitest";
 import { createTestPrismaClient } from "../support/test-db.js";
@@ -38,6 +42,10 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["creator_profiles_content_styles_check", CONTENT_STYLES],
     ["creator_profiles_production_roles_check", PRODUCTION_ROLES],
     ["creator_profiles_service_status_check", CREATOR_SERVICE_STATUSES],
+    ["projects_purpose_check", VIDEO_PURPOSES],
+    ["projects_status_check", PROJECT_STATUSES],
+    ["projects_close_reason_check", PROJECT_CLOSE_REASONS],
+    ["projects_styles_check", VIDEO_STYLES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

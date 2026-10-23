@@ -6,6 +6,10 @@ import {
 } from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
 import { createProfileService } from "../../src/profiles/profile.service.js";
+import {
+  createProjectService,
+  type ProjectService,
+} from "../../src/projects/project.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -18,7 +22,49 @@ interface TestAppOptions {
   trustProxyHops?: number;
   apiDocs?: boolean;
   socialProviders?: SocialProviders;
+  projectService?: ProjectService;
 }
+
+const EMPTY_PROJECT = {
+  id: "1",
+  clientId: "1",
+  clientName: "테스트 의뢰인",
+  title: "테스트 영상 제작",
+  description: "테스트를 위한 공개 맞춤 영상 제작 의뢰입니다.",
+  purpose: "OTHER" as const,
+  styles: ["CLEAN" as const],
+  budget: 30_000,
+  expectedDurationSeconds: 60,
+  recruitmentEndAt: "2026-11-01T00:00:00.000Z",
+  deliveryDueDate: "2026-11-10",
+  status: "OPEN" as const,
+  closeReason: null,
+  createdAt: "2026-10-23T00:00:00.000Z",
+  updatedAt: "2026-10-23T00:00:00.000Z",
+};
+
+const unusedProjectService: ProjectService = {
+  listPublic: () =>
+    Promise.resolve({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    }),
+  getPublic: () => Promise.resolve(EMPTY_PROJECT),
+  listMine: () =>
+    Promise.resolve({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    }),
+  create: () => Promise.resolve(EMPTY_PROJECT),
+  update: () => Promise.resolve(EMPTY_PROJECT),
+  close: () =>
+    Promise.resolve({
+      ...EMPTY_PROJECT,
+      status: "CLOSED",
+      closeReason: "MANUAL",
+    }),
+  remove: () => Promise.resolve(),
+};
 
 // 단위 테스트용: 주소만 있고 실제로 쿼리하지 않으므로 접속하지 않는다.
 let unusedPrisma: PrismaClient | undefined;
@@ -30,6 +76,7 @@ export function createTestApp({
   trustProxyHops,
   apiDocs,
   socialProviders,
+  projectService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -45,6 +92,11 @@ export function createTestApp({
       socialProviders,
     }),
     profileService: createProfileService({ prisma: client }),
+    projectService:
+      projectService ??
+      (prisma
+        ? createProjectService({ prisma: client })
+        : unusedProjectService),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

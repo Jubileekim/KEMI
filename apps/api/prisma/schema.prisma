@@ -36,6 +36,7 @@ model User {
   sessions       AuthSession[]
   clientProfile  ClientProfile?
   creatorProfile CreatorProfile?
+  projects       Project[]
 
   @@map("users")
 }
@@ -129,4 +130,34 @@ model CreatorProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@map("creator_profiles")
+}
+
+// ─── 공개 맞춤 의뢰 ───────────────────────────────────────────
+// PRD v2.0 PROJ-01·02. 공개 프로젝트는 CLIENT가 만들고 CREATOR가 탐색·지원한다.
+// 지원·계약 관계는 후속 work_requests 기능에서 연결한다.
+
+model Project {
+  id                      BigInt    @id @default(autoincrement())
+  clientId                BigInt    @map("client_id")
+  title                   String    @db.VarChar(200)
+  description             String
+  purpose                 String
+  styles                  String[]  @default([])
+  budget                  BigInt
+  expectedDurationSeconds Int?      @map("expected_duration_seconds")
+  recruitmentEndAt        DateTime  @map("recruitment_end_at") @db.Timestamptz(3)
+  deliveryDueDate         DateTime  @map("delivery_due_date") @db.Date
+  status                  String    @default("OPEN")
+  closeReason             String?   @map("close_reason")
+  deletedAt               DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([status, recruitmentEndAt])
+  @@index([purpose])
+  @@index([budget])
+  @@index([createdAt])
+  @@map("projects")
 }
