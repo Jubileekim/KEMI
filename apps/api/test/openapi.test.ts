@@ -222,15 +222,20 @@ describe("OpenAPI 문서", () => {
     profiles.get("/me", ok); // 문서에 있음: GET /api/profiles/me (두 단계 마운트)
     const nested = Router();
     nested.get("/debug", ok); // 문서에 없음
+    // 문서에 없음: /api/misplaced/me. 바깥 마운트(/api)만 보면 문서의 /api/profiles/me와 헷갈린다.
+    const misplaced = Router();
+    misplaced.get("/me", ok);
     const api = Router();
     api.use("/profiles", profiles);
     api.use("/nested", nested);
+    api.use("/misplaced", misplaced);
     api.all("/all-debug", ok); // 문서에 없음 (메서드를 특정할 수 없음)
     const app = express();
     app.use("/api", api);
 
     expect(undocumentedRoutes(mountedRoutes(app))).toEqual([
       "GET …/debug",
+      "GET …/me",
       "ALL …/all-debug",
     ]);
   });
