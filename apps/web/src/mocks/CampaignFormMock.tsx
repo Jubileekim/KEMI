@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "../components/ui/button";
 import Input from "../components/ui/input";
 import Textarea from "../components/ui/textarea";
 import Label from "../components/ui/label";
+import PricingMock from "./PricingMock";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ export default function CampaignFormMock({
           budget: item.budget,
           references: item.references,
           days: item.days,
+          pricingApplication: item.pricingApplication,
         }
       : emptyCampaign,
     resolver: zodResolver(campaignValuesSchema),
@@ -54,6 +56,15 @@ export default function CampaignFormMock({
   const [failed, setFailed] = useState(false);
   const pending = busy || form.formState.isSubmitting;
   const published = item?.status === "OPEN";
+  const currentValues = useWatch({ control: form.control });
+  const conditionsKey = JSON.stringify([
+    currentValues.title,
+    currentValues.product,
+    currentValues.purpose,
+    currentValues.scope,
+    currentValues.references,
+    currentValues.days,
+  ]);
   let heading = item ? "초안 재편집" : "새 캠페인";
   if (published) heading = "공개한 캠페인";
   async function submit(type: CampaignCommand["type"]) {
@@ -129,6 +140,31 @@ export default function CampaignFormMock({
           </p>
         </div>
       </fieldset>
+      {!published && (
+        <PricingMock
+          disabled={pending || confirm}
+          conditionsKey={conditionsKey}
+          onApply={(report, amountKrw) => {
+            form.setValue("budget", String(amountKrw), {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+            form.setValue(
+              "pricingApplication",
+              { report, amountKrw },
+              { shouldDirty: true },
+            );
+          }}
+        />
+      )}
+      {currentValues.pricingApplication && (
+        <p className="min-w-0 break-words">
+          마지막 명시 반영 기록 (Mock):{" "}
+          {currentValues.pricingApplication.amountKrw?.toLocaleString("ko-KR")}
+          원 · 리포트 {currentValues.pricingApplication.report?.id}. 이후 수동
+          수정한 현재 예산과 다를 수 있어요. 계약 금액에는 연결되지 않아요.
+        </p>
+      )}
       {problems.length > 0 && (
         <div role="alert">
           <p>공개 전 모의 확인이 필요해요.</p>
@@ -192,7 +228,8 @@ export default function CampaignFormMock({
                 </p>
                 <p>
                   D04 필수값은 모의 후보 기준이에요. AI 분석 없이 수동 예산으로
-                  진행해요.
+                  진행할 수 있어요. 분석 결과는 명시 반영한 경우에만 예산에
+                  적용돼요.
                 </p>
                 {problems.length > 0 && (
                   <p role="alert">{problems.join(" ")}</p>

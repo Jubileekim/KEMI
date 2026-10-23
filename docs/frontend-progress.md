@@ -364,3 +364,34 @@
 - 기존 대응 브랜치/PR 없음·작업 트리 깨끗함을 확인하고 #39 최신 `ae65867`에서 `feat/frontend-2a-campaigns`를 만들었다. 모델/단위/계약 경계 [6a382b1](https://github.com/Jubileekim/KEMI/commit/6a382b1), 화면/Mock/검사/기록 [4566c1a](https://github.com/Jubileekim/KEMI/commit/4566c1a) 푸시 완료. [Draft PR #40](https://github.com/Jubileekim/KEMI/pull/40)을 이 채팅에 연결했다. base는 `feat/frontend-1d-portfolio`이며 #39가 선행이다. PR의 원격 head와 로컬 기능 SHA가 일치함을 확인했다. 선행 PR 병합 후 base 조정 검토가 필요하다.
 - **원격 Web CI:** 기능 SHA `4566c1a25325f30a44c3dda117d8abe2928d4b79`의 [run91](https://github.com/Jubileekim/KEMI/actions/runs/40039317360)은 확인 시 checkout·Node 설정 success, npm ci in_progress, 형식/단위/빌드/Chromium/E2E pending이었다. 로컬104/146/운영5 결과와 별개이며 원격 최종 통과로 기록하지 않는다. 최종 링크·결과 기록은 문서만 바꾸는 별도 전달 커밋으로 푸시하므로 cancel-in-progress에 의해 실행이 교체될 수 있다. **최신 문서 SHA의 원격 CI 최종 결과는 미검증**이며 [PR #40 Checks](https://github.com/Jubileekim/KEMI/pull/40/checks)에서 확인한다. Draft를 유지하고 CI 설정/검사/시간 제한을 완화하거나 재실행하지 않는다.
 - **기존 Vercel 연결 상태:** 기능 SHA의 상태가 failure이며 GitHub status 설명은 `Git author Dev-Yuncheol must have access to the project on Vercel to create deployments.`다. Web CI/로컬 빌드와 다른 접근 권한 문제이며 배포 성공 증거가 아니다. 초대·권한/배포 설정 변경·배포/재배포 명령은 실행하지 않았다. 푸시/PR로 발생한 연결 서비스 검사는 직접 실행한 배포와 구분한다.
+
+## 2-B 선택 AI 분석·명시적 예산 반영 (2026-10-24)
+
+### 구현·변경 파일
+
+- **AI-01/02·P20의 클라이언트/명시적 Mock 범위.** 2-A 작성·초안 재편집 안에서 예산 없이도 제작 조건을 선택 분석하고, 항목·소계/합계·산정 이유·가정·누락 안내를 확인한다. 분석 생성은 예산을 바꾸지 않는다. 반영액을 확인·조정하고 명시 적용해야 예산 입력이 바뀌며 저장·공개는 별도다. 이후 수동 수정도 가능하다.
+- 제작 조건/설명 변경·지연 응답은 이전 리포트 반영을 차단한다. 구조·항목 계산·합계·입력 일치 검사를 통과한 결과만 반영한다. 취소·권한·429·503·네트워크·형식 오류에도 수동 예산/공개가 가능하다. 화면 이탈/로그아웃 시 취소·epoch로 늦은 결과를 차단한다. 자동 재시도 없음.
+- 마지막 명시 적용액·리포트 ID/입력/결과·고정 Mock 모델/프롬프트 버전을 모의 초안에 보존한다. 수동 변경 후에는 과거 기록임을 표시한다. 실제 계약 금액과 연결하지 않는다. 공고의 다른 필드·파일·참고 자료는 분석에 자동 전송하지 않으며 명시 입력한 설명만 보낸다.
+- **API 재대조:** `api문서.txt`와 기존 기능표는 경로가 없지만 현재 코드에는 `POST /api/pricing/analyze`와 shared pricing 스키마가 있다. shared 입력/구조·단가/수량 제약을 재사용한다. 비용 범위·누락 전용 필드·실제 버전/근거·리포트 저장/공고 적용 계약은 부족하여 `/__mock__/pricing/analyze` 고정 예시로 분리했다. 실제 API 호출/제공자 연결 완료로 표시하지 않는다. D16 정책과 현재 서버의 사용자별 10회/시간 구현은 별개다.
+- 모델·통신·handler·화면: `apps/web/src/mocks/{pricing-model.ts,pricing-api.ts,pricing-handlers.ts,PricingMock.tsx}`, 연결 `CampaignFormMock.tsx`, `campaign-model.ts`, `browser.ts`. 검사 `apps/web/test/pricing.test.ts`, `apps/web/e2e/pricing.spec.ts`. 근거/기록 `docs/frontend-pricing-2b.md`, `docs/frontend-feature-matrix.md`, 이 문서, `qa/frontend-2b/{README.md,capture.cjs,production-smoke.cjs,production-results.json,editor-390.png,editor-1280.png}`.
+- `.github/workflows/web-ci.yml`에는 선행 `feat/frontend-2a-campaigns` base만 추가했다. 검사 명령·재시도0·timeout 유지. API/shared·원본 엑셀/PDF·계획·의존성/lockfile·브랜드/토큰 변경 없음. 상위 독립 앱은 수정하지 않았다.
+
+### 검증·검토
+
+- `npm run test:web`: **109/109**(기존104+신규5). 요청 길이/허용 필드·구조·계산·범위/통화/출처/근거 오류·Mock 버전 구분·명시 적용액/초안/수동 수정 기록 검증.
+- `npm run build:web`(타입·ESLint·운영 빌드), `npm run format:check`, `npm run check:tokens`, `git diff --check`: 통과. 운영 빌드는 AUTH_API/MOCK 플래그를 모두 켠 조건도 통과했다. 키트11개 타입·16개 대비·6개 재생성 검사 유지.
+- 첫 전체 Edge 실행은 **169/170·exit1**, 이번 2-B는 **24/24** 통과. 기존 프로필 만료 후 재저장1건은 성공 문구 대기 실패였고 단독 재현은 데스크톱/모바일 **2/2** 통과했다. 실패 trace에서 두 번째 PATCH200 뒤 앱 재로딩/초기 인증·조회가 확인됐고 Vite 로그는 trace HTML 생성 시 page reload를 기록했다. 산출물을 저장소 밖 OS 임시 폴더로만 바꾼 전체 재검증은 진행 중이며 종료 후 추가 기록한다. 2-B 통합 흐름은 선택 분석→예산 불변→반영액 조정/명시 적용→초안 저장/재편집→공개이며, 2단계 전체 통합 완료를 뜻하지 않는다.
+- 독립 모의 HTTP 운영 smoke **5개 통과·페이지 오류0**. pricing/campaign Mock 엔드포인트·버전/시나리오·worker 운영 제외, CLIENT/CREATOR의 두 작성 경로·제품 API/Mock 호출/worker 없음을 확인했다. 실제 서버/DB 검증이 아니다.
+- 390/1280px 분석·명시 적용 화면 캡처2개 생성·시각 확인. KEMI 로고/주요 색/버튼/카드/600·1024px 구간 유지. 스크린리더·실제 브라우저 메뉴200% 확대·다른 브라우저는 미검증.
+- 명세/코드·React·보안 자체 검토: DEV lazy import 경계/운영 제외, Bearer·활성 의뢰인·epoch·요청 취소, 입력 최소화/외부 요청 없음·React 이스케이프·로컬 오류 문구·비밀값/의존성 추가 없음 확인. 실제 인증/권한/DB 보안의 증거가 아니다. Hook 구독은 공식 React Hook Form useWatch 안내를 확인했다.
+- 중간 실패: 초기 form.watch React Compiler 경고·이름 shadow·리스트 index key·E2E 반복문 lint 위반은 기존 규칙을 바꾸지 않고 수정했다. 초기 분석 전용 실행17/18은 전체 실행을 겹쳐 시작해 trace 파일 ENOENT/timeout이 발생했다. 실행 중첩은 작업 실수로 기록하며 통과로 계산하지 않는다. 전체 실행의 기존 프로필 만료 재저장 실패도 따로 재현/기록한다.
+
+### 남은 일·다음 작업 하나
+
+- **실제 API·OpenAI·DB·영구 리포트/적용 기록은 미연결/미검증.** D16 입력/출력·비용 범위·한도·저장·재분석·버전/근거 계약과 실제 공고 연결이 남는다. UI의 금액·문자 제한은 Mock 보호 후보이며 정책 확정이 아니다. 단일 탭 메모리/고정150,000원 예시를 실제 분석·시장 평균으로 표시하지 않는다.
+- 다음 작업 하나: **2-B D16 리포트·버전·저장/예산 적용 API 계약 조율**. 자동 착수하지 않는다. 공개 후 수정/삭제·탐색/상세·제안/협의와 2단계 전체는 미완료다.
+
+### Git 전달 상태
+
+- 2-B 기존 원격 브랜치·PR 없음 확인. 선행 #40의 원격/로컬 일치 SHA `35c9357`에서 `feat/frontend-2b-ai-budget` 생성. 모델·응답/적용 기록·단위 검사 커밋 [747a2b8](https://github.com/Jubileekim/KEMI/commit/747a2b8). 이후 UI/통신/검사/QA/기록 커밋과 Draft PR 링크·원격 CI는 전달 후 아래에 갱신한다.
+- base는 `feat/frontend-2a-campaigns`(#40 선행). 선행 PR 병합 후 base 조정 검토 필요. PR 병합·자동 병합 설정·명시적 배포/재배포·다음 범위 착수 없음. 푸시/PR로 생기는 기존 연결 서비스 검사는 명시적 배포 실행과 구분한다.

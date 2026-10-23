@@ -1,0 +1,11 @@
+{
+  "source": "production bundle with independent HTTP auth fixtures; NOT live API",
+  "results": [
+    "Mock code/endpoints/worker excluded from production",
+    "CLIENT /campaigns/new: production boundary verified",
+    "CLIENT /campaigns/example/edit: production boundary verified",
+    "CREATOR /campaigns/new: production boundary verified",
+    "CREATOR /campaigns/example/edit: production boundary verified"
+  ],
+  "pageErrors": []
+}

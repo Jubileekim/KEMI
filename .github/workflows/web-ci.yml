@@ -11,6 +11,7 @@ on:
         feat/frontend-1c-profiles,
         feat/frontend-1d-packages,
         feat/frontend-1d-portfolio,
+        feat/frontend-2a-campaigns,
       ]
   push:
     branches: [main]
