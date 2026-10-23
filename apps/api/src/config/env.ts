@@ -35,6 +35,9 @@ const envSchema = z
     // 카카오 REST API 키(client_id)와 Client Secret(앱에서 끈 경우 비움)
     KAKAO_REST_API_KEY: optionalSecret,
     KAKAO_CLIENT_SECRET: optionalSecret,
+    // 서버 측 AI 단가 분석 (선택). API 키를 브라우저에 전달하지 않는다.
+    AI_PRICING_API_KEY: optionalSecret,
+    AI_PRICING_MODEL: z.string().trim().min(1).max(80).default("gpt-4o-mini"),
   })
   .refine((env) => !env.GOOGLE_CLIENT_ID === !env.GOOGLE_CLIENT_SECRET, {
     path: ["GOOGLE_CLIENT_SECRET"],

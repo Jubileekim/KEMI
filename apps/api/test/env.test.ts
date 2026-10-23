@@ -17,6 +17,7 @@ describe("parseEnv", () => {
       JWT_ACCESS_SECRET,
       APP_ORIGIN,
       TRUST_PROXY_HOPS: 0,
+      AI_PRICING_MODEL: "gpt-4o-mini",
     });
   });
 

@@ -6,6 +6,10 @@ import {
 } from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
 import { createProfileService } from "../../src/profiles/profile.service.js";
+import {
+  createPricingService,
+  type PricingService,
+} from "../../src/pricing/pricing.service.js";
 import { createApplicationService } from "../../src/applications/application.service.js";
 import { createNotificationService } from "../../src/notifications/notification.service.js";
 import {
@@ -30,6 +34,7 @@ interface TestAppOptions {
   socialProviders?: SocialProviders;
   projectService?: ProjectService;
   projectDiscoveryService?: ProjectDiscoveryService;
+  pricingService?: PricingService;
 }
 
 const EMPTY_PROJECT = {
@@ -100,6 +105,7 @@ export function createTestApp({
   socialProviders,
   projectService,
   projectDiscoveryService,
+  pricingService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -128,6 +134,7 @@ export function createTestApp({
       (prisma
         ? createProjectDiscoveryService({ prisma: client })
         : unusedProjectDiscoveryService),
+    pricingService: pricingService ?? createPricingService(),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

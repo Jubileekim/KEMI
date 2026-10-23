@@ -261,6 +261,18 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - 알림 5종: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터)
 - 모집 마감은 스케줄러 없이 처리한다. 지원할 때 마감 시각을 검사하고, 직접 마감하면 대기 지원자에게 알린다. 마감 시각이 지났다는 알림은 보내지 않는다.
 
+## AI 단가 분석 (AI-01·AI-02)
+
+`POST /api/pricing/analyze` — 활성 의뢰인 `Authorization: Bearer <accessToken>` 필수.
+
+- 입력: `description`(10~5000자) 및 선택 입력 `title`, `purpose`, `styles`, `expectedDurationSeconds`.
+- 출력: `workUnits`(작업·수량·추정 단가·산정 근거·소계), `estimatedBudgetKrw`(KRW 정수 합계), `assumptions`, `notice`.
+- **AI 출력은 참고용 추정치**이며 거래 확정가·실제 시장 단가가 아니다. 모델이 낸 수치의 범위를 서버가 검증하고 합계는 서버가 다시 계산한다.
+- 예산 반영은 자동으로 저장하지 않는다. 프론트엔드에서 확인 후 새 프로젝트 등록 시 `budget`으로 사용하거나, 모집 중인 본인 프로젝트에 `PATCH /api/projects/{projectId}`와 `{ "budget": 추정금액 }`을 보낸다. 기존 프로젝트 권한·마감 검증이 그대로 적용된다.
+- 키가 없으면 `503 SERVICE_UNAVAILABLE`, 호출/응답 오류는 `502 SERVICE_UNAVAILABLE`, IP당 1시간 10회 초과 시 `429 RATE_LIMITED`.
+- API 키는 **백엔드** `AI_PRICING_API_KEY`에서만 읽는다. 미설정 시 가짜 AI 견적을 반환하지 않는다. 기본 모델은 `AI_PRICING_MODEL=gpt-4o-mini`이며 서버에서 변경 가능하다. AI 모델 호출은 외부 API 과금과 데이터 전송을 수반하므로, 사용자 화면에는 해당 사실과 민감정보 미입력 안내가 필요하다.
+- 실제 외부 모델·프론트엔드·DB E2E 검증은 별도 작업이다. 요청·응답 세부 형식은 Swagger의 `pricing` 태그를 참조한다.
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
@@ -290,6 +302,8 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |      |                | Google 로그인. 둘 다 넣어야 켜진다                                                                                              |
 | `KAKAO_REST_API_KEY`                       |      |                | 카카오 로그인(REST API 키). 넣으면 켜진다                                                                                       |
 | `KAKAO_CLIENT_SECRET`                      |      |                | 카카오 Client Secret. 앱에서 끈 경우에만 비운다                                                                                 |
+| `AI_PRICING_API_KEY`                       |      |                | 심화 AI 단가 분석 서버 키. 없으면 요청 시 503 (브라우저에 노출 금지)                                                            |
+| `AI_PRICING_MODEL`                         |      | `gpt-4o-mini`  | AI 단가 분석용 Responses API 모델                                                                                               |
 
 실제 값은 `.env`(커밋 금지)나 Render 대시보드의 Environment에만 넣는다. 저장소에는 `.env.example`만 둔다.
 
