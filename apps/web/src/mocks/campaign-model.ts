@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pricingApplicationSchema } from "./pricing-model";
 
 // D04 candidate checks and local input protection; never a shared API contract.
 export const campaignFields = [
@@ -18,6 +19,7 @@ export const campaignValuesSchema = z.strictObject({
   budget: text,
   references: text,
   days: z.enum(["3", "7", "14"]),
+  pricingApplication: pricingApplicationSchema.optional(),
 });
 export type CampaignValues = z.infer<typeof campaignValuesSchema>;
 export const emptyCampaign: CampaignValues = {
