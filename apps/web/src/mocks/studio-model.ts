@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { creatorServiceStatusSchema } from "@kemi/shared";
+import {
+  workItemSchema,
+  portfolioCommandSchema,
+  changeWorks,
+} from "./portfolio-model";
 
 // Candidate UI fixtures only. These are NOT product API DTOs or approved policies.
 export const packageFields = {
@@ -61,6 +66,8 @@ export const studioSchema = z.object({
   packages: z.array(packageItemSchema),
   // A separate synthetic reference lets tests demonstrate immutable historic values.
   reference: packageItemSchema.nullable(),
+  works: z.array(workItemSchema),
+  workReference: workItemSchema.nullable(),
 });
 export type StudioState = z.infer<typeof studioSchema>;
 export function emptyStudio(): StudioState {
@@ -71,6 +78,8 @@ export function emptyStudio(): StudioState {
     primaryId: null,
     packages: [],
     reference: null,
+    works: [],
+    workReference: null,
   };
 }
 export const commandSchema = z.discriminatedUnion("type", [
@@ -87,6 +96,7 @@ export const commandSchema = z.discriminatedUnion("type", [
     value: z.enum(["UNKNOWN", "READY", "MISSING"]),
   }),
   z.object({ type: z.literal("capture-reference"), id: z.string() }),
+  ...portfolioCommandSchema.options,
 ]);
 export type StudioCommand = z.infer<typeof commandSchema>;
 export function packageProblems(values: PackageValues) {
@@ -117,6 +127,15 @@ export function applyStudio(
   command: StudioCommand,
 ): StudioState {
   const next = structuredClone(state);
+  if (
+    command.type === "save-work" ||
+    command.type === "delete-work" ||
+    command.type === "capture-work-reference"
+  ) {
+    const changed = changeWorks(next, command);
+    next.works = changed.works;
+    next.workReference = changed.workReference;
+  }
   if (command.type === "save-package") {
     const old = next.packages.find((item) => item.id === command.id);
     if (command.visibility === "PUBLIC") {
@@ -184,5 +203,10 @@ export function applyStudio(
 export function visiblePackages(state: StudioState) {
   return state.service === "PUBLIC"
     ? state.packages.filter((p) => p.visibility === "PUBLIC")
+    : [];
+}
+export function visibleWorks(state: StudioState) {
+  return state.service === "PUBLIC"
+    ? state.works.filter((work) => work.visibility === "PUBLIC")
     : [];
 }
