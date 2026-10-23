@@ -404,6 +404,48 @@ describe("마감·삭제 (일괄 마감)", () => {
   });
 });
 
+describe("마감·선정 후 상세 조회 (#19 리뷰 4번)", () => {
+  const detail = (projectId: bigint, token?: string) => {
+    const req = request(app).get(`/api/projects/${projectId}`);
+    return token ? req.set(auth(token)) : req;
+  };
+
+  it("선정 뒤에는 작성자와 지원자(선정·자동 거절 모두)만 상세를 보고, 다른 사람은 404다", async () => {
+    const { client, project, creators, applicationIds } =
+      await projectWithApplicants(2);
+    await accept(client.token, applicationIds[0] ?? "");
+    const stranger = await signup("CREATOR", 9);
+    const otherClient = await signup("CLIENT", 9);
+
+    expect((await detail(project.id)).status).toBe(404);
+    expect((await detail(project.id, stranger.token)).status).toBe(404);
+    expect((await detail(project.id, otherClient.token)).status).toBe(404);
+    expect((await detail(project.id, client.token)).status).toBe(200);
+    const selected = await detail(project.id, creators[0]?.token);
+    expect(selected.status).toBe(200);
+    expect(selected.body.status).toBe("MATCHED");
+    expect((await detail(project.id, creators[1]?.token)).status).toBe(200);
+  });
+
+  it("직접 마감 뒤에도 지원자는 상세를 본다. 잘못된 토큰은 401이다", async () => {
+    const { client, project, creators } = await projectWithApplicants(1);
+    await closeProject(client.token, project.id);
+
+    expect((await detail(project.id)).status).toBe(404);
+    expect((await detail(project.id, creators[0]?.token)).status).toBe(200);
+    expect((await detail(project.id, "not-a-token")).status).toBe(401);
+  });
+
+  it("삭제한 프로젝트는 지원자도 볼 수 없다 (404)", async () => {
+    const { client, project, creators } = await projectWithApplicants(1);
+    await request(app)
+      .delete(`/api/projects/${project.id}`)
+      .set(auth(client.token));
+
+    expect((await detail(project.id, creators[0]?.token)).status).toBe(404);
+  });
+});
+
 describe("동시 요청", () => {
   // 같은 프로젝트의 지원·선정·거절·마감·삭제는 프로젝트 행 잠금으로 하나씩 처리된다.
 
@@ -466,6 +508,35 @@ describe("동시 요청", () => {
         }),
       Promise.resolve(),
     );
+  });
+
+  it("다른 트랜잭션이 프로젝트를 잠그고 선정하는 동안 들어온 수정은 기다렸다가 409가 된다", async () => {
+    const { client, project } = await projectWithApplicants(1);
+    let patch: Promise<request.Response> | undefined;
+
+    // 선정 트랜잭션을 흉내 낸다: 프로젝트 행을 잠근 채 MATCHED로 바꾸고, 그 사이에 수정 요청을 보낸다.
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`;
+      await tx.project.update({
+        where: { id: project.id },
+        data: { status: "MATCHED" },
+      });
+      patch = request(app)
+        .patch(`/api/projects/${project.id}`)
+        .set(auth(client.token))
+        .send({ title: "선정 중에 바꾼 제목" })
+        .then((res) => res);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 300);
+      });
+    });
+
+    const res = await patch;
+    expect(res?.status).toBe(409);
+    const row = await prisma.project.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    expect(row.title).toBe("돌잔치 성장영상");
   });
 
   it("선정과 다른 지원자 거절이 겹쳐도 상태가 어긋나지 않는다", async () => {

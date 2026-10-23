@@ -529,7 +529,7 @@ const openApiDocument = {
         tags: ["projects"],
         summary: "공개 프로젝트 상세 조회",
         description:
-          "모집 중(OPEN)이고 마감 전이며, 이용 제한·탈퇴되지 않은 회원의 프로젝트만 보여준다. 그 밖에는 404다.",
+          "모집 중(OPEN)이고 마감 전이며, 이용 제한·탈퇴되지 않은 회원의 프로젝트만 보여준다. 다만 `Authorization`을 보낸 작성자와 이 프로젝트에 지원한 크리에이터는 마감·선정 뒤에도 볼 수 있다(삭제한 프로젝트는 제외). 토큰이 잘못되면 401, 그 밖에는 404다.",
         parameters: [projectIdParam],
         responses: {
           200: projectResponse,

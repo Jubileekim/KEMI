@@ -151,7 +151,7 @@ const includeClient = { client: { select: { name: true } } } as const;
 
 export interface ProjectService {
   listPublic(input: unknown): Promise<ProjectListResponse>;
-  getPublic(projectId: bigint): Promise<ProjectSummary>;
+  getPublic(projectId: bigint, viewer?: AuthUser): Promise<ProjectSummary>;
   listMine(user: AuthUser, input: unknown): Promise<ProjectListResponse>;
   create(user: AuthUser, input: unknown): Promise<ProjectSummary>;
   update(
@@ -224,7 +224,24 @@ export function createProjectService({
   return {
     listPublic: (input) => list(input),
 
-    async getPublic(projectId) {
+    // 일반 사용자에게는 모집 중인 프로젝트만 보여준다.
+    // 작성자와 이 프로젝트에 지원한 크리에이터는 마감·선정 뒤에도 상세를 볼 수 있다(삭제한 프로젝트는 제외, #19 리뷰 4번).
+    async getPublic(projectId, viewer) {
+      if (viewer) {
+        const viewerId = BigInt(viewer.id);
+        const related = await prisma.project.findFirst({
+          where: {
+            id: projectId,
+            deletedAt: null,
+            OR: [
+              { clientId: viewerId },
+              { workRequests: { some: { creatorId: viewerId } } },
+            ],
+          },
+          include: includeClient,
+        });
+        if (related) return toProject(related);
+      }
       const row = await prisma.project.findFirst({
         where: {
           id: projectId,
@@ -269,59 +286,71 @@ export function createProjectService({
       return toProject(row);
     },
 
+    // 선정·마감과 겹치지 않도록 같은 프로젝트 행 잠금 안에서 상태를 다시 읽고 수정한다.
     async update(user, projectId, input) {
-      const existing = await getOwned(user, projectId);
-      if (projectStatusSchema.parse(existing.status) !== "OPEN") {
-        throw new AppError(
-          409,
-          "CONFLICT",
-          "모집 중인 프로젝트만 수정할 수 있습니다.",
-        );
-      }
-      // 마감 시각이 지나면 제목만 고치거나 마감을 연장하는 요청도 받지 않는다.
-      if (existing.recruitmentEndAt <= now()) {
-        throw new AppError(
-          409,
-          "CONFLICT",
-          "모집 마감 시각이 지나 수정할 수 없습니다.",
-        );
-      }
+      await getOwned(user, projectId);
       const parsed = projectUpdateSchema.parse(input);
-      const recruitmentEndAt =
-        parsed.recruitmentEndAt === undefined
-          ? existing.recruitmentEndAt
-          : new Date(parsed.recruitmentEndAt);
-      const deliveryDueDate =
-        parsed.deliveryDueDate === undefined
-          ? existing.deliveryDueDate
-          : dateOnly(parsed.deliveryDueDate);
-      validateSchedule(recruitmentEndAt, deliveryDueDate, now());
+      return prisma.$transaction(async (tx) => {
+        const existing = await lockProject(tx, projectId);
+        if (!existing) {
+          throw new AppError(404, "NOT_FOUND", "프로젝트를 찾을 수 없습니다.");
+        }
+        if (projectStatusSchema.parse(existing.status) !== "OPEN") {
+          throw new AppError(
+            409,
+            "CONFLICT",
+            "모집 중인 프로젝트만 수정할 수 있습니다.",
+          );
+        }
+        // 마감 시각이 지나면 제목만 고치거나 마감을 연장하는 요청도 받지 않는다.
+        if (existing.recruitmentEndAt <= now()) {
+          throw new AppError(
+            409,
+            "CONFLICT",
+            "모집 마감 시각이 지나 수정할 수 없습니다.",
+          );
+        }
+        const recruitmentEndAt =
+          parsed.recruitmentEndAt === undefined
+            ? existing.recruitmentEndAt
+            : new Date(parsed.recruitmentEndAt);
+        const deliveryDueDate =
+          parsed.deliveryDueDate === undefined
+            ? existing.deliveryDueDate
+            : dateOnly(parsed.deliveryDueDate);
+        validateSchedule(recruitmentEndAt, deliveryDueDate, now());
 
-      const row = await prisma.project.update({
-        where: { id: projectId },
-        data: {
-          ...(parsed.title !== undefined ? { title: parsed.title } : {}),
-          ...(parsed.description !== undefined
-            ? { description: parsed.description }
-            : {}),
-          ...(parsed.purpose !== undefined ? { purpose: parsed.purpose } : {}),
-          ...(parsed.styles !== undefined ? { styles: parsed.styles } : {}),
-          ...(parsed.budget !== undefined
-            ? { budget: BigInt(parsed.budget) }
-            : {}),
-          ...(parsed.expectedDurationSeconds !== undefined
-            ? {
-                expectedDurationSeconds: parsed.expectedDurationSeconds ?? null,
-              }
-            : {}),
-          ...(parsed.recruitmentEndAt !== undefined
-            ? { recruitmentEndAt }
-            : {}),
-          ...(parsed.deliveryDueDate !== undefined ? { deliveryDueDate } : {}),
-        },
-        include: includeClient,
+        const row = await tx.project.update({
+          where: { id: projectId },
+          data: {
+            ...(parsed.title !== undefined ? { title: parsed.title } : {}),
+            ...(parsed.description !== undefined
+              ? { description: parsed.description }
+              : {}),
+            ...(parsed.purpose !== undefined
+              ? { purpose: parsed.purpose }
+              : {}),
+            ...(parsed.styles !== undefined ? { styles: parsed.styles } : {}),
+            ...(parsed.budget !== undefined
+              ? { budget: BigInt(parsed.budget) }
+              : {}),
+            ...(parsed.expectedDurationSeconds !== undefined
+              ? {
+                  expectedDurationSeconds:
+                    parsed.expectedDurationSeconds ?? null,
+                }
+              : {}),
+            ...(parsed.recruitmentEndAt !== undefined
+              ? { recruitmentEndAt }
+              : {}),
+            ...(parsed.deliveryDueDate !== undefined
+              ? { deliveryDueDate }
+              : {}),
+          },
+          include: includeClient,
+        });
+        return toProject(row);
       });
-      return toProject(row);
     },
 
     // 직접 마감: 신규 지원만 막는다. 대기 중인 지원은 그대로 두어 선정·거절할 수 있고, 지원자에게 마감을 알린다.
