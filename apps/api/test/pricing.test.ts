@@ -1,12 +1,17 @@
 import type { AuthUser } from "@kemi/shared";
+import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
+import { createAuthService } from "../src/auth/auth.service.js";
 import AppError from "../src/http/app-error.js";
+import { errorHandler } from "../src/http/error-handler.js";
+import { createPrismaClient } from "../src/lib/prisma.js";
+import createPricingRouter from "../src/pricing/pricing.router.js";
 import {
   createPricingService,
   requestOpenAIPricing,
 } from "../src/pricing/pricing.service.js";
-import { createTestApp } from "./support/test-app.js";
+import { createTestApp, TEST_ACCESS_SECRET } from "./support/test-app.js";
 
 const client: AuthUser = {
   id: "1",
@@ -40,6 +45,33 @@ const modelResult = {
   ],
   assumptions: ["고객이 원본 자료를 제공한다"],
 };
+
+function pricingTestApp() {
+  const app = express();
+  app.use(express.json());
+  // 이 API에는 인증 기능만 필요하다. 테스트 DB나 실제 토큰에 의존하지 않는다.
+  const fakeAuth = createAuthService({
+    prisma: createPrismaClient({
+      DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
+      DATABASE_POOL_MAX: 1,
+    }),
+    accessTokenSecret: TEST_ACCESS_SECRET,
+  });
+  const authenticate = vi
+    .spyOn(fakeAuth, "authenticate")
+    .mockImplementation(async (token: string | undefined) => {
+      if (token === "valid-a") return { ...client, id: "user-a" };
+      if (token === "valid-b") return { ...client, id: "user-b" };
+      throw new AppError(401, "UNAUTHENTICATED", "유효하지 않은 토큰입니다.");
+    });
+  const generate = vi.fn(async () => modelResult);
+  app.use(
+    "/api/pricing",
+    createPricingRouter(fakeAuth, createPricingService({ generate })),
+  );
+  app.use(errorHandler);
+  return { app, authenticate, generate };
+}
 
 describe("AI 단가 분석 (AI-01, AI-02)", () => {
   it("모델 단가·수량으로 합계를 계산하고 참고 견적임을 명시한다", async () => {
@@ -181,6 +213,108 @@ describe("AI 단가 분석 (AI-01, AI-02)", () => {
       status: 502,
       code: "SERVICE_UNAVAILABLE",
     });
+  });
+
+  it("요청 한도는 인증된 사용자별로 분리되고 11번째에 공통 형식 429", async () => {
+    const { app, generate } = pricingTestApp();
+    const allowed = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(app)
+          .post("/api/pricing/analyze")
+          .set("Authorization", "Bearer valid-a")
+          .send(validRequest),
+      ),
+    );
+    expect(allowed.map(({ status }) => status)).toEqual(Array(10).fill(200));
+
+    const blocked = await request(app)
+      .post("/api/pricing/analyze")
+      .set("Authorization", "Bearer valid-a")
+      .send(validRequest);
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.code).toBe("RATE_LIMITED");
+    expect(generate).toHaveBeenCalledTimes(10);
+
+    const otherUser = await request(app)
+      .post("/api/pricing/analyze")
+      .set("Authorization", "Bearer valid-b")
+      .send(validRequest);
+    expect(otherUser.status).toBe(200);
+    expect(generate).toHaveBeenCalledTimes(11);
+  });
+
+  it("인증 실패 401은 같은 사용자 요청 한도를 차감하지 않는다", async () => {
+    const { app, generate } = pricingTestApp();
+    const unauthenticated = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        request(app)
+          .post("/api/pricing/analyze")
+          .set("Authorization", "Bearer invalid")
+          .send(validRequest),
+      ),
+    );
+    expect(unauthenticated.map(({ status }) => status)).toEqual(
+      Array(12).fill(401),
+    );
+    expect(unauthenticated.map(({ body }) => body.error.code)).toEqual(
+      Array(12).fill("UNAUTHENTICATED"),
+    );
+
+    const allowed = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(app)
+          .post("/api/pricing/analyze")
+          .set("Authorization", "Bearer valid-a")
+          .send(validRequest),
+      ),
+    );
+    expect(allowed.map(({ status }) => status)).toEqual(Array(10).fill(200));
+    expect(generate).toHaveBeenCalledTimes(10);
+  });
+
+  it("별도 앱 인스턴스는 요청 제한 카운터를 공유하지 않는다", async () => {
+    const first = pricingTestApp();
+    const second = pricingTestApp();
+    const allowed = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(first.app)
+          .post("/api/pricing/analyze")
+          .set("Authorization", "Bearer valid-a")
+          .send(validRequest),
+      ),
+    );
+    expect(allowed.map(({ status }) => status)).toEqual(Array(10).fill(200));
+    const res = await request(second.app)
+      .post("/api/pricing/analyze")
+      .set("Authorization", "Bearer valid-a")
+      .send(validRequest);
+    expect(res.status).toBe(200);
+    expect(second.generate).toHaveBeenCalledOnce();
+  });
+
+  it("모델 HTTP 실패는 상태 코드와 단계만 기록하고 민감정보를 남기지 않는다", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const fetcher: typeof fetch = async () =>
+        new Response("upstream-secret-response-body", { status: 401 });
+      await expect(
+        requestOpenAIPricing({
+          apiKey: "sk-private-key",
+          model: "gpt-4o-mini",
+          input: validRequest,
+          fetcher,
+        }),
+      ).rejects.toMatchObject({ status: 502, code: "SERVICE_UNAVAILABLE" });
+      expect(warn).toHaveBeenCalledWith("[pricing] AI upstream failure", {
+        stage: "http",
+        status: 401,
+      });
+      expect(JSON.stringify(warn.mock.calls)).not.toMatch(
+        /sk-private-key|upstream-secret-response-body|돌잔치/,
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("인증 없는 API 호출은 모델 호출 없이 401", async () => {

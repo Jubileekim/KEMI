@@ -33,19 +33,21 @@ const pricingOutputSchema = {
     summary: { type: "string" },
     workUnits: {
       type: "array",
+      minItems: 1,
+      maxItems: 8,
       items: {
         type: "object",
         properties: {
           name: { type: "string" },
-          quantity: { type: "integer" },
-          unitPriceKrw: { type: "integer" },
+          quantity: { type: "integer", minimum: 1, maximum: 10 },
+          unitPriceKrw: { type: "integer", minimum: 1000, maximum: 5000000 },
           rationale: { type: "string" },
         },
         required: ["name", "quantity", "unitPriceKrw", "rationale"],
         additionalProperties: false,
       },
     },
-    assumptions: { type: "array", items: { type: "string" } },
+    assumptions: { type: "array", maxItems: 6, items: { type: "string" } },
   },
   required: ["summary", "workUnits", "assumptions"],
   additionalProperties: false,
@@ -101,29 +103,44 @@ export async function requestOpenAIPricing({
       }),
     });
   } catch {
+    console.warn("[pricing] AI upstream failure", { stage: "request" });
     throw unavailable();
   }
-  if (!response.ok) throw unavailable();
+  if (!response.ok) {
+    console.warn("[pricing] AI upstream failure", {
+      stage: "http",
+      status: response.status,
+    });
+    throw unavailable();
+  }
 
   let raw: unknown;
   try {
     raw = await response.json();
   } catch {
+    console.warn("[pricing] AI upstream failure", { stage: "response_json" });
     throw unavailable();
   }
 
   const parsed = responseSchema.safeParse(raw);
   if (!parsed.success || parsed.data.status !== "completed") {
+    console.warn("[pricing] AI upstream failure", {
+      stage: "response_incomplete",
+    });
     throw unavailable();
   }
   const content = parsed.data.output
     .flatMap((item) => item.content ?? [])
     .find((part) => part.type === "output_text")?.text;
-  if (!content) throw unavailable();
+  if (!content) {
+    console.warn("[pricing] AI upstream failure", { stage: "content_missing" });
+    throw unavailable();
+  }
   try {
     const output: unknown = JSON.parse(content);
     return output;
   } catch {
+    console.warn("[pricing] AI upstream failure", { stage: "content_json" });
     throw unavailable();
   }
 }
