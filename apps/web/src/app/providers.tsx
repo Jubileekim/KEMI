@@ -5,7 +5,9 @@ import { session } from "./session";
 
 export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
-    session.bootstrap();
+    // Callback owns its refresh→me flight; signup/error must not rotate a session.
+    if (window.location.pathname !== "/auth/social/callback")
+      session.bootstrap();
     const verify = () => {
       if (document.visibilityState === "visible") session.verify();
     };

@@ -13,6 +13,7 @@ import { ApiError } from "../../shared/api/client";
 import { authEnabled, mockEnabled } from "./config";
 import { signupFormSchema } from "./contracts";
 import safeReturnTo from "./redirect";
+import GoogleButton from "./GoogleButton";
 
 const loginFormSchema = loginRequestSchema.extend({
   passwordConfirm: z.string(),
@@ -108,6 +109,12 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
+      <GoogleButton
+        returnTo={params.get("returnTo")}
+        disabled={
+          busy || ["checking", "logging-out", "logout-error"].includes(status)
+        }
+      />
       {status === "checking" && <p role="status">세션을 확인하고 있어요.</p>}
       {status === "error" && (
         <Button variant="outline" onClick={() => session.bootstrap()}>

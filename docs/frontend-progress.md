@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-23 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일 인증의 클라이언트·Mock 구현/로컬 검증 완료. 실제 가입 정책 충돌·실서버 검증은 남음. 0단계·1단계 전체 완료 아님.
+갱신: 2026-10-23 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일과 1-B Google의 클라이언트·Mock 구현/로컬 검증 완료. 실제 Google/API 검증·이메일 가입 정책 충돌은 남음. 카카오 미착수. 0단계·1단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -186,3 +186,36 @@
 - **원격 Web CI:** 기능 커밋 `130219e`의 [run 81](https://github.com/Jubileekim/KEMI/actions/runs/39943799612) **success** 확인. Ubuntu/Node 24에서 npm ci·형식·단위·타입/린트/빌드·Chromium 설치·데스크톱/모바일 **36/36**·report 업로드가 모두 성공했다. 로컬 Edge 결과와 별도 증거다. 기존 API CI는 이 base에서 실행 대상이 아니며 API/DB 성공을 주장하지 않는다.
 - 이 결과/PR 링크를 추가한 최종 전달 커밋은 문서만 변경한다. 해당 커밋의 최신 CI는 PR Checks에서 SHA와 함께 확인할 수 있다. 문서 변경 후 형식/공백 검사를 수행하고 푸시한다. 소스·테스트는 검증한 `130219e`와 같다.
 - 다음 작업 하나는 위의 **1-A API 정합화·실서버 검증**이며 자동 착수하지 않는다.
+
+## 1-B Google 로그인 화면과 콜백 처리 (2026-10-23)
+
+### 완료 범위·변경 파일
+
+- 기준 저장소는 `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`, 앱은 npm workspace `apps/web`이다. 상위 독립 앱은 수정하지 않았다. AUTH-04/P03만 구현했고 **AUTH-06 카카오 로그인은 미착수**로 남긴다.
+- Google 시작은 실제 모드에서 `/api/auth/google/start`로 브라우저 이동. 기존 회원 콜백은 개인 캐시 제거→refresh→me 확인→역할별 안전한 복귀. 신규 회원은 서버 티켓 조회 후 공개 콜백에서 역할/이름을 받고 shared 계약으로 가입→프로필 이동한다. 이메일/비밀번호를 요구하거나 제공자 이메일로 기존 계정을 합치지 않는다.
+- `apps/web/src/features/auth/{google.ts,GoogleButton.tsx,GoogleCallback.tsx,SocialSignupForm.tsx}` 신규. 같은 폴더의 `AuthForm.tsx`, `session-controller.ts`, `src/app/{App,providers}.tsx`와 `.env.example` 연결. OAuth state·PKCE·토큰 교환은 기존 서버 책임이며 프론트에서 대체하지 않는다.
+- 개발 전용 `src/mocks/GoogleProvider.tsx` 신규, `auth-handlers.ts`에 명시적 Google fixture/티켓/오류 추가. 기존 이메일 회원과 같은 제공자 이메일을 가진 별도 Google fixture로 자동 병합 없는 UI를 검사한다. 비밀이 아닌 Mock 역할 표식으로 새로고침 역할을 보존하며 이름 편집은 탭 메모리 한정이다. 실제 DB 저장/계정 유일성 증거가 아니다.
+- 검사 `apps/web/test/google.test.ts`, `e2e/google.spec.ts`와 증거 `qa/frontend-1b/` 신규. 계약/판단은 `docs/frontend-auth-1b.md`, 해당 기능 상태는 `frontend-feature-matrix.md`에 기록했다. `.github/workflows/web-ci.yml`은 아직 열린 1-A 브랜치를 PR base 허용 목록에 추가했고 기존 검사 절차를 유지한다.
+- API/shared·DB·의존성/lockfile·원본 엑셀·디자인 토큰/로고 변경 없음. 다음 기능·병합·자동 병합·배포는 실행하지 않았다.
+
+### 로컬 검증·검토
+
+- 최종 `npm run test:web`: **59/59**. Google 신규 단위 27개와 기존 32개. 콜백 단일 분기/중복 키·위조 값 거절, 복귀 경로/만료, 캐시 초기화, 제한 계정, 로그아웃 이후 늦은 가입 응답을 확인했다.
+- 최종 `npm run build:web`의 타입/ESLint/운영 빌드, `npm run format:check`, `npm run check:tokens`, `git diff --check`: **통과**. 키트 11개 타이포 역할·16개 대비·6개 재생성 PASS. 대표 비밀키/개인키 패턴 의심 경로 없음.
+- 최종 전체 Playwright: **64/64, 종료 코드 0**. 기존 이메일/health 36개와 Google 28개를 데스크톱·모바일 Edge/Chromium으로 검사. 두 역할 신규 가입→프로필→로그아웃→동일 ID/역할 재로그인→새로고침, 기존 회원 복귀, 취소/실패/설정 없음/요청 제한/이용 제한, 티켓 없음/만료/409/500/429, 이름 수정·역할 필수·중복 제출, 320/390/599/600/768/1023/1024/1280px 넘침·키보드·오류 연결·주요 색상을 확인했다.
+- 로컬 명령은 `npm exec -- playwright test --config tmp/playwright.local.config.ts` (Edge·5179). 정식 CI의 Chromium 설정을 변경하지 않았다. 로그/trace/report/tmp는 제외한다. 기존 MSW의 정적 파일/health 통과 요청 경고는 남으며 실제 서버 성공으로 해석하지 않는다.
+- 운영 빌드(인증/Mock 플래그를 모두 켬)+preview 4182에서 **모의 HTTP 7개 검사 통과·페이지 오류 0**. 시작 API가 fetch가 아닌 주소 이동인지, refresh/me 후 인증, 크리에이터 전용 복귀, 신규 역할/이름 POST 1회, 카카오 티켓 거절, worker/Google Mock/개발 도구/카카오 버튼 제외 확인. 390/1280px 캡처 시각 검토. `qa/frontend-1b/README.md`, `production-results.json`으로 재현한다.
+- 중간 실패와 수정: 재로그인 검사의 복귀 기대값을 기존 로그아웃의 프로필 복귀 규칙에 맞췄고, 개발 도구 label 대신 응답의 사용자 ID/역할로 확인하도록 바꿨다. 빠른 운영 모의 응답에서 세션 캐시 초기화가 가입 폼을 다시 만들어 완료 이동이 누락되는 문제를 재현·수정한 뒤 운영 smoke와 전체 E2E를 다시 통과했다. 기존 ESLint 규칙 위반을 수정했으며 검사 완화/자동 재시도는 추가하지 않았다. 중단/재개 뒤 종료된 preview는 다시 실행했다.
+- 명세·코드 품질·보안 축의 최종 자체 검토 완료. 토큰/티켓 URL 수락 금지, provider 검증, 외부 복귀 차단, 쿠키 요청 순서·개인 캐시·늦은 응답·운영 Mock 제외를 실행 증거와 대조했다. 실제 보안/제공자 검증을 대체하지 않으므로 Draft로 전달한다.
+
+### 남은 일·다음 작업 하나
+
+- **실제 API/Google/DB 미검증:** 이 체크아웃에는 API `.env`와 실행 서버가 없고 실제 Google 설정·동의 세션도 없다. APP_ORIGIN·같은 Origin proxy/rewrite·Google 콘솔 콜백, 실제 HttpOnly/Secure/SameSite 쿠키·동의 취소·계정 재로그인·동일 이메일 분리는 실환경에서 확인해야 한다. Mock/모의 HTTP 결과를 실제 연결 완료로 표시하지 않는다.
+- D01 프로필 완료 판정·D05 팀 결정과 기존 1-A 이메일 가입 정책 충돌은 유지한다. **1-B 클라이언트/Mock 범위까지 완료이며 실제 Google 연동 전체·1단계 전체 완료가 아니다.** 프로필·패키지와 단계 통합 완료 조건은 남아 있어 1단계 전체 통합 검증을 완료로 표시하지 않는다. 이번 Google 기능 묶음의 연속 흐름은 위 E2E로 확인했다.
+- 카카오 AUTH-06: **미착수**. 백엔드/shared의 기존 정의만 보존하며 프론트 버튼·카카오 신규 가입은 연결하지 않았다.
+- 다음 작업 하나: **1-B 실제 Google 동의·콜백·계정 상태 검증**. 서버/Google 콘솔/팀 승인 준비 후 별도 요청으로 진행한다. 이번에는 자동 착수하지 않는다.
+
+### Git 전달 상태
+
+- 기존 Google 백엔드 PR #14는 참고 계약이며 이번 프론트 PR이 아니다. 기존 1-B 브랜치/PR 없음 확인 후 1-A Draft PR #35의 `c9a78e0`에서 `feat/frontend-1b-google-auth`를 만들었다. 1-A가 아직 열려 있어 새 PR의 base도 해당 브랜치로 두어 이번 Google 변경만 검토한다.
+- 커밋·푸시·Draft PR과 해당 SHA의 원격 CI는 아래 전달 기록에 추가한다. 로컬 검사 성공은 원격 CI 성공을 뜻하지 않는다.

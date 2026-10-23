@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
 import type { AuthUser } from "@kemi/shared";
-import { loginRequestSchema } from "@kemi/shared";
+import { loginRequestSchema, socialSignupRequestSchema } from "@kemi/shared";
 import { signupFormSchema } from "../features/auth/contracts";
 
 // UI fixtures only: no credentials or tokens are persisted. This marker is not authentication.
@@ -21,6 +21,20 @@ const users: Record<string, AuthUser> = {
   },
 };
 let currentUser: AuthUser | undefined;
+// Non-secret fixture role marker only, matching the existing Mock session marker.
+const savedGoogleRole = document.cookie
+  .split("; ")
+  .find((item) => item.startsWith("kemi_mock_google_role="))
+  ?.split("=")[1];
+let googleUser: AuthUser = {
+  id: "mock-google",
+  email: null,
+  name: "Google 회원",
+  role: savedGoogleRole === "CREATOR" ? "CREATOR" : "CLIENT",
+  status: "ACTIVE",
+};
+let googleTicket = false;
+let googleRegistered = !!savedGoogleRole;
 const registrations = new Map<string, { user: AuthUser; digest: string }>();
 async function passwordDigest(password: string) {
   const bytes = await crypto.subtle.digest(
@@ -47,6 +61,8 @@ function authResponse(user: AuthUser) {
 }
 function setMarker(value: string) {
   document.cookie = `kemi_mock_session=${value}; Path=/; SameSite=Lax`;
+  if (value === "mock-google")
+    document.cookie = `kemi_mock_google_role=${googleUser.role}; Path=/; SameSite=Lax`;
 }
 function readUser() {
   if (currentUser) return currentUser;
@@ -55,12 +71,60 @@ function readUser() {
     .find((item) => item.startsWith("kemi_mock_session="))
     ?.split("=")[1];
   return (
+    (marker === "mock-google" ? googleUser : undefined) ??
     Object.values(users).find((user) => user.id === marker) ??
     Array.from(registrations.values()).find((entry) => entry.user.id === marker)
       ?.user
   );
 }
 const authHandlers = [
+  http.post("/__mock__/google/finish", async ({ request }) => {
+    const outcome = await request.text();
+    googleTicket = false;
+    const errors: Record<string, string> = {
+      cancel: "SOCIAL_CANCELLED",
+      failure: "SOCIAL_FAILED",
+      unavailable: "SOCIAL_UNAVAILABLE",
+      rate: "SOCIAL_RATE_LIMITED",
+      restricted: "FORBIDDEN",
+    };
+    if (errors[outcome]) return HttpResponse.text(`error=${errors[outcome]}`);
+    if (outcome === "existing" || googleRegistered) {
+      currentUser = googleUser;
+      setMarker(googleUser.id);
+      return HttpResponse.text("result=login");
+    }
+    googleTicket = true;
+    return HttpResponse.text("result=signup");
+  }),
+  http.get("/api/auth/social/signup", () =>
+    googleTicket
+      ? HttpResponse.json({
+          provider: "google",
+          suggestedName: "Google 이름",
+          providerEmail: "client@example.test",
+        })
+      : failure(401, "UNAUTHENTICATED"),
+  ),
+  http.post("/api/auth/social/signup", async ({ request }) => {
+    if (!googleTicket) return failure(401, "UNAUTHENTICATED");
+    const parsed = socialSignupRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return failure(400, "VALIDATION_FAILED");
+    if (scenario === "server") return failure(500, "INTERNAL_ERROR");
+    if (scenario === "rate") return failure(429, "RATE_LIMITED");
+    if (scenario === "expired") {
+      googleTicket = false;
+      return failure(401, "UNAUTHENTICATED");
+    }
+    if (scenario === "invalid") return failure(409, "CONFLICT");
+    googleTicket = false;
+    googleRegistered = true;
+    googleUser = { ...googleUser, ...parsed.data };
+    currentUser = googleUser;
+    setMarker(googleUser.id);
+    await delay(300);
+    return HttpResponse.json(authResponse(googleUser), { status: 201 });
+  }),
   http.post("/__mock__/auth/scenario", async ({ request }) => {
     scenario = await request.text();
     return new HttpResponse(null, { status: 204 });

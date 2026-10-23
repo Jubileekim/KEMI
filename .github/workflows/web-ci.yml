@@ -2,7 +2,7 @@ name: Web CI
 
 on:
   pull_request:
-    branches: [main, feat/frontend-0abc-foundation]
+    branches: [main, feat/frontend-0abc-foundation, feat/frontend-1a-email-auth]
   push:
     branches: [main]
 

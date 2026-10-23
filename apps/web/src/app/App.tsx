@@ -6,6 +6,10 @@ import { Guard, Placeholder } from "./route-pages";
 import { screens } from "./routes";
 
 const AuthForm = lazy(() => import("../features/auth/AuthForm"));
+const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
+const GoogleProvider = import.meta.env.DEV
+  ? lazy(() => import("../mocks/GoogleProvider"))
+  : null;
 
 const DevTools = import.meta.env.DEV
   ? lazy(() => import("../mocks/DevTools"))
@@ -32,14 +36,19 @@ export default function App() {
                   path={screen.path}
                   element={
                     <Guard screen={screen}>
-                      {screen.path === "/login" || screen.path === "/signup" ? (
+                      {(screen.path === "/login" ||
+                        screen.path === "/signup") && (
                         <AuthForm
                           key={screen.path}
                           signup={screen.path === "/signup"}
                         />
-                      ) : (
-                        <Placeholder screen={screen} />
                       )}
+                      {screen.path === "/auth/social/callback" && (
+                        <GoogleCallback />
+                      )}
+                      {!["/login", "/signup", "/auth/social/callback"].includes(
+                        screen.path,
+                      ) && <Placeholder screen={screen} />}
                     </Guard>
                   }
                 />
@@ -50,6 +59,9 @@ export default function App() {
               />
             </Route>
             {Showcase && <Route path="/__dev/ui" element={<Showcase />} />}
+            {GoogleProvider && (
+              <Route path="/__mock__/google" element={<GoogleProvider />} />
+            )}
             {HealthDiagnostic && (
               <Route path="/__dev/health" element={<HealthDiagnostic />} />
             )}
