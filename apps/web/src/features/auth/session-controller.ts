@@ -5,6 +5,7 @@ import type {
   AuthUser,
   LoginRequest,
   SignupRequest,
+  SocialSignupRequest,
 } from "@kemi/shared";
 import { api, ApiError } from "../../shared/api/client";
 import { authResponseSchema, authUserSchema } from "./contracts";
@@ -253,6 +254,22 @@ export default function createSessionController(
     getToken,
     bootstrap,
     authenticate,
+    async completeGoogleLogin() {
+      reset();
+      await bootstrap();
+    },
+    async completeGoogleSignup(input: SocialSignupRequest) {
+      if (!enabled)
+        throw new ApiError(0, "CONTRACT_PENDING", "인증 API 설정이 필요해요.");
+      reset();
+      const expected = epoch;
+      const response = await withCookieLock(() =>
+        api.post<unknown>("/api/auth/social/signup", input, {
+          withCredentials: true,
+        }),
+      );
+      accept(authResponseSchema.parse(response.data), expected);
+    },
     verify,
     logout,
     async recover(stale: string) {
