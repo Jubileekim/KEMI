@@ -242,6 +242,25 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - 영상 목적과 스타일의 허용 값 및 요청·응답 형식은 Swagger UI(`/api/docs`)가 기준이다.
 - 삭제는 행을 지우지 않고 `CLOSED`와 `deleted_at`으로 보존한다.
 
+## 지원·알림 API
+
+자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 12장에 있다. 모두 `Authorization: Bearer <accessToken>`이 필요하다.
+
+| 메서드·경로                                      | 누가       | 하는 일                                           |
+| ------------------------------------------------ | ---------- | ------------------------------------------------- |
+| `POST /api/projects/{projectId}/applications`    | 크리에이터 | 지원 (모집 중·마감 시각 전, 프로젝트당 1회)       |
+| `GET /api/projects/{projectId}/applications`     | 의뢰인     | 내 프로젝트의 지원자 목록                         |
+| `GET /api/applications/me`                       | 크리에이터 | 내 지원 내역 (`page`, `pageSize`)                 |
+| `POST /api/applications/{applicationId}/accept`  | 의뢰인     | 선정 → 프로젝트 `MATCHED`, 나머지 자동 거절       |
+| `POST /api/applications/{applicationId}/decline` | 의뢰인     | 직접 거절                                         |
+| `GET /api/notifications`                         | 모두       | 내 알림(`unread=true`로 미확인만) + `unreadCount` |
+| `GET /api/notifications/unread-count`            | 모두       | 미확인 개수                                       |
+| `POST /api/notifications/{notificationId}/read`  | 모두       | 하나 읽음                                         |
+| `POST /api/notifications/read-all`               | 모두       | 모두 읽음                                         |
+
+- 알림 5종: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터)
+- 모집 마감은 스케줄러 없이 처리한다. 지원할 때 마감 시각을 검사하고, 직접 마감하면 대기 지원자에게 알린다. 마감 시각이 지났다는 알림은 보내지 않는다.
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
@@ -356,6 +375,8 @@ apps/api/
 │  ├─ config/env.ts        # Zod 환경 변수 검증
 │  ├─ auth/                # 회원가입·로그인·토큰
 │  ├─ profiles/            # 역할별 본인 프로필
+│  ├─ applications/        # 프로젝트 지원·선정·거절
+│  ├─ notifications/       # 인앱 알림 생성(notify)·조회·읽음
 │  ├─ docs/                # OpenAPI 문서·Swagger UI
 │  ├─ http/                # AppError·공통 오류 처리·Bearer 토큰 읽기
 │  ├─ lib/prisma.ts        # Prisma Client (pg 어댑터)

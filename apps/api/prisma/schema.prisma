@@ -32,11 +32,14 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  identities     AuthIdentity[]
-  sessions       AuthSession[]
-  clientProfile  ClientProfile?
-  creatorProfile CreatorProfile?
-  projects       Project[]
+  identities      AuthIdentity[]
+  sessions        AuthSession[]
+  clientProfile   ClientProfile?
+  creatorProfile  CreatorProfile?
+  projects        Project[]
+  clientRequests  WorkRequest[]   @relation("WorkRequestClient")
+  creatorRequests WorkRequest[]   @relation("WorkRequestCreator")
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -152,11 +155,63 @@ model Project {
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  client User @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  client        User           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  workRequests  WorkRequest[]
+  notifications Notification[]
 
   @@index([status, recruitmentEndAt])
   @@index([purpose])
   @@index([budget])
   @@index([createdAt])
   @@map("projects")
+}
+
+// 의뢰 요청 (ERD v0.6 work_requests). 페이즈 2는 공개 프로젝트 지원(PROJECT_APPLICATION)만 만든다.
+// 직접 의뢰(DIRECT_REQUEST)용 열(brief, response_expires_at, client_request_key 등)은 해당 기능에서 추가한다.
+model WorkRequest {
+  id            BigInt    @id @default(autoincrement())
+  requestType   String    @map("request_type")
+  clientId      BigInt    @map("client_id")
+  creatorId     BigInt    @map("creator_id")
+  projectId     BigInt?   @map("project_id")
+  message       String
+  initialAmount BigInt    @map("initial_amount")
+  expectedDays  Int       @map("expected_days")
+  status        String    @default("PENDING")
+  closedReason  String?   @map("closed_reason")
+  respondedAt   DateTime? @map("responded_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  client        User           @relation("WorkRequestClient", fields: [clientId], references: [id], onDelete: Restrict)
+  creator       User           @relation("WorkRequestCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  project       Project?       @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  notifications Notification[]
+
+  @@unique([projectId, creatorId])
+  @@index([creatorId, createdAt])
+  @@index([projectId, status])
+  @@map("work_requests")
+}
+
+// 인앱 알림 (ERD v0.6 notifications). (recipient_user_id, event_key) UNIQUE로 같은 사건의 중복 알림을 막는다.
+model Notification {
+  id              BigInt    @id @default(autoincrement())
+  recipientUserId BigInt    @map("recipient_user_id")
+  workRequestId   BigInt?   @map("work_request_id")
+  projectId       BigInt?   @map("project_id")
+  eventKey        String    @map("event_key")
+  eventType       String    @map("event_type")
+  title           String
+  body            String
+  readAt          DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  recipient   User         @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+  workRequest WorkRequest? @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+
+  @@unique([recipientUserId, eventKey])
+  @@index([recipientUserId, createdAt])
+  @@map("notifications")
 }

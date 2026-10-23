@@ -798,25 +798,116 @@ PR #13이 리뷰·병합된 뒤, 이슈에 아래 범위를 공유하고 동의�
   - 티켓 없음 401, 다른 Origin 403, ADMIN 400, 티켓 재사용 409, 용도가 다른 토큰 거부
 - state 비교, 제공자 일치, 회원 상태 확인, `audience` 검사, `Origin` 검사, Google 이메일 확인 여부, 만료 검사(1시간 허용 오차), 티켓 유효 시간, 중복 가입 409 처리를 일부러 바꾸면 해당 테스트가 실패하는 것을 확인했다. 바꾼 코드는 모두 되돌렸고 최종 diff에 남지 않았음을 확인했다.
 
+## 12. 공개 프로젝트 지원·선정·알림 (APPLY-01·02, STATE-01, NOTI-01)
+
+PRD v2.0 페이즈 2의 "지원 관리"와 "알림"이다. 프로젝트 CRUD·탐색(PROJ-01·02)은 `feat/projects-api`에서 만들었고, 이 장은 그 위에 지원과 알림을 붙인다.
+
+> 장 번호 참고: 12장은 원래 PR #16(패키지)의 장이었다. PRD v2.0에 맞춰 패키지를 다시 설계하기로 해(2026-10-23 팀 합의) #16을 닫으면서 이 번호를 쓴다.
+
+**팀 합의 (2026-10-23, Jubileekim·jangseonu)**
+
+| 항목                | 결정                                                                                                                                         | 이전 기준과 다른 점                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 자동 거절 시점      | 지원자를 **선정하는 순간** 같은 프로젝트의 나머지 대기 지원을 자동 거절(`NOT_SELECTED`)한다                                                  | 2장 [제안]은 "계약 체결 시 나머지 미선정"이었다. PRD v2.0 8.2(한 명 선정 → 금액 합의)에 맞추고, 페이즈 2에는 계약 기능이 없어 바꿨다 |
+| 선정자와 합의 실패  | 프로젝트를 무선정 종료(`NO_SELECTION`)로 닫고, 재모집은 새 프로젝트로 한다                                                                   | 처리 API는 금액 합의·계약 기능에서 만든다                                                                                            |
+| 프로젝트 상태       | `OPEN`(모집) → `CLOSED`(직접 마감) → `MATCHED`(선정, 거래 단계) → `CONTRACTED` / `NO_SELECTION`                                              | `MATCHED`·`NO_SELECTION`을 추가했다                                                                                                  |
+| 모집 마감           | 의뢰인이 직접 마감할 수 있다. 지원할 때 서버가 마감 시각을 검사해 막는다. 목록에서는 마감 시각이 지난 프로젝트를 모집 중으로 보여주지 않는다 | 서버 스케줄러(node-cron)는 MVP에서 쓰지 않는다. 0장의 "cron은 보조 수단" 결정은 유지하되, 지금은 필요하지 않다                       |
+| 마감 시각 경과 알림 | 만들지 않는다. `PROJECT_CLOSED` 알림은 직접 마감할 때만 보낸다                                                                               | 필요하면 이후 Supabase Cron으로 상태 정리·알림을 추가한다                                                                            |
+
+**데이터**
+
+- `work_requests` (ERD v0.6): 이번에는 공개 지원(`PROJECT_APPLICATION`)만 쓴다.
+  - 열: `request_type`, `client_id`·`creator_id`(→ `users.id`), `project_id`, `message`, `initial_amount`(제안 금액), `expected_days`, `status`, `closed_reason`, `responded_at`
+  - ERD와 다른 점: 당사자 FK는 `client_profiles`·`creator_profiles`가 아니라 `users.id`다(프로젝트 테이블과 같은 기준, 프로필 저장이 지원의 선행 조건이 아니다). `title`·`brief`·`response_expires_at`·`client_request_key`는 직접 의뢰 기능에서 추가한다. 자동 거절 사유 `closed_reason`(`OTHER_SELECTED`·`PROJECT_DELETED`)을 값 목록으로 정했다.
+  - 제약: `(project_id, creator_id)` UNIQUE(상태와 관계없이 프로젝트당 한 번, 3장), 공개 지원이면 `project_id` 필수(`request_type`과 짝 CHECK), 의뢰인 ≠ 크리에이터, 금액 > 0·기간 ≥ 1, 상태·유형·사유 CHECK
+- `notifications` (ERD v0.6): `recipient_user_id`, `work_request_id`, `project_id`, `event_key`, `event_type`, `title`, `body`, `read_at`
+  - `(recipient_user_id, event_key)` UNIQUE: 같은 사건의 알림은 한 번만 저장한다(재시도·중복 호출 방지).
+  - ERD와 다른 점: `contract_id`는 계약 테이블이 생길 때, `reference`(jsonb)는 대신 `project_id`·`work_request_id` 열로 바로가기를 준다.
+  - 본문에는 프로젝트 제목만 넣고 이메일·연락처 같은 개인정보는 넣지 않는다. 외부 발송(메일·푸시)은 하지 않는다.
+- 두 테이블 모두 RLS를 켰다(Data API 차단, 8장).
+
+**상태 흐름**
+
+| 동작      | 누가            | 조건                                     | 결과                                                                                       | 알림                                                              |
+| --------- | --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| 지원      | 크리에이터      | 프로젝트 `OPEN`, 마감 시각 전, 처음 지원 | 지원 `PENDING`                                                                             | 의뢰인 `APPLICATION_SUBMITTED`                                    |
+| 선정      | 프로젝트 의뢰인 | 프로젝트 `OPEN`·`CLOSED`, 지원 `PENDING` | 지원 `DISCUSSING`, 프로젝트 `MATCHED`, 나머지 `PENDING` → `NOT_SELECTED`(`OTHER_SELECTED`) | 선정자 `APPLICATION_ACCEPTED`, 나머지 `APPLICATION_AUTO_REJECTED` |
+| 직접 거절 | 프로젝트 의뢰인 | 프로젝트 `OPEN`·`CLOSED`, 지원 `PENDING` | 지원 `DECLINED`, 프로젝트 그대로                                                           | 지원자 `APPLICATION_DECLINED`                                     |
+| 직접 마감 | 프로젝트 의뢰인 | 프로젝트 `OPEN`                          | 프로젝트 `CLOSED`. 대기 지원은 그대로(선정·거절 가능)                                      | 대기 지원자 `PROJECT_CLOSED`                                      |
+| 삭제      | 프로젝트 의뢰인 | 프로젝트 `OPEN`·`CLOSED`                 | 프로젝트 숨김, 대기 지원 → `NOT_SELECTED`(`PROJECT_DELETED`)                               | 대기 지원자 `APPLICATION_AUTO_REJECTED`                           |
+
+- 선정 후(`MATCHED`)에는 다른 지원의 선정·거절, 신규 지원, 마감, 삭제가 모두 `409 CONFLICT`다.
+- 마감(`CLOSED`)은 2장·ERD 업무 규칙대로 **신규 접수만** 막는다. 이미 들어온 지원은 선정할 수 있다.
+
+**트랜잭션과 잠금**
+
+- 지원·선정·거절·마감·삭제는 모두 한 트랜잭션에서 먼저 프로젝트 행을 `SELECT … FOR UPDATE`로 잠근 뒤(`projects/project-lock.ts`) 최신 상태를 읽고 판단한다. 알림도 같은 트랜잭션에서 만든다(상태 변경이 되돌려지면 알림도 남지 않는다).
+- 그래서 "마감 직후의 지원", "두 지원자 동시 선정", "선정과 거절이 겹침"이 하나씩 순서대로 처리된다.
+- `projects`의 마감·삭제(`feat/projects-api`)도 같은 잠금을 쓰도록 이 PR에서 바꿨다.
+
+**API**
+
+| 메서드·경로                                      | 하는 일                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------- |
+| `POST /api/projects/{projectId}/applications`    | 지원 (크리에이터)                                          |
+| `GET /api/projects/{projectId}/applications`     | 내 프로젝트의 지원자 목록 (의뢰인)                         |
+| `GET /api/applications/me`                       | 내 지원 내역, 페이지네이션 (크리에이터)                    |
+| `POST /api/applications/{applicationId}/accept`  | 선정 (의뢰인)                                              |
+| `POST /api/applications/{applicationId}/decline` | 직접 거절 (의뢰인)                                         |
+| `GET /api/notifications`                         | 내 알림 목록(`unread=true`로 미확인만), `unreadCount` 포함 |
+| `GET /api/notifications/unread-count`            | 미확인 개수                                                |
+| `POST /api/notifications/{notificationId}/read`  | 하나 읽음 (처음 읽은 시각 유지)                            |
+| `POST /api/notifications/read-all`               | 모두 읽음                                                  |
+
+- 남의 프로젝트·지원·알림은 `404`(존재를 드러내지 않음), 역할이 다르면 `403`
+
+**[제안] 값 (팀 확인 필요)**
+
+- 지원 메시지 10~2000자, 제안 금액 1원~10억 원(프로젝트 예산 범위와 같음), 예상 작업 1~365일
+- 알림 제목·본문 문구
+
+**후속 (이 PR에 없음)**
+
+- 지원 철회(`WITHDRAWN`): RFP 필수가 아니라 뺐다. 상태 값은 정의돼 있다.
+- 기한 경과 자동 마감·알림(Supabase Cron 등)
+- 합의 실패 시 `NO_SELECTION` 처리, 계약 체결 시 `CONTRACTED` (금액 합의·계약 기능)
+- 진행 단계별 추가 알림(PRD P1), 실시간 알림 전달(Realtime)
+
+**검증**
+
+- 테스트 DB에서 마이그레이션 `20261023120000_applications_notifications` 적용과 지원·알림 DB 테스트 18개 통과
+  - 지원: 저장·알림, 중복 지원 409(동시 3건 중 1건만), 마감 시각 경과·직접 마감 후 409, 역할 403·없는 프로젝트 404·입력 400
+  - 조회: 의뢰인은 본인 프로젝트 지원자만, 크리에이터는 본인 지원만
+  - 선정·거절: 선정 시 MATCHED·자동 거절·알림, 선정 뒤 모든 변경 409, 직접 거절, 남의 지원 404
+  - 마감·삭제: 마감 후 선정 가능·대기 지원자 알림, 삭제 시 자동 거절·알림
+  - 동시 요청: 두 지원자 동시 선정, 마감과 지원 경합(5회 반복), 선정과 거절 경합
+  - 알림: 미확인 개수·하나/모두 읽음·재읽음 시각 유지, 남의 알림 404, 사건 키 UNIQUE
+  - DB 제약: 공개 지원의 프로젝트 필수, 의뢰인 ≠ 크리에이터
+- 뮤테이션 확인: 아래를 하나씩 일부러 바꾸면 해당 테스트가 실패한다.
+  - 프로젝트 행 잠금 제거: 동시 요청 테스트 2개
+  - 자동 거절 제거, 마감 시각 검사 제거, 마감 알림 유형 변경, 재읽음 시 시각 덮어쓰기, 알림 읽음의 수신자 확인 제거
+- [미검증] 팀 공용 Supabase 적용: 프로젝트 PR 다음 순서로 병합한 뒤, 기존 절차(이슈 공유 → 읽기 전용 점검 → 적용 → 확인)로 함께 진행한다.
+
 ## 다음 작업
 
-| 작업                                                       | 처리                                                                                                                           |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)         | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                                         |
-| ESLint (Airbnb + TypeScript, 빌드 시 강제)                 | 완료 — PR #1 병합 (`eslint.config.js`)                                                                                         |
-| Prettier (기본 설정)                                       | 완료 — PR #3 병합. CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                                                  |
-| TypeScript 5.9.3 고정                                      | 완료 — PR #3 병합. `package.json`과 lockfile 모두 반영                                                                         |
-| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿 | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                                                |
-| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전             | 완료 — PR #4 병합. 이후 Data API 차단(PR #8·#9) 포함 DB 테스트 27개 통과                                                       |
-| 가입·로그인·갱신 요청 제한(429)                            | 완료 — PR #4 병합. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                                |
-| 팀 공용 Supabase DB에 인증 마이그레이션 적용               | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
-| 실제 브라우저의 Refresh 쿠키 동작 확인                     | 미완료 — 프론트엔드 연동 때                                                                                                    |
-| 의뢰인·크리에이터 프로필 수정 API                          | 일부 완료 — PR #13 병합. PROFILE-01·02의 텍스트·선택 항목 (10장). 로고·이미지·경력·링크·서비스 공개(PROFILE-03·04)는 후속      |
-| 팀 공용 Supabase DB에 프로필 마이그레이션 적용             | 완료 — `20261021005250_role_profiles` 적용·검증 ([이슈 #15](https://github.com/Jubileekim/KEMI/issues/15), 2026-10-21)         |
-| 소셜 로그인 (Google·카카오)                                | PR #14 (리뷰 대기). **실제 제공자 로그인 미검증** — 앱·키·콜백 주소 등록 필요 (11장, 연동 문서 "팀원 준비 목록")               |
-| shared 상태값 enum과 CHECK 일치 테스트                     | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                       |
-| Supabase Realtime 자체 JWT 연동 검증                       | 채팅 작업 전 별도 검증                                                                                                         |
-| Swagger/OpenAPI 문서                                       | 완료 — PR #11 병합. health·인증 API 문서와 Swagger UI(운영 환경 제외)                                                          |
-| 팀 개발용 Supabase PostgreSQL 주 버전 확인                 | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                                                   |
-| 팀 개발용 Supabase DB 연결·`/health/ready` 확인            | 완료 — 로컬 API에서 개발용 Supabase로 `/health/ready` 200 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5)) |
-| 배포 환경(Render)에서 DB 연결·`/health/ready` 확인         | 미검증 — Render 배포 후 확인 (절차서 2단계)                                                                                    |
+| 작업                                                           | 처리                                                                                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| API CI (형식·타입 검사·단위·DB 테스트·린트 + 빌드)             | 완료 — PR #1 병합, Prettier 검사는 `chore/prettier-ts-pin` PR에서 추가                                                         |
+| ESLint (Airbnb + TypeScript, 빌드 시 강제)                     | 완료 — PR #1 병합 (`eslint.config.js`)                                                                                         |
+| Prettier (기본 설정)                                           | 완료 — PR #3 병합. CI에서 `format:check`로 검사하며, 빌드에서는 실행하지 않음                                                  |
+| TypeScript 5.9.3 고정                                          | 완료 — PR #3 병합. `package.json`과 lockfile 모두 반영                                                                         |
+| 프론트엔드 ESLint·Prettier 적용·CI, `main` 보호, PR 템플릿     | 미구현 — [이슈 #2](https://github.com/Jubileekim/KEMI/issues/2)                                                                |
+| 회원 테이블 + 이메일 회원가입·로그인·토큰 회전                 | 완료 — PR #4 병합. 이후 Data API 차단(PR #8·#9) 포함 DB 테스트 27개 통과                                                       |
+| 가입·로그인·갱신 요청 제한(429)                                | 완료 — PR #4 병합. 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`)는 배포 후 확인                                                |
+| 팀 공용 Supabase DB에 인증 마이그레이션 적용                   | 완료 — 마이그레이션 3개 적용·검증 ([이슈 #5](https://github.com/Jubileekim/KEMI/issues/5), 2026-10-19)                         |
+| 실제 브라우저의 Refresh 쿠키 동작 확인                         | 미완료 — 프론트엔드 연동 때                                                                                                    |
+| 의뢰인·크리에이터 프로필 수정 API                              | 일부 완료 — PR #13 병합. PROFILE-01·02의 텍스트·선택 항목 (10장). 로고·이미지·경력·링크·서비스 공개(PROFILE-03·04)는 후속      |
+| 팀 공용 Supabase DB에 프로필 마이그레이션 적용                 | 완료 — `20261021005250_role_profiles` 적용·검증 ([이슈 #15](https://github.com/Jubileekim/KEMI/issues/15), 2026-10-21)         |
+| 소셜 로그인 (Google·카카오)                                    | PR #14 (리뷰 대기). **실제 제공자 로그인 미검증** — 앱·키·콜백 주소 등록 필요 (11장, 연동 문서 "팀원 준비 목록")               |
+| 공개 프로젝트 지원·선정·자동 거절·마감 알림 (APPLY·STATE·NOTI) | `feat/applications-notifications` PR (리뷰 대기, 12장). 프로젝트 PR(`feat/projects-api`) 다음 순서로 병합                      |
+| shared 상태값 enum과 CHECK 일치 테스트                         | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                       |
+| Supabase Realtime 자체 JWT 연동 검증                           | 채팅 작업 전 별도 검증                                                                                                         |
+| Swagger/OpenAPI 문서                                           | 완료 — PR #11 병합. health·인증 API 문서와 Swagger UI(운영 환경 제외)                                                          |
+| 팀 개발용 Supabase PostgreSQL 주 버전 확인                     | 완료 — 17.11, 테스트 DB·CI 이미지 고정 (8장)                                                                                   |
+| 팀 개발용 Supabase DB 연결·`/health/ready` 확인                | 완료 — 로컬 API에서 개발용 Supabase로 `/health/ready` 200 (2026-10-19, [이슈 #5](https://github.com/Jubileekim/KEMI/issues/5)) |
+| 배포 환경(Render)에서 DB 연결·`/health/ready` 확인             | 미검증 — Render 배포 후 확인 (절차서 2단계)                                                                                    |

@@ -76,7 +76,9 @@ describe("OpenAPI 문서", () => {
         // 경로 변수는 실제 값으로 바꿔 부른다.
         const path = documented
           .replace("{provider}", "google")
-          .replace("{projectId}", "1");
+          .replace("{projectId}", "1")
+          .replace("{applicationId}", "1")
+          .replace("{notificationId}", "1");
         const agent = request(app);
         let res;
         if (method === "get") res = await agent.get(path);

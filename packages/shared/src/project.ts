@@ -24,7 +24,15 @@ export const VIDEO_STYLES = [
 export const videoStyleSchema = z.enum(VIDEO_STYLES);
 export type VideoStyle = z.infer<typeof videoStyleSchema>;
 
-export const PROJECT_STATUSES = ["OPEN", "CLOSED", "CONTRACTED"] as const;
+// OPEN: 모집 중 / CLOSED: 직접 마감(신규 지원만 차단, 대기 지원자 선정 가능) / MATCHED: 지원자 선정, 거래 단계
+// CONTRACTED: 계약 체결(계약 기능에서 사용) / NO_SELECTION: 선정자와 합의 실패 등으로 무선정 종료(계약 기능에서 사용)
+export const PROJECT_STATUSES = [
+  "OPEN",
+  "CLOSED",
+  "MATCHED",
+  "CONTRACTED",
+  "NO_SELECTION",
+] as const;
 export const projectStatusSchema = z.enum(PROJECT_STATUSES);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 

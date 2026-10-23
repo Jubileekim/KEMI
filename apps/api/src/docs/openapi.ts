@@ -1,9 +1,11 @@
 import {
+  applicationCreateSchema,
   clientProfileUpdateSchema,
   CONTENT_STYLES,
   CREATOR_SERVICE_STATUSES,
   creatorProfileUpdateSchema,
   ERROR_CODES,
+  NOTIFICATION_TYPES,
   loginRequestSchema,
   SOCIAL_CALLBACK_ERRORS,
   SOCIAL_PROVIDER_PATHS,
@@ -17,6 +19,8 @@ import {
   socialSignupRequestSchema,
   USER_ROLES,
   USER_STATUSES,
+  WORK_REQUEST_CLOSED_REASONS,
+  WORK_REQUEST_STATUSES,
   VIDEO_PURPOSES,
   VIDEO_STYLES,
 } from "@kemi/shared";
@@ -137,6 +141,31 @@ const projectListParameters = [
   },
 ];
 
+const idParam = (name: string) => ({
+  name,
+  in: "path",
+  required: true,
+  schema: { type: "string", pattern: "^[1-9]\\d*$" },
+});
+
+const jsonResponse = (description: string, schema: string) => ({
+  description,
+  content: {
+    "application/json": {
+      schema: { $ref: `#/components/schemas/${schema}` },
+    },
+  },
+});
+
+const pageParameters = [
+  { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+  {
+    name: "pageSize",
+    in: "query",
+    schema: { type: "integer", minimum: 1, maximum: 50 },
+  },
+];
+
 const nullableEnum = (values: readonly string[]) => ({
   type: ["string", "null"],
   enum: [...values, null],
@@ -156,6 +185,8 @@ const openApiDocument = {
     { name: "auth", description: "이메일 회원가입·로그인·토큰 갱신" },
     { name: "profiles", description: "역할별 본인 프로필" },
     { name: "projects", description: "공개 맞춤 영상 제작 의뢰" },
+    { name: "applications", description: "프로젝트 지원·선정·거절" },
+    { name: "notifications", description: "인앱 알림" },
   ],
   paths: {
     "/health": {
@@ -543,6 +574,8 @@ const openApiDocument = {
       post: {
         tags: ["projects"],
         summary: "내 프로젝트 모집 마감",
+        description:
+          "신규 지원만 막는다. 대기 중인 지원은 그대로 남아 선정·거절할 수 있고, 대기 지원자에게 `PROJECT_CLOSED` 알림이 간다. 마감 시각이 지나도 서버가 자동으로 상태를 바꾸지는 않으며(스케줄러 없음), 지원할 때 마감 시각을 검사해 막는다.",
         security: [{ bearerAuth: [] }],
         parameters: [projectIdParam],
         responses: {
@@ -551,6 +584,157 @@ const openApiDocument = {
           403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
           404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
           409: errorResponse("이미 모집이 종료됨 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/projects/{projectId}/applications": {
+      post: {
+        tags: ["applications"],
+        summary: "프로젝트에 지원 (APPLY-01)",
+        description:
+          "크리에이터만. 모집 중(`OPEN`)이고 마감 시각 전인 프로젝트에만 지원할 수 있다. 같은 프로젝트에는 상태와 관계없이 한 번만 지원한다(결정 기록 3장). 의뢰인에게 `APPLICATION_SUBMITTED` 알림이 간다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("projectId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(applicationCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("지원 완료", "Application"),
+          400: errorResponse(
+            "입력값 오류 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+          404: errorResponse("없거나 삭제된 프로젝트 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "모집 마감 또는 이미 지원한 프로젝트 (`CONFLICT`)",
+          ),
+        },
+      },
+      get: {
+        tags: ["applications"],
+        summary: "내 프로젝트의 지원자 목록",
+        description: "프로젝트를 등록한 의뢰인만. 지원 순서대로 준다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("projectId")],
+        responses: {
+          200: jsonResponse("지원자 목록", "ProjectApplicationListResponse"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/applications/me": {
+      get: {
+        tags: ["applications"],
+        summary: "내 지원 내역 (크리에이터)",
+        security: [{ bearerAuth: [] }],
+        parameters: pageParameters,
+        responses: {
+          200: jsonResponse("내 지원 내역", "MyApplicationListResponse"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/applications/{applicationId}/accept": {
+      post: {
+        tags: ["applications"],
+        summary: "지원자 선정 (APPLY-02)",
+        description:
+          "한 트랜잭션에서 처리한다: 선정 지원 → `DISCUSSING`, 프로젝트 → `MATCHED`(거래 단계), 같은 프로젝트의 나머지 대기 지원 → `NOT_SELECTED`(`OTHER_SELECTED`). 선정자에게 `APPLICATION_ACCEPTED`, 나머지에게 `APPLICATION_AUTO_REJECTED` 알림이 간다. 직접 마감한 프로젝트에서도 선정할 수 있다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("applicationId")],
+        responses: {
+          200: jsonResponse("선정된 지원", "Application"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트의 지원이 아님 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "이미 처리된 지원, 또는 이미 선정했거나 종료된 프로젝트 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/applications/{applicationId}/decline": {
+      post: {
+        tags: ["applications"],
+        summary: "지원자 직접 거절 (APPLY-02)",
+        description:
+          "대기 중인 지원만 `DECLINED`로 바꾼다. 프로젝트 상태는 그대로다. 지원자에게 `APPLICATION_DECLINED` 알림이 간다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("applicationId")],
+        responses: {
+          200: jsonResponse("거절된 지원", "Application"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트의 지원이 아님 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "이미 처리된 지원, 또는 이미 선정했거나 종료된 프로젝트 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/notifications": {
+      get: {
+        tags: ["notifications"],
+        summary: "내 알림 목록 (NOTI-01)",
+        description:
+          "최신순. `unread=true`면 미확인 알림만. 응답의 `unreadCount`는 필터와 관계없이 전체 미확인 개수다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "unread",
+            in: "query",
+            schema: { type: "string", enum: ["true", "false"] },
+          },
+          ...pageParameters,
+        ],
+        responses: {
+          200: jsonResponse("알림 목록", "NotificationListResponse"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/notifications/unread-count": {
+      get: {
+        tags: ["notifications"],
+        summary: "미확인 알림 개수",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("미확인 개수", "UnreadCountResponse"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/notifications/read-all": {
+      post: {
+        tags: ["notifications"],
+        summary: "내 알림 모두 읽음",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("남은 미확인 개수(0)", "UnreadCountResponse"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/notifications/{notificationId}/read": {
+      post: {
+        tags: ["notifications"],
+        summary: "알림 하나 읽음",
+        description: "이미 읽은 알림은 처음 읽은 시각을 유지한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("notificationId")],
+        responses: {
+          200: jsonResponse("읽음 처리된 알림", "Notification"),
+          ...bearerErrors,
+          404: errorResponse("본인 알림이 아님 (`NOT_FOUND`)"),
         },
       },
     },
@@ -750,6 +934,125 @@ const openApiDocument = {
             },
           },
         },
+      },
+      Application: {
+        type: "object",
+        required: [
+          "id",
+          "projectId",
+          "creatorId",
+          "creatorName",
+          "message",
+          "proposedAmount",
+          "expectedDays",
+          "status",
+          "closedReason",
+          "respondedAt",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          projectId: { type: "string" },
+          creatorId: { type: "string" },
+          creatorName: { type: "string" },
+          message: { type: "string" },
+          proposedAmount: { type: "integer" },
+          expectedDays: { type: "integer" },
+          status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
+          closedReason: nullableEnum(WORK_REQUEST_CLOSED_REASONS),
+          respondedAt: { type: ["string", "null"], format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      ProjectApplicationListResponse: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Application" },
+          },
+        },
+      },
+      MyApplicationListResponse: {
+        type: "object",
+        required: ["items", "pagination"],
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              allOf: [
+                { $ref: "#/components/schemas/Application" },
+                {
+                  type: "object",
+                  required: ["project"],
+                  properties: {
+                    project: {
+                      type: "object",
+                      required: ["id", "title", "status"],
+                      properties: {
+                        id: { type: "string" },
+                        title: { type: "string" },
+                        status: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          pagination: { $ref: "#/components/schemas/Pagination" },
+        },
+      },
+      Pagination: {
+        type: "object",
+        required: ["page", "pageSize", "total", "totalPages"],
+        properties: {
+          page: { type: "integer" },
+          pageSize: { type: "integer" },
+          total: { type: "integer" },
+          totalPages: { type: "integer" },
+        },
+      },
+      Notification: {
+        type: "object",
+        required: [
+          "id",
+          "type",
+          "title",
+          "body",
+          "projectId",
+          "applicationId",
+          "readAt",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          type: { type: "string", enum: [...NOTIFICATION_TYPES] },
+          title: { type: "string" },
+          body: { type: "string" },
+          projectId: { type: ["string", "null"] },
+          applicationId: { type: ["string", "null"] },
+          readAt: { type: ["string", "null"], format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      NotificationListResponse: {
+        type: "object",
+        required: ["items", "unreadCount", "pagination"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Notification" },
+          },
+          unreadCount: { type: "integer" },
+          pagination: { $ref: "#/components/schemas/Pagination" },
+        },
+      },
+      UnreadCountResponse: {
+        type: "object",
+        required: ["unreadCount"],
+        properties: { unreadCount: { type: "integer" } },
       },
       HealthResponse: {
         type: "object",

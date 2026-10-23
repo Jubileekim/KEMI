@@ -6,6 +6,8 @@ import {
 } from "../../src/auth/auth.service.js";
 import { createPrismaClient, type PrismaClient } from "../../src/lib/prisma.js";
 import { createProfileService } from "../../src/profiles/profile.service.js";
+import { createApplicationService } from "../../src/applications/application.service.js";
+import { createNotificationService } from "../../src/notifications/notification.service.js";
 import {
   createProjectService,
   type ProjectService,
@@ -91,6 +93,9 @@ export function createTestApp({
       (prisma
         ? createProjectService({ prisma: client })
         : unusedProjectService),
+    // 지원·알림 경로는 인증을 먼저 하므로, DB 없는 단위 테스트에서도 쿼리 전에 끝난다.
+    applicationService: createApplicationService({ prisma: client }),
+    notificationService: createNotificationService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,
