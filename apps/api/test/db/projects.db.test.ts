@@ -165,7 +165,6 @@ describe("공개 프로젝트 CRUD", () => {
     expect(row.deletedAt).not.toBeNull();
   });
 
-
   it("KST 달력 날짜로 납품일을 검증한다 (UTC 자정 근처)", async () => {
     const token = await signup("CLIENT");
     const deadline = "2090-11-02T01:00:00+09:00";
