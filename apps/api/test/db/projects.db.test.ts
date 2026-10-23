@@ -164,4 +164,58 @@ describe("공개 프로젝트 CRUD", () => {
     expect(row.status).toBe("CLOSED");
     expect(row.deletedAt).not.toBeNull();
   });
+
+
+  it("KST 달력 날짜로 납품일을 검증한다 (UTC 자정 근처)", async () => {
+    const token = await signup("CLIENT");
+    const deadline = "2090-11-02T01:00:00+09:00";
+
+    const sameDay = await request(app)
+      .post("/api/projects")
+      .set(auth(token))
+      .send(
+        projectBody({
+          recruitmentEndAt: deadline,
+          deliveryDueDate: "2090-11-02",
+        }),
+      );
+    expect(sameDay.status).toBe(400);
+
+    const nextDay = await request(app)
+      .post("/api/projects")
+      .set(auth(token))
+      .send(
+        projectBody({
+          recruitmentEndAt: deadline,
+          deliveryDueDate: "2090-11-03",
+        }),
+      );
+    expect(nextDay.status).toBe(201);
+  });
+
+  it("DB CHECK도 세션 시간대와 관계없이 KST 날짜를 사용한다", async () => {
+    await signup("CLIENT");
+    const client = await prisma.user.findUniqueOrThrow({
+      where: { email: "client-1@example.com" },
+    });
+    const tryInsert = (timeZone: string) =>
+      prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT set_config('TimeZone', ${timeZone}, true)`;
+        return tx.project.create({
+          data: {
+            clientId: client.id,
+            title: "KST 날짜 경계 테스트",
+            description: "세션 시간대와 무관하게 납품일을 검사합니다.",
+            purpose: "CHILD_FAMILY",
+            styles: ["EMOTIONAL"],
+            budget: 50_000n,
+            recruitmentEndAt: new Date("2090-11-02T01:00:00+09:00"),
+            deliveryDueDate: new Date("2090-11-02T00:00:00.000Z"),
+          },
+        });
+      });
+
+    await expect(tryInsert("UTC")).rejects.toThrow();
+    await expect(tryInsert("Asia/Seoul")).rejects.toThrow();
+  });
 });
