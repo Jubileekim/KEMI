@@ -9,3 +9,5 @@
 - `production-smoke.cjs`: AUTH_API/MOCK 플래그를 모두 켜서 만든 운영 산출물을 검사한다. `/__mock__/pricing`, 고정 Mock 버전·시나리오·worker 제외, 독립 모의 인증 HTTP를 사용한 두 역할/두 작성 경로에서 제품 API/Mock 요청·worker 없음. preview는 기본4187이며 `KEMI_PREVIEW_URL`로 지정 가능. `node qa/frontend-2b/production-smoke.cjs` 실행, `production-results.json` 생성.
 
 빌드/dist·전체 Playwright trace/report·임시 config·로그·node_modules는 커밋하지 않는다. 실제 브라우저 메뉴 200% 확대·스크린리더·다른 브라우저·실제 제공자 검증은 별도다.
+
+로컬 임시 config는 기존 `apps/web/playwright.config.ts`를 확장해 Edge·5183만 선택하며, `outputDir`를 `join(tmpdir(), 'kemi-2b-final-results')`로 둔다. 검사 trace의 HTML이 Vite watcher에 잡혀 화면을 재로딩하는 간섭을 피하기 위한 위치 변경이다. 동일한 170개 검사·프로젝트·기본 timeout·재시도0·workers2를 유지한다. 브라우저 검사 중 shared 빌드/소스 변경·다른 Playwright 실행을 겹치지 않는다.
