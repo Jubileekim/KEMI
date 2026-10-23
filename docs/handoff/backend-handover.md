@@ -1,7 +1,7 @@
 # 백엔드 인수인계서
 
 - 작성: 2026-10-21, 백엔드 담당(jangseonu / GitHub `seonu2070-droid`). 이후 작업할 때마다 갱신한다.
-- 기준: `main` `5d69389` (PR #10 병합, 2026-10-23 07:37 UTC). PR·리뷰·CI·이슈 상태는 2026-10-23 09:20 UTC에 다시 확인했다.
+- 기준: `main` `73057fe` (PR #30 병합, 2026-10-23 09:33 UTC). PR·리뷰·CI·이슈 상태는 2026-10-23 09:35 UTC에 다시 확인했다.
 
 > **상태 표는 작성 시점 기준이다.** PR의 리뷰·병합·CI 상태는 이 문서가 병합된 뒤에도 계속 바뀐다. 작업을 시작하기 전에 GitHub에서 최신 상태를 직접 확인한다. 이 문서와 다르면 GitHub가 맞다.
 >
@@ -46,7 +46,7 @@
    - 기존 공유 DB(`nibqyycfknurkncdgqps`)는 2026-10-22에 다른 작업 스키마로 바뀌었다. 우리 마이그레이션 4개와 테이블 6개가 없다.
    - PM 결정: 기존 DB는 윤철님 작업용으로 두고 **건드리지 않는다.** KEMI 전용 `KEMI-dev`를 새로 만들어 `main`의 마이그레이션 7개를 적용한다.
    - 지금은 희년님(Supabase Owner)의 프로젝트 생성을 기다리고 있다.
-2. **열린 PR 리뷰·병합 (2장)**: #28 Render 배포 설정, #31 OpenAPI 쌍방향 검사(우리 PR), #30 AI 단가 분석(희년님, 수정 반영 후 승인), #32 Vercel 설정(희년님)
+2. **열린 PR 리뷰·병합 (2장)**: #28 Render 배포 설정, #31 OpenAPI 쌍방향 검사, #33 이 문서(우리 PR), #32 Vercel 설정(희년님)
 3. **Render 서비스 생성 (8장, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27))**: #28 병합과 `KEMI-dev` 준비 뒤 희년님이 만든다.
 
 **접근 권한** (2026-10-23 확인)
@@ -92,6 +92,7 @@
 | #20 | 프로젝트 북마크·추천 (BOOK-01). 희년님 작성, `project_bookmarks` 테이블                                              |
 | #22 | 지원·선정·자동 거절·마감과 인앱 알림 5종 (APPLY·STATE·NOTI). `work_requests`·`notifications` 테이블                  |
 | #10 | ERD v0.5 검토 보존본과 2026-10-23 MVP 필드 결정 (`apps/api/prisma/review/`, 실행 기준 아님). 희년님 작성             |
+| #30 | AI 단가 분석 `POST /api/pricing/analyze` (AI-01, 예산 반영은 기존 `budget` 필드로 AI-02). 희년님 작성. DB 변경 없음  |
 
 - 참고: PR #7(`apps/web` 프론트엔드 작업 공간)은 프론트엔드 담당 작업이다.
 - **닫은 PR**
@@ -102,12 +103,11 @@
 
 ## 2. 열려 있는 PR과 남은 작업
 
-| PR                                                                    | 작성자 | 상태 (2026-10-23 09:20 UTC)                     | 남은 작업                                                                                          |
-| --------------------------------------------------------------------- | ------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint    | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님           | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                           |
-| [#31](https://github.com/Jubileekim/KEMI/pull/31) OpenAPI 쌍방향 검사 | 선우님 | CI 실행. 리뷰 요청: 희년님                      | 리뷰·병합. 병합 뒤에는 라우터에 경로를 추가하고 `openapi.ts`를 고치지 않으면 CI가 실패한다         |
-| [#30](https://github.com/Jubileekim/KEMI/pull/30) AI 단가 분석        | 희년님 | CI 통과(`384d68a`). **선우님 승인**(2026-10-23) | 병합(작성자 외 승인 완료). 실제 AI 호출은 키 설정 승인 뒤. 외부 전송 안내는 #26에서 정함           |
-| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정         | 희년님 | Web CI 통과. 리뷰 요청 없음                     | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가 |
+| PR                                                                    | 작성자 | 상태 (2026-10-23 09:20 UTC)           | 남은 작업                                                                                          |
+| --------------------------------------------------------------------- | ------ | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint    | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님 | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                           |
+| [#31](https://github.com/Jubileekim/KEMI/pull/31) OpenAPI 쌍방향 검사 | 선우님 | CI 실행. 리뷰 요청: 희년님            | 리뷰·병합. 병합 뒤에는 라우터에 경로를 추가하고 `openapi.ts`를 고치지 않으면 CI가 실패한다         |
+| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정         | 희년님 | Web CI 통과. 리뷰 요청 없음           | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가 |
 
 **리뷰 기록** (2026-10-23 확인)
 
@@ -177,7 +177,7 @@ npm run build:api                               # 린트 경고가 하나라도 
 | `TEST_DATABASE_URL`                         | DB 테스트           | `.env.test.example`의 로컬 Docker 값. 비밀값 아님                                                                                                  |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`  | 서버 (소셜 로그인)  | Google Cloud Console. **[미확인] 발급 담당 미정**. 둘 중 하나만 넣으면 서버가 시작하지 않는다. 준비 목록은 [연동 문서](2026-10-21-social-login.md) |
 | `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 서버 (소셜 로그인)  | Kakao Developers. **[미확인] 발급 담당 미정**                                                                                                      |
-| `AI_PRICING_API_KEY`, `AI_PRICING_MODEL`    | 서버 (AI 단가 분석) | PR #30(병합 전). 키가 없으면 그 기능만 503. 실제 연동 테스트를 승인한 뒤에만 Render에 넣는다                                                       |
+| `AI_PRICING_API_KEY`, `AI_PRICING_MODEL`    | 서버 (AI 단가 분석) | PR #30. 키가 없으면 그 기능만 503. 실제 연동 테스트를 승인한 뒤에만 Render에 넣는다. **[미확인] 키 발급 담당**                                     |
 
 - 소셜·AI 키는 비워도 서버가 시작한다. 이때 해당 기능만 동작하지 않는다.
 - 비밀값은 로컬 `apps/api/.env`(커밋 금지)와 Render 대시보드 Environment에만 넣는다. Render에는 관리자(희년님)가 넣는다. 채팅·PR·이슈에 적지 않는다.
@@ -203,6 +203,7 @@ apps/api/
 │  ├─ applications/              # 지원·선정·거절 (라우터에 알림 경로도 있음)
 │  ├─ notifications/             # 알림 저장(notify.ts)·조회·읽음
 │  ├─ project-discovery/         # 북마크·추천
+│  ├─ pricing/                   # AI 단가 분석 (OpenAI Responses API, 사용자별 1시간 10회)
 │  ├─ docs/                      # OpenAPI 문서(openapi.ts)·Swagger UI
 │  ├─ http/                      # AppError, 오류 응답 처리, Bearer 토큰 읽기
 │  ├─ routes/health.ts           # /health, /health/ready
@@ -343,7 +344,7 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
   - PR #31(병합 전): 실제 라우터의 모든 경로·메서드가 문서에 있음
 - 소셜 로그인: 가짜 제공자로 state 검증·가입 티켓 만료·일회성·동시 재사용, 제공자 응답 지연 시 요청 취소, 시작·콜백 요청 제한 분리
 - 주요 검사를 일부러 빼면 테스트가 실패하는지(뮤테이션 확인)도 각 PR에서 확인했다.
-- 테스트 수: `main` `5d69389` CI 기준 단위 71, DB 199
+- 테스트 수: `main` `5d69389` CI 기준 단위 71, DB 199. #30 병합으로 단위 테스트가 14개 늘었다(#30 브랜치 로컬 85)
 
 **사람이 직접 확인한 것**
 
@@ -359,7 +360,7 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
 - 배포 환경의 클라이언트 IP(`TRUST_PROXY_HOPS`) 값
 - 실제 브라우저의 Refresh 쿠키 동작, 프론트엔드 화면 연동 (이슈 #26)
 - 실제 Google·카카오 로그인 (앱·키·콜백 주소 미등록), 카카오 실제 응답 필드
-- 실제 AI 단가 분석 호출 (PR #30, 키 미설정)
+- 실제 AI 단가 분석 호출 (PR #30 병합, 키 미설정)
 - Supabase Realtime과 자체 JWT 연동(채팅 전 검증 예정)
 
 ## 9. 다음 작업 우선순위
@@ -367,14 +368,14 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
 11/9 발표, 11/8 API 명세 제출(이슈 #25) 기준 제안 순서다.
 
 1. **`KEMI-dev` 생성 → 마이그레이션 7개 적용** (이슈 #24, 7장)
-2. **열린 PR 리뷰·병합**: #28, #31(우리 PR), #30(승인 완료, 병합만 남음), #32(프론트엔드 리뷰)
+2. **열린 PR 리뷰·병합**: #28, #31, #33(우리 PR), #32(프론트엔드 리뷰)
 3. **Render 배포** (이슈 #27, 절차서 2단계): 희년님이 Blueprint로 생성 → `/health`·`/health/ready` 확인 → #27 기록
 4. **Vercel 연결과 `/api/*` rewrite, `APP_ORIGIN` 교체** (프론트엔드, #32)
 5. **`TRUST_PROXY_HOPS` 확인** (절차서 4단계, 희년님이 임시 배포)
 6. **브라우저 E2E** (이슈 #26): 두 테스트 계정으로 등록 → 지원 → 선정 → 알림
    - 시연용 시드 데이터 스크립트가 필요하면 백엔드에서 만든다(실제 개인정보와 분리).
 7. **실제 소셜 로그인 검증**: 키를 받은 뒤 ([연동 문서](2026-10-21-social-login.md) "키를 받은 뒤 확인할 것")
-8. **심화 기능** (이슈 #29): AI 단가(#30) → 금액 합의·계약·서명 → Sandbox 결제·모의 정산 → 납품·리뷰. API를 추가할 때마다 OpenAPI·테스트를 함께 고친다(#25).
+8. **심화 기능** (이슈 #29): AI 단가(#30 병합) → 금액 합의·계약·서명 → Sandbox 결제·모의 정산 → 납품·리뷰. API를 추가할 때마다 OpenAPI·테스트를 함께 고친다(#25).
 9. **API 명세 제출** (이슈 #25): 기능 동결 후 인증·오류 코드 검수, 외부 열람 링크, PDF
 
 ## 10. 로컬에만 남은 작업 (이전 담당자 PC, 2026-10-23 확인)
@@ -393,8 +394,8 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
 ## 11. 링크
 
 - **PR**
-  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#30 AI 단가](https://github.com/Jubileekim/KEMI/pull/30), [#31 OpenAPI 쌍방향](https://github.com/Jubileekim/KEMI/pull/31), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32)
-  - 병합: #1, #3, #4, #6, #8, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #22
+  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#31 OpenAPI 쌍방향](https://github.com/Jubileekim/KEMI/pull/31), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32), [#33 이 문서](https://github.com/Jubileekim/KEMI/pull/33)
+  - 병합: #1, #3, #4, #6, #8, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #22, [#30 AI 단가](https://github.com/Jubileekim/KEMI/pull/30)
   - 닫음: [#16 패키지](https://github.com/Jubileekim/KEMI/pull/16)(재설계), #23(취소)
 - **이슈**
   - 열림: [#24 팀 개발 DB](https://github.com/Jubileekim/KEMI/issues/24), [#25 API 명세](https://github.com/Jubileekim/KEMI/issues/25), [#26 프론트 E2E](https://github.com/Jubileekim/KEMI/issues/26), [#27 배포](https://github.com/Jubileekim/KEMI/issues/27), [#29 심화 기능](https://github.com/Jubileekim/KEMI/issues/29)
