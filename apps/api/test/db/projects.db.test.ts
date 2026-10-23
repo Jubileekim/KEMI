@@ -200,18 +200,20 @@ describe("공개 프로젝트 CRUD", () => {
     const tryInsert = (timeZone: string) =>
       prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT set_config('TimeZone', ${timeZone}, true)`;
-        return tx.project.create({
-          data: {
-            clientId: client.id,
-            title: "KST 날짜 경계 테스트",
-            description: "세션 시간대와 무관하게 납품일을 검사합니다.",
-            purpose: "CHILD_FAMILY",
-            styles: ["EMOTIONAL"],
-            budget: 50_000n,
-            recruitmentEndAt: new Date("2090-11-02T01:00:00+09:00"),
-            deliveryDueDate: new Date("2090-11-02T00:00:00.000Z"),
-          },
-        });
+        // @db.Date를 JS Date로 바인딩하면 세션 시간대에 따라 입력 날짜가
+        // 재해석될 수 있으므로, CHECK 자체는 명시적 SQL DATE로 검사한다.
+        return tx.$executeRaw`
+          INSERT INTO "projects" (
+            "client_id", "title", "description", "purpose", "styles",
+            "budget", "recruitment_end_at", "delivery_due_date"
+          ) VALUES (
+            ${client.id}, 'KST 날짜 경계 테스트',
+            '세션 시간대와 무관하게 납품일을 검사합니다.',
+            'CHILD_FAMILY', ARRAY['EMOTIONAL']::TEXT[],
+            50000, TIMESTAMPTZ '2090-11-02 01:00:00+09',
+            DATE '2090-11-02'
+          )
+        `;
       });
 
     await expect(tryInsert("UTC")).rejects.toThrow();
