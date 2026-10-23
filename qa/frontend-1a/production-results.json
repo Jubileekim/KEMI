@@ -1,0 +1,14 @@
+{
+  "source": "production bundle + Playwright fulfilled HTTP fixtures, NOT live API",
+  "checks": [
+    "login normalized email",
+    "protected return",
+    "logout",
+    "signup conflict blocked",
+    "no development tools",
+    "no worker registration",
+    "no page errors"
+  ],
+  "calls": ["/api/auth/refresh", "/api/auth/login", "/api/auth/logout"],
+  "errors": []
+}

@@ -2,9 +2,12 @@ import { useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, matchRoutes, useLocation } from "react-router";
 import Brand from "@/components/kemi/brand";
 import { screens } from "../routes";
+import { session, useSession } from "../session";
+import Button from "../../components/ui/button";
 
 export default function Shell() {
   const location = useLocation();
+  const { role, status, notice } = useSession();
   const main = useRef<HTMLElement>(null);
   const screen = matchRoutes(screens, location)?.[0]?.route;
   useEffect(() => {
@@ -30,7 +33,13 @@ export default function Shell() {
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
             <NavLink to="/me/activity">내 활동</NavLink>
-            <NavLink to="/login">로그인</NavLink>
+            {role === "guest" ? (
+              <NavLink to="/login">로그인</NavLink>
+            ) : (
+              <Button variant="ghost" onClick={() => session.logout()}>
+                로그아웃
+              </Button>
+            )}
           </nav>
         </div>
       </header>
@@ -51,7 +60,22 @@ export default function Shell() {
             }[screen?.layout ?? "public"]
           }
         </p>
-        <Outlet />
+        {status === "logging-out" || status === "logout-error" ? (
+          <section role="status">
+            <p>
+              {status === "logging-out"
+                ? "로그아웃을 처리하고 있어요."
+                : notice}
+            </p>
+            {status === "logout-error" && (
+              <Button onClick={() => session.logout()}>
+                서버 로그아웃 다시 시도
+              </Button>
+            )}
+          </section>
+        ) : (
+          <Outlet />
+        )}
       </main>
       <footer className="page-container text-sm text-muted-foreground">
         KEMI · 화면 기반 구성 중

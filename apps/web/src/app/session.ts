@@ -1,10 +1,24 @@
-import { createContext, useContext } from "react";
-import type { Role } from "./routes";
+import { useSyncExternalStore } from "react";
+import createSessionController from "../features/auth/session-controller";
+import { authEnabled, mockEnabled } from "../features/auth/config";
+import { connectSession } from "../shared/api/client";
+import queryClient from "./query-client";
 
-export const mockEnabled =
-  import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === "true";
-export const SessionContext = createContext<{
-  role: Role;
-  setRole: (role: Role) => void;
-}>({ role: "guest", setRole: () => {} });
-export const useSession = () => useContext(SessionContext);
+export { mockEnabled } from "../features/auth/config";
+export const session = createSessionController(
+  authEnabled,
+  () => {
+    queryClient.cancelQueries();
+    queryClient.clear();
+  },
+  mockEnabled,
+);
+connectSession({
+  token: session.getToken,
+  recover: session.recover,
+  epoch: session.epoch,
+});
+export function useSession() {
+  const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  return { ...state, setRole: session.setMockRole };
+}

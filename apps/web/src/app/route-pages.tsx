@@ -7,7 +7,8 @@ import {
   useSearchParams,
 } from "react-router";
 import Button from "@/components/ui/button";
-import { mockEnabled, useSession } from "./session";
+import { mockEnabled, useSession, session } from "./session";
+import { authEnabled } from "../features/auth/config";
 import { screens, type Screen } from "./routes";
 
 export function Guard({
@@ -17,14 +18,23 @@ export function Guard({
   screen: Screen;
   children: ReactNode;
 }) {
-  const { role } = useSession();
+  const { role, status } = useSession();
   const location = useLocation();
   if (!screen.roles) return children;
-  if (!mockEnabled)
+  if (!authEnabled)
     return (
       <section role="status">
         <h1 className="type-heading-lg">인증 연결 준비 중</h1>
         <p>실제 세션 계약 연결 후 이용할 수 있어요.</p>
+      </section>
+    );
+  if (status === "checking")
+    return <p role="status">세션을 확인하고 있어요.</p>;
+  if (status === "error")
+    return (
+      <section role="alert">
+        <p>세션을 확인하지 못했어요.</p>
+        <Button onClick={() => session.bootstrap()}>세션 다시 확인</Button>
       </section>
     );
   if (role === "guest")
@@ -38,7 +48,7 @@ export function Guard({
     return (
       <section role="alert">
         <h1 className="type-heading-lg">접근 권한이 없어요</h1>
-        <p>개발용 Mock 역할 기준입니다. 서버 권한 검증은 미연결 상태예요.</p>
+        <p>현재 계정으로 이용할 수 없는 화면이에요.</p>
       </section>
     );
   return children;

@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-23 · 현재: 0-A·0-B·0-C 완료. 제품 기능은 미착수. 0단계 전체 완료 아님.
+갱신: 2026-10-23 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일 인증의 클라이언트·Mock 구현/로컬 검증 완료. 실제 가입 정책 충돌·실서버 검증은 남음. 0단계·1단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -113,7 +113,7 @@
 
 ## 다음 작업 하나
 
-**0-D 테스트·CI 정합화:** 원격 저장소에 이미 있는 Vitest·Playwright·GitHub Actions를 기준으로 0-C 회귀 검사를 편입하고, 기존 0-D 계획과 진행 상태를 맞춘다. 별도 요청 후 착수.
+**1-A API 정합화·실서버 검증:** P01 가입 비밀번호와 프로필 완료 판정 계약·D05를 조율한 후 실제 Origin/쿠키/세션을 검증한다. API팀 계약·실행 환경 준비가 필요하다. 별도 요청 후 착수하며 1-B를 자동 시작하지 않는다. 기존 0-D 전체 정합화는 여전히 미완료다.
 
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
@@ -147,3 +147,39 @@
 5. 다음 작업 하나
 
 전체 원본·전체 계획을 매 턴 다시 요약하지 않는다. 필요한 기능 행과 관련 절을 우선 확인한다. 사용자 요청 범위까지만 진행한다.
+
+## 1-A 이메일 회원가입·로그인·로그아웃·만료 (2026-10-23)
+
+### 완료 범위와 변경 파일
+
+- 지정 Git 저장소 `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`, npm workspace `apps/web`만 기준으로 구현. 상위 독립 앱은 수정하지 않았다. 중단 후 미커밋 변경이 보존된 것을 확인하고 검사를 재실행했다.
+- AUTH-01·02·03·05의 이메일 클라이언트 범위: RHF/Zod 가입·로그인 폼, Mock 가입 후 자동 로그인→프로필, 역할별 기본 경로/안전한 복귀, refresh→me 초기 확인, TOKEN_EXPIRED 갱신, 실패·폐기·로그아웃·서버 로그아웃 재시도.
+- `apps/web/src/features/auth/{AuthForm.tsx,config.ts,contracts.ts,redirect.ts,session-controller.ts}` 신규. 세션/라우터/레이아웃은 `src/app/{App.tsx,providers.tsx,session.ts,route-pages.tsx,layouts/Shell.tsx}`, 통신은 `src/shared/api/client.ts`, 스타일은 `src/styles/index.css` 수정.
+- 개발용 `src/mocks/{auth-handlers.ts,browser.ts,DevTools.tsx}`, `.env.example`, `src/vite-env.d.ts` 갱신. 토큰은 메모리만 사용하고 Query 변수에 비밀번호를 보관하지 않는다. Mock 계정은 탭 메모리 한정이며 실제 가입 저장이 아니다.
+- 검사: `apps/web/test/auth{,-transport}.test.ts`, `e2e/auth.spec.ts` 신규. 기존 `e2e/app.spec.ts`는 MSW와 함께 health 요청을 가로채도록 context.route 적용. `playwright.config.ts`는 검사 서버에서 Mock을 명시적으로 활성화한다.
+- `.github/workflows/web-ci.yml`의 기존 검사 절차를 유지하고, 아직 열린 기반 PR #34 위의 별도 1-A PR도 실행하도록 기반 브랜치를 허용 목록에 추가했다. API CI·API/shared 소스·lockfile·브랜드 원본/토큰은 변경하지 않았다.
+- 상세 경계/실행: `docs/frontend-auth-1a.md`, 관련 기능 상태 `docs/frontend-feature-matrix.md`, 증거·재현 `qa/frontend-1a/{README.md,production-smoke.cjs,production-results.json,signup-390.png,signup-1280.png}`.
+
+### 로컬 검증 결과
+
+- 최종 `npm run test:web`: **32/32 통과**. 비밀번호 경계·이메일 정규화·위험한 복귀 경로·초기 확인·동시 갱신·409 횟수/3초 예산·네트워크 재시도 제한·서버 로그아웃 실패·늦은 응답·계정 변경 캐시 제거·변경 요청 재전송 금지 확인.
+- 최종 `npm run build:web`(타입·ESLint 포함), `npm run format:check`, `npm run check:tokens`, `git diff --check`: **통과**. 토큰 검사 11개 타입 역할·16개 대비·6개 재생성 PASS. 신규 의존성 설치 없음.
+- 최신 전체 Playwright **36/36 통과, 종료 코드 0**. 기존 health 12개와 인증 24개를 데스크톱·모바일 Edge/Chromium으로 검사했다. 가입→프로필→로그아웃→동일 계정 로그인 통합 흐름을 두 역할에서 추가 확인했다. 지연/오류/제한/429/500/네트워크·안전한 복귀·새로고침·로그아웃 캐시 제거·실패 후 재시도·뒤로 가기·세션 폐기·320/390/768/1280px 넘침을 포함한다. 390/1280px 캡처 시각 확인.
+- 로컬은 무시되는 `tmp/playwright.local.config.ts`에서 Edge와 포트 5179를 사용. 일반 명령·CI는 기존 Chromium 프로젝트와 별도 개발 서버를 유지한다. 전체 trace/report·tmp 로그는 커밋에서 제외했다.
+- 중간 실패 기록: 초기 로컬 config에서 Mock env 누락, 기존 page.route가 MSW 요청을 놓치는 문제를 수정했다. shared 재빌드/소스 갱신과 E2E를 겹쳐 실행했을 때 초기 checking 상태 대기가 실패했다. 빌드 종료 후 개발 서버를 새로 띄운 단독 전체 실행은 **36/36**. 이 정황과 최종 결과를 구분하며 타임아웃 완화·자동 재시도 추가로 숨기지 않았다.
+- 운영 모드 build/preview(4181): Mock 플래그가 있어도 worker·Mock 계정/도구가 산출물에서 제외되는지 검색했고, Playwright가 HTTP를 모의 응답한 브라우저 smoke **7개 검사 통과**, 페이지 오류 0. 이메일 정규화·보호 화면 복귀·로그아웃·실제 모드 가입 차단·개발 도구/worker 미등록 확인. `production-results.json` 참조. 이 결과도 실제 서버 검증이 아니다.
+- 독립 보안/명세 검토의 계정 전환 캐시와 정적/동적 경로 우선순위 지적을 수정·회귀 검사했다. 추가로 쿠키를 쓰는 login/logout/refresh를 같은 큐/지원 환경 Web Lock으로 묶었다. 실제 다중 탭/쿠키 응답 순서는 미검증이다.
+
+### 남은 일과 정책 경계
+
+- **AUTH-01 실제 가입 미연결:** 엑셀 P01(8~64자·영문/숫자)과 현재 shared/API(8자 이상·72바이트) 충돌. 엑셀을 따르는 Mock으로 분리했고 실제 가입 버튼/호출을 차단했다. API/shared 정책을 임의 수정하지 않았다.
+- **AUTH-02 미완성 프로필 자동 이동 미완료:** AuthUser/MeResponse에 완료 판정 계약이 없고 D01 미정. 브랜드/공개 여부로 추정하지 않고 역할별 기본 이동만 제공한다. 프로필 화면 편집은 이번 범위 아님.
+- **실제 API·DB·Origin/HttpOnly/Secure/SameSite·세션 폐기·외부 제공자 미검증:** 이 체크아웃에는 API 환경 파일/실행 서버가 없다. Mock과 모의 HTTP 응답의 성공을 실제 연결로 표시하지 않는다. 실제 모드는 `VITE_ENABLE_AUTH_API=true`로 명시하며 D05 팀 승인은 별도다.
+- 기존 API Windows 단위 실패 이력은 앞선 기반 PR 기록을 유지하며 이번에 재실행하거나 백엔드를 변경하지 않았다. API CI와 원격 웹 CI 결과는 아래 Git 전달 기록에서 별도 관리한다.
+- 1-A의 클라이언트/Mock 검증까지 완료. **1-A 실제 인증 전체·0단계 전체·1단계 전체는 완료가 아니다.** 소셜·프로필·패키지·다음 작업, PR 병합·자동 병합·배포는 실행하지 않았다.
+
+### Git 전달 상태
+
+- 기존 인증 1-A 브랜치/PR 없음 확인. 기반 Draft PR #34의 `314c831`에서 `feat/frontend-1a-email-auth`를 만들었다. 별도 PR은 기반 브랜치를 대상으로 하여 0-A~0-C diff를 중복하지 않는다.
+- 세션/계약·검사 커밋: [4320db7](https://github.com/Jubileekim/KEMI/commit/4320db7). 화면/Mock·통합검사와 문서 커밋 및 PR/원격 CI 결과는 전달 확인 후 아래에 추가한다.
+- 다음 작업 하나는 위의 **1-A API 정합화·실서버 검증**이며 자동 착수하지 않는다.

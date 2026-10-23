@@ -5,6 +5,8 @@ import Shell from "./layouts/Shell";
 import { Guard, Placeholder } from "./route-pages";
 import { screens } from "./routes";
 
+const AuthForm = lazy(() => import("../features/auth/AuthForm"));
+
 const DevTools = import.meta.env.DEV
   ? lazy(() => import("../mocks/DevTools"))
   : null;
@@ -30,7 +32,14 @@ export default function App() {
                   path={screen.path}
                   element={
                     <Guard screen={screen}>
-                      <Placeholder screen={screen} />
+                      {screen.path === "/login" || screen.path === "/signup" ? (
+                        <AuthForm
+                          key={screen.path}
+                          signup={screen.path === "/signup"}
+                        />
+                      ) : (
+                        <Placeholder screen={screen} />
+                      )}
                     </Guard>
                   }
                 />

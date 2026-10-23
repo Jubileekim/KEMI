@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/shared/api/client";
 import Button from "@/components/ui/button";
-import { mockEnabled, useSession } from "@/app/session";
+import { mockEnabled, useSession, session } from "@/app/session";
 
 export default function DevTools() {
   const { role, setRole } = useSession();
@@ -36,11 +36,40 @@ export default function DevTools() {
         개발 전용 ·{" "}
         {mockEnabled
           ? "Mock 활성 · 실제 API 미연결"
-          : "Mock 비활성 · 실제 API 미연결"}
+          : "Mock 비활성 · 인증 API는 명시적 설정으로 연결"}
       </p>
       <Link to="/__dev/ui">공통 UI 예시</Link>
       {mockEnabled && (
         <>
+          <Button variant="outline" onClick={() => session.verify()}>
+            인증 세션 확인
+          </Button>
+          <label htmlFor="mock-auth">
+            Mock 인증 응답{" "}
+            <select
+              id="mock-auth"
+              onChange={(e) => {
+                api.post("/__mock__/auth/scenario", e.target.value, {
+                  baseURL: "/",
+                  headers: { "Content-Type": "text/plain" },
+                });
+              }}
+            >
+              {[
+                "success",
+                "delay",
+                "invalid",
+                "restricted",
+                "rate",
+                "server",
+                "network",
+                "expired",
+                "logout-error",
+              ].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </label>
           <label htmlFor="mock-role">
             Mock 역할{" "}
             <select

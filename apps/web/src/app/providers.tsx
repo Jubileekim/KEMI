@@ -1,19 +1,22 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import queryClient from "./query-client";
-import { SessionContext } from "./session";
-import type { Role } from "./routes";
+import { session } from "./session";
 
 export default function Providers({ children }: { children: ReactNode }) {
-  const [role, updateRole] = useState<Role>("guest");
-  function setRole(next: Role) {
-    queryClient.cancelQueries();
-    queryClient.clear();
-    updateRole(next);
-  }
+  useEffect(() => {
+    session.bootstrap();
+    const verify = () => {
+      if (document.visibilityState === "visible") session.verify();
+    };
+    window.addEventListener("focus", verify);
+    document.addEventListener("visibilitychange", verify);
+    return () => {
+      window.removeEventListener("focus", verify);
+      document.removeEventListener("visibilitychange", verify);
+    };
+  }, []);
   return (
-    <QueryClientProvider client={queryClient}>
-      <SessionContext value={{ role, setRole }}>{children}</SessionContext>
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }

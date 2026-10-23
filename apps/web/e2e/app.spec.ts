@@ -43,7 +43,7 @@ test("확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다
   const responseGate = new Promise<void>((resolve) => {
     releaseResponse = resolve;
   });
-  await page.route(healthRoute, async (route) => {
+  await page.context().route(healthRoute, async (route) => {
     await responseGate;
     await route.fulfill({ json: healthyResponse });
   });
@@ -60,22 +60,22 @@ test("확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다
 });
 
 test("네트워크 실패 후 다시 확인하면 복구된다", async ({ page }) => {
-  await page.route(healthRoute, (route) => route.abort("failed"));
+  await page.context().route(healthRoute, (route) => route.abort("failed"));
   await page.goto("/__dev/health");
   await page.getByRole("button", { name: "API 연결 확인" }).click();
   await expect(page.getByRole("status")).toContainText(
     "서버에 연결하지 못했습니다.",
   );
-  await page.unroute(healthRoute);
-  await page.route(healthRoute, (route) =>
-    route.fulfill({ json: healthyResponse }),
-  );
+  await page.context().unroute(healthRoute);
+  await page
+    .context()
+    .route(healthRoute, (route) => route.fulfill({ json: healthyResponse }));
   await page.getByRole("button", { name: "API 연결 확인" }).click();
   await expect(page.getByRole("status")).toContainText("API 연결 성공");
 });
 
 test("HTML 응답을 서버 연결 성공으로 표시하지 않는다", async ({ page }) => {
-  await page.route(healthRoute, (route) =>
+  await page.context().route(healthRoute, (route) =>
     route.fulfill({
       contentType: "text/html",
       body: "<!doctype html><html></html>",
@@ -89,7 +89,7 @@ test("HTML 응답을 서버 연결 성공으로 표시하지 않는다", async (
 });
 
 test("서버의 공통 오류 메시지를 표시한다", async ({ page }) => {
-  await page.route(healthRoute, (route) =>
+  await page.context().route(healthRoute, (route) =>
     route.fulfill({
       status: 503,
       json: {
