@@ -9,10 +9,16 @@ import {
   SOCIAL_PROVIDER_PATHS,
   PRODUCT_CATEGORIES,
   PRODUCTION_ROLES,
+  PROJECT_SORTS,
+  PROJECT_STATUSES,
+  projectCreateSchema,
+  projectUpdateSchema,
   signupRequestSchema,
   socialSignupRequestSchema,
   USER_ROLES,
   USER_STATUSES,
+  VIDEO_PURPOSES,
+  VIDEO_STYLES,
 } from "@kemi/shared";
 import { z } from "zod";
 
@@ -79,6 +85,58 @@ const myProfileResponse = {
   },
 };
 
+const projectResponse = {
+  description: "공개 맞춤 영상 제작 의뢰",
+  content: {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/Project" },
+    },
+  },
+};
+
+const projectIdParam = {
+  name: "projectId",
+  in: "path",
+  required: true,
+  schema: { type: "string", pattern: "^[1-9]\\d*$" },
+};
+
+const projectListParameters = [
+  {
+    name: "q",
+    in: "query",
+    schema: { type: "string", minLength: 1, maxLength: 100 },
+  },
+  {
+    name: "purpose",
+    in: "query",
+    schema: { type: "string", enum: [...VIDEO_PURPOSES] },
+  },
+  {
+    name: "styles",
+    in: "query",
+    description: "쉼표로 구분한 영상 스타일 (예: EMOTIONAL,CINEMATIC)",
+    schema: { type: "string" },
+  },
+  { name: "budgetMin", in: "query", schema: { type: "integer", minimum: 1 } },
+  { name: "budgetMax", in: "query", schema: { type: "integer", minimum: 1 } },
+  {
+    name: "sort",
+    in: "query",
+    schema: { type: "string", enum: [...PROJECT_SORTS], default: "LATEST" },
+  },
+  {
+    name: "page",
+    in: "query",
+    schema: { type: "integer", minimum: 1, default: 1 },
+  },
+  {
+    name: "pageSize",
+    in: "query",
+    schema: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+  },
+];
+
 const nullableEnum = (values: readonly string[]) => ({
   type: ["string", "null"],
   enum: [...values, null],
@@ -97,6 +155,7 @@ const openApiDocument = {
     { name: "health", description: "서버·DB 상태 확인" },
     { name: "auth", description: "이메일 회원가입·로그인·토큰 갱신" },
     { name: "profiles", description: "역할별 본인 프로필" },
+    { name: "projects", description: "공개 맞춤 영상 제작 의뢰" },
   ],
   paths: {
     "/health": {
@@ -371,6 +430,130 @@ const openApiDocument = {
         },
       },
     },
+    "/api/projects": {
+      get: {
+        tags: ["projects"],
+        summary: "모집 중인 공개 프로젝트 탐색",
+        description:
+          "마감 전이며 삭제되지 않은 OPEN 프로젝트만 반환한다. 제목·설명을 검색하고 목적·스타일·예산으로 필터링한다.",
+        parameters: projectListParameters,
+        responses: {
+          200: {
+            description: "프로젝트 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProjectListResponse" },
+              },
+            },
+          },
+          400: errorResponse("잘못된 검색 조건 (`VALIDATION_FAILED`)"),
+        },
+      },
+      post: {
+        tags: ["projects"],
+        summary: "공개 프로젝트 등록",
+        description:
+          "CLIENT만 등록할 수 있다. 모집 마감은 현재 이후, 희망 납품일은 모집 마감일 이후여야 한다.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(projectCreateSchema) },
+          },
+        },
+        responses: {
+          201: projectResponse,
+          400: errorResponse(
+            "잘못된 입력 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/projects/me": {
+      get: {
+        tags: ["projects"],
+        summary: "내 프로젝트 목록",
+        security: [{ bearerAuth: [] }],
+        parameters: projectListParameters,
+        responses: {
+          200: {
+            description: "마감된 항목을 포함한 내 프로젝트 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProjectListResponse" },
+              },
+            },
+          },
+          400: errorResponse("잘못된 검색 조건 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/projects/{projectId}": {
+      get: {
+        tags: ["projects"],
+        summary: "공개 프로젝트 상세 조회",
+        parameters: [projectIdParam],
+        responses: {
+          200: projectResponse,
+          400: errorResponse("잘못된 프로젝트 ID (`VALIDATION_FAILED`)"),
+          404: errorResponse("공개 모집 중인 프로젝트가 없음 (`NOT_FOUND`)"),
+        },
+      },
+      patch: {
+        tags: ["projects"],
+        summary: "내 프로젝트 부분 수정",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(projectUpdateSchema) },
+          },
+        },
+        responses: {
+          200: projectResponse,
+          400: errorResponse(
+            "잘못된 입력 (`VALIDATION_FAILED`, `INVALID_JSON`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("모집 중인 프로젝트가 아님 (`CONFLICT`)"),
+        },
+      },
+      delete: {
+        tags: ["projects"],
+        summary: "내 프로젝트 삭제 (소프트 삭제)",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        responses: {
+          204: { description: "삭제 완료" },
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("거래가 시작된 프로젝트 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/projects/{projectId}/close": {
+      post: {
+        tags: ["projects"],
+        summary: "내 프로젝트 모집 마감",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        responses: {
+          200: projectResponse,
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("이미 모집이 종료됨 (`CONFLICT`)"),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -507,6 +690,64 @@ const openApiDocument = {
               { $ref: "#/components/schemas/ClientProfile" },
               { $ref: "#/components/schemas/CreatorProfile" },
             ],
+          },
+        },
+      },
+      Project: {
+        type: "object",
+        required: [
+          "id",
+          "clientId",
+          "clientName",
+          "title",
+          "description",
+          "purpose",
+          "styles",
+          "budget",
+          "expectedDurationSeconds",
+          "recruitmentEndAt",
+          "deliveryDueDate",
+          "status",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string", pattern: "^\\d+$" },
+          clientId: { type: "string", pattern: "^\\d+$" },
+          clientName: { type: "string" },
+          title: { type: "string" },
+          description: { type: "string" },
+          purpose: { type: "string", enum: [...VIDEO_PURPOSES] },
+          styles: {
+            type: "array",
+            items: { type: "string", enum: [...VIDEO_STYLES] },
+          },
+          budget: { type: "integer", minimum: 1, description: "KRW" },
+          expectedDurationSeconds: { type: ["integer", "null"], minimum: 1 },
+          recruitmentEndAt: { type: "string", format: "date-time" },
+          deliveryDueDate: { type: "string", format: "date" },
+          status: { type: "string", enum: [...PROJECT_STATUSES] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      ProjectListResponse: {
+        type: "object",
+        required: ["items", "pagination"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Project" },
+          },
+          pagination: {
+            type: "object",
+            required: ["page", "pageSize", "total", "totalPages"],
+            properties: {
+              page: { type: "integer" },
+              pageSize: { type: "integer" },
+              total: { type: "integer" },
+              totalPages: { type: "integer" },
+            },
           },
         },
       },

@@ -74,14 +74,15 @@ describe("OpenAPI 문서", () => {
     const results = await Promise.all(
       operations.map(async ({ path: documented, method }) => {
         // 경로 변수는 실제 값으로 바꿔 부른다.
-        const path = documented.replace("{provider}", "google");
+        const path = documented
+          .replace("{provider}", "google")
+          .replace("{projectId}", "1");
         const agent = request(app);
-        const res =
-          method === "get"
-            ? await agent.get(path)
-            : await (
-                method === "patch" ? agent.patch(path) : agent.post(path)
-              ).send({});
+        let res;
+        if (method === "get") res = await agent.get(path);
+        else if (method === "patch") res = await agent.patch(path).send({});
+        else if (method === "delete") res = await agent.delete(path);
+        else res = await agent.post(path).send({});
         return { path, method, status: res.status };
       }),
     );

@@ -220,6 +220,28 @@ if (err instanceof Error && "code" in err && err.code === "ENOENT") {
 - 선택지 값과 화면 표시 이름 제안: [프로필 선택지 공유 문서](../../docs/handoff/2026-10-21-profile-options.md)
 - 이번 구현은 PROFILE-01·02의 텍스트·선택 항목까지다. 로고·이미지·경력·링크·공개 전환은 후속이다(결정 기록 10장 표).
 
+## 공개 프로젝트 API
+
+PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로그인 없이 조회할 수 있고, 등록·수정·마감·삭제는 `CLIENT`만 할 수 있다.
+
+| 메서드·경로                            | 하는 일                                        |
+| -------------------------------------- | ---------------------------------------------- |
+| `GET /api/projects`                    | 모집 중인 프로젝트 검색·필터·정렬·페이지네이션 |
+| `GET /api/projects/{projectId}`        | 모집 중인 프로젝트 상세 조회                   |
+| `GET /api/projects/me`                 | 마감된 항목을 포함한 내 프로젝트 목록          |
+| `POST /api/projects`                   | 공개 프로젝트 등록                             |
+| `PATCH /api/projects/{projectId}`      | 본인 프로젝트 부분 수정                        |
+| `POST /api/projects/{projectId}/close` | 모집 마감                                      |
+| `DELETE /api/projects/{projectId}`     | 소프트 삭제                                    |
+
+- 검색: `q`
+- 필터: `purpose`, `styles`(쉼표 구분), `budgetMin`, `budgetMax`
+- 정렬: `LATEST`, `BUDGET_LOW`, `BUDGET_HIGH`, `DEADLINE`
+- 페이지: `page`, `pageSize`(최대 50)
+- 공개 목록에는 `OPEN`, 미삭제, 모집 마감 전 항목만 나온다.
+- 영상 목적과 스타일의 허용 값 및 요청·응답 형식은 Swagger UI(`/api/docs`)가 기준이다.
+- 삭제는 행을 지우지 않고 `CLOSED`와 `deleted_at`으로 보존한다.
+
 ## API 경로 규칙
 
 | 경로                | 용도                               | 누가 호출하나                    |
