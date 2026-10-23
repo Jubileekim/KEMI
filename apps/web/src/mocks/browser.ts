@@ -3,12 +3,14 @@ import handlers from "./handlers";
 import authHandlers from "./auth-handlers";
 import profileHandlers from "./profile-handlers";
 import studioHandlers from "./studio-handlers";
+import campaignHandlers from "./campaign-handlers";
 
 const worker = setupWorker(
   ...handlers,
   ...authHandlers,
   ...profileHandlers,
   ...studioHandlers,
+  ...campaignHandlers,
 );
 
 export default worker;

@@ -10,6 +10,7 @@ on:
         feat/frontend-1b-google-auth,
         feat/frontend-1c-profiles,
         feat/frontend-1d-packages,
+        feat/frontend-1d-portfolio,
       ]
   push:
     branches: [main]

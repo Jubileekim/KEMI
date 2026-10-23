@@ -10,6 +10,9 @@ const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
 const ProfilePage = lazy(() => import("../features/profiles/ProfilePage"));
 const PortfolioPage = lazy(() => import("../features/portfolio/PortfolioPage"));
 const PackagesPage = lazy(() => import("../features/packages/PackagesPage"));
+const CampaignEditor = lazy(
+  () => import("../features/campaigns/CampaignEditor"),
+);
 const GoogleProvider = import.meta.env.DEV
   ? lazy(() => import("../mocks/GoogleProvider"))
   : null;
@@ -52,6 +55,10 @@ export default function App() {
                       {screen.path === "/me/profile" && <ProfilePage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
+                      {(screen.path === "/campaigns/new" ||
+                        screen.path === "/campaigns/:campaignId/edit") && (
+                        <CampaignEditor />
+                      )}
                       {![
                         "/login",
                         "/signup",
@@ -59,6 +66,8 @@ export default function App() {
                         "/me/profile",
                         "/studio/packages",
                         "/studio/portfolio",
+                        "/campaigns/new",
+                        "/campaigns/:campaignId/edit",
                       ].includes(screen.path) && (
                         <Placeholder screen={screen} />
                       )}
