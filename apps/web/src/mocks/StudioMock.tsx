@@ -13,6 +13,7 @@ import {
   type StudioCommand,
   type StudioState,
 } from "./studio-model";
+import PortfolioManagerMock from "./PortfolioManagerMock";
 import PackageEditorMock from "./PackageEditorMock";
 
 function StudioContent({
@@ -21,12 +22,14 @@ function StudioContent({
   fetching,
   reload,
   readError,
+  portfolio,
 }: {
   state: StudioState;
   queryKey: readonly unknown[];
   fetching: boolean;
   reload: () => void;
   readError: unknown;
+  portfolio: boolean;
 }) {
   const cache = useQueryClient();
   const [editor, setEditor] = useState<PackageItem | "new" | null>(null);
@@ -58,8 +61,17 @@ function StudioContent({
     <section className="mx-auto grid w-full max-w-4xl gap-6">
       <div className="grid gap-2">
         <p className="type-label-sm text-primary">CREATOR STUDIO</p>
-        <h1 className="type-heading-lg">패키지·서비스 관리</h1>
-        <Link to="/me/profile">내 프로필 확인</Link>
+        <h1 className="type-heading-lg">
+          {portfolio ? "작업물 관리" : "패키지·서비스 관리"}
+        </h1>
+        <div className="flex flex-wrap gap-4">
+          <Link to="/me/profile">내 프로필 확인</Link>
+          {portfolio ? (
+            <Link to="/studio/packages">패키지·서비스로 이동</Link>
+          ) : (
+            <Link to="/studio/portfolio">작업물 관리로 이동</Link>
+          )}
+        </div>
       </div>
       <p role="status" className="rounded-xl bg-muted p-4">
         개발용 Mock · 실제 API·DB·탐색·거래에는 반영되지 않아요. 이 탭에서만
@@ -164,120 +176,139 @@ function StudioContent({
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
-      {editor !== null ? (
-        <PackageEditorMock
-          key={typeof editor === "string" ? editor : editor.id}
-          item={editor === "new" ? undefined : editor}
-          busy={busy}
-          onSave={save}
-          onClose={() => setEditor(null)}
-        />
+      {portfolio ? (
+        <PortfolioManagerMock state={state} busy={busy} onSave={save} />
       ) : (
-        <Button
-          className="justify-self-start"
-          disabled={busy}
-          onClick={() => setEditor("new")}
-        >
-          새 패키지 만들기
-        </Button>
-      )}
-      <div className="grid gap-4">
-        <h2 className="type-heading-sm">내 패키지 ({state.packages.length})</h2>
-        {state.packages.length === 0 && (
-          <p>첫 패키지를 초안으로 준비해 보세요. 대표는 직접 지정해요.</p>
-        )}
-        {state.packages.map((item) => (
-          <article
-            key={item.id}
-            aria-label={`패키지 ${item.title || "제목 없는 초안"}`}
-            className="showcase-card grid gap-4"
-          >
-            <h3 className="type-heading-sm">
-              {item.title || "제목 없는 초안"} · {statuses[item.visibility]}
-              {state.primaryId === item.id && " · 대표"}
-            </h3>
-            <dl className="grid gap-2 sm:grid-cols-2">
-              {Object.entries(packageFields).map(([name, label]) => (
-                <div key={name} className="min-w-0">
-                  <dt className="text-sm text-muted-foreground">{label}</dt>
-                  <dd className="whitespace-pre-wrap break-words">
-                    {String(Reflect.get(item, name)) || "미입력"}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p>가격과 조건 변경은 기존 계약에 반영되지 않아요.</p>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                disabled={busy || editor !== null}
-                onClick={() => setEditor(item)}
+        <>
+          {editor !== null ? (
+            <PackageEditorMock
+              key={typeof editor === "string" ? editor : editor.id}
+              item={editor === "new" ? undefined : editor}
+              busy={busy}
+              onSave={save}
+              onClose={() => setEditor(null)}
+            />
+          ) : (
+            <Button
+              className="justify-self-start"
+              disabled={busy}
+              onClick={() => setEditor("new")}
+            >
+              새 패키지 만들기
+            </Button>
+          )}
+          <div className="grid gap-4">
+            <h2 className="type-heading-sm">
+              내 패키지 ({state.packages.length})
+            </h2>
+            {state.packages.length === 0 && (
+              <p>첫 패키지를 초안으로 준비해 보세요. 대표는 직접 지정해요.</p>
+            )}
+            {state.packages.map((item) => (
+              <article
+                key={item.id}
+                aria-label={`패키지 ${item.title || "제목 없는 초안"}`}
+                className="showcase-card grid gap-4"
               >
-                패키지 수정
-              </Button>
-              {item.visibility === "PUBLIC" && (
-                <>
-                  <Button
-                    disabled={
-                      busy || editor !== null || state.primaryId === item.id
-                    }
-                    onClick={() => save({ type: "primary", id: item.id })}
-                  >
-                    대표로 지정
-                  </Button>
+                <h3 className="type-heading-sm">
+                  {item.title || "제목 없는 초안"} · {statuses[item.visibility]}
+                  {state.primaryId === item.id && " · 대표"}
+                </h3>
+                <dl className="grid gap-2 sm:grid-cols-2">
+                  {Object.entries(packageFields).map(([name, label]) => (
+                    <div key={name} className="min-w-0">
+                      <dt className="text-sm text-muted-foreground">{label}</dt>
+                      <dd className="whitespace-pre-wrap break-words">
+                        {String(Reflect.get(item, name)) || "미입력"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p>가격과 조건 변경은 기존 계약에 반영되지 않아요.</p>
+                <div className="flex flex-wrap gap-3">
                   <Button
                     variant="outline"
                     disabled={busy || editor !== null}
+                    onClick={() => setEditor(item)}
+                  >
+                    패키지 수정
+                  </Button>
+                  {item.visibility === "PUBLIC" && (
+                    <>
+                      <Button
+                        disabled={
+                          busy || editor !== null || state.primaryId === item.id
+                        }
+                        onClick={() => save({ type: "primary", id: item.id })}
+                      >
+                        대표로 지정
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={busy || editor !== null}
+                        onClick={() =>
+                          save({
+                            type: "save-package",
+                            id: item.id,
+                            values: item,
+                            visibility: "PRIVATE",
+                          })
+                        }
+                      >
+                        패키지 비공개
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    disabled={busy || !!state.reference || editor !== null}
                     onClick={() =>
-                      save({
-                        type: "save-package",
-                        id: item.id,
-                        values: item,
-                        visibility: "PRIVATE",
-                      })
+                      save({ type: "capture-reference", id: item.id })
                     }
                   >
-                    패키지 비공개
+                    모의 계약 참조 보관
                   </Button>
-                </>
-              )}
-              <Button
-                variant="ghost"
-                disabled={busy || !!state.reference || editor !== null}
-                onClick={() => save({ type: "capture-reference", id: item.id })}
-              >
-                모의 계약 참조 보관
-              </Button>
-            </div>
-          </article>
-        ))}
-      </div>
-      <section className="showcase-card grid gap-3" aria-label="모의 공개 결과">
-        <h2 className="type-heading-sm">공개 결과 미리보기 · Mock</h2>
-        <p>
-          신규 활동: {state.service === "PUBLIC" ? "모의 허용" : "모의 차단"}
-        </p>
-        <ul>
-          {visiblePackages(state).map((p) => (
-            <li key={p.id}>
-              {p.title} · {p.price}원{p.id === state.primaryId ? " · 대표" : ""}
-            </li>
-          ))}
-        </ul>
-        {visiblePackages(state).length === 0 && <p>공개 노출 상품 없음</p>}
-        <p>기존 거래: 실제 연결 미구현 · 아래 참조는 테스트용 예시예요.</p>
-        {state.reference && (
-          <p>
-            보관된 모의 계약: {state.reference.title} · {state.reference.price}
-            원 · {state.reference.included}
-          </p>
-        )}
-      </section>
+                </div>
+              </article>
+            ))}
+          </div>
+          <section
+            className="showcase-card grid gap-3"
+            aria-label="모의 공개 결과"
+          >
+            <h2 className="type-heading-sm">공개 결과 미리보기 · Mock</h2>
+            <p>
+              신규 활동:{" "}
+              {state.service === "PUBLIC" ? "모의 허용" : "모의 차단"}
+            </p>
+            <ul>
+              {visiblePackages(state).map((p) => (
+                <li key={p.id}>
+                  {p.title} · {p.price}원
+                  {p.id === state.primaryId ? " · 대표" : ""}
+                </li>
+              ))}
+            </ul>
+            {visiblePackages(state).length === 0 && <p>공개 노출 상품 없음</p>}
+            <p>기존 거래: 실제 연결 미구현 · 아래 참조는 테스트용 예시예요.</p>
+            {state.reference && (
+              <p>
+                보관된 모의 계약: {state.reference.title} ·{" "}
+                {state.reference.price}원 · {state.reference.included}
+              </p>
+            )}
+          </section>
+        </>
+      )}
     </section>
   );
 }
 
-export default function StudioMock() {
+export default function StudioMock({
+  portfolio = false,
+}: {
+  portfolio?: boolean;
+}) {
   const { user } = useSession();
   const key = ["mock-studio", user?.id, session.epoch()] as const;
   const query = useQuery({
@@ -305,8 +336,9 @@ export default function StudioMock() {
     );
   return (
     <StudioContent
-      key={`${user.id}-${session.epoch()}`}
+      key={`${user.id}-${session.epoch()}-${portfolio}`}
       state={query.data}
+      portfolio={portfolio}
       readError={query.error}
       queryKey={key}
       fetching={query.isFetching}

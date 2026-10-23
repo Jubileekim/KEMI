@@ -20,6 +20,8 @@ const path = require("node:path");
     "모의 계약 참조 보관",
     "D01 모의 프로필 조건",
     "setupWorker",
+    "Mock 업로드 완료 처리",
+    "모의 제출 참조 보관",
   ])
     expect(bundle).not.toContain(marker);
   expect(
@@ -65,26 +67,34 @@ const path = require("node:path");
     page.on("request", (req) => {
       if (req.url().includes("/__mock__/")) mockRequests.push(req.url());
     });
-    await page.goto("/studio/packages");
-    await expect(
-      page.getByRole("heading", {
-        name:
-          role === "CREATOR"
-            ? "패키지·서비스 관리 준비 중"
-            : "접근 권한이 없어요",
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "서비스 공개", exact: true }),
-    ).toHaveCount(0);
-    await expect(page.getByText("개발 전용 도구", { exact: true })).toHaveCount(
-      0,
-    );
-    expect(mockRequests).toEqual([]);
-    expect(writes).toBe(1); // refresh only; no undefined product writes.
-    results.push(
-      `${role}: protected production route, no studio Mock/product writes`,
-    );
+    for (const [index, routeName] of ["packages", "portfolio"].entries()) {
+      await page.goto(`/studio/${routeName}`);
+      await expect(
+        page.getByRole("heading", {
+          name:
+            role === "CREATOR"
+              ? routeName === "packages"
+                ? "패키지·서비스 관리 준비 중"
+                : "작업물 관리 준비 중"
+              : "접근 권한이 없어요",
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "서비스 공개", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "새 작업물 만들기" }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("개발 전용 도구", { exact: true }),
+      ).toHaveCount(0);
+      expect(mockRequests).toEqual([]);
+      expect(writes).toBe(index + 1); // refresh per full page load, no undefined product writes.
+      expect(context.serviceWorkers()).toHaveLength(0);
+      results.push(
+        `${role}/${routeName}: protected production route, no studio Mock/product writes`,
+      );
+    }
     await context.close();
   }
   expect(errors).toEqual([]);
