@@ -229,11 +229,21 @@ WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data
 
 저장소 루트의 [`render.yaml`](../../render.yaml)(Render Blueprint)로 서비스를 만든다. 대시보드에서 값을 하나씩 입력하지 않는다.
 
+### 2-0. 관리 방식 (2026-10-23 결정, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27))
+
+- **Render 계정 관리자: 희년님.** 무료(Hobby) 워크스페이스에는 팀원을 초대할 수 없어서 한 명이 관리한다. 저장소 주인이 희년님이라 Render GitHub 연결도 그 계정으로 한다.
+- 팀원은 Render 대시보드에 들어가지 않는다. 변경은 모두 GitHub에서 한다.
+  - 서비스 설정(빌드·시작 명령, 헬스 체크, 리전, 고정 환경 변수): `render.yaml`을 고치는 PR
+  - 코드: 기능 PR을 `main`에 병합하면, CI를 통과한 커밋이 자동으로 배포된다(`checksPass`)
+- **관리자만 하는 일:** 서비스 생성(2-2), 비밀 환경 변수 입력·변경(`DATABASE_URL`, `APP_ORIGIN`, 소셜 로그인·AI 키), 로그 확인, 수동 재배포·되돌리기, 4단계의 임시 브랜치 수동 배포
+  - 비밀값은 관리자에게 GitHub이 아닌 비공개 채널로 전달한다.
+- **결과 공유:** 배포 URL, 배포된 커밋, `/health`·`/health/ready` 결과, 오류 로그 요약(비밀값·개인정보 제외)을 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)에 남긴다. 배포 상태는 GitHub 커밋의 체크와 CI로도 볼 수 있다.
+
 ### 2-1. 선행 조건
 
 - 개발용 DB에 `main`의 마이그레이션이 모두 적용돼 있다(1단계, 2026-10-23부터는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)의 `KEMI-dev`).
 - `main`의 API CI·Web CI가 통과한 상태다.
-- Render 계정이 GitHub 저장소 `Jubileekim/KEMI`에 접근할 수 있다(Render GitHub 앱 설치·저장소 선택). 저장소 소유자 승인이 필요할 수 있다.
+- 관리자(희년님)의 Render 계정에 GitHub 저장소 `Jubileekim/KEMI`가 연결돼 있다(Render GitHub 앱 설치 시 이 저장소만 선택).
 - 기존에 만든 KEMI Render 서비스가 없는지 확인한다(중복 배포 방지, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)).
 
 ### 2-2. Blueprint로 서비스 만들기
