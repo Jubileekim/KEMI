@@ -11,6 +11,7 @@ import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
 import { createProjectDiscoveryService } from "./project-discovery/project-discovery.service.js";
 import { createProfileService } from "./profiles/profile.service.js";
+import { createPricingService } from "./pricing/pricing.service.js";
 import { createApplicationService } from "./applications/application.service.js";
 import { createNotificationService } from "./notifications/notification.service.js";
 import { createProjectService } from "./projects/project.service.js";
@@ -50,6 +51,10 @@ function start(env: Env) {
     applicationService: createApplicationService({ prisma }),
     notificationService: createNotificationService({ prisma }),
     projectDiscoveryService: createProjectDiscoveryService({ prisma }),
+    pricingService: createPricingService({
+      apiKey: env.AI_PRICING_API_KEY,
+      model: env.AI_PRICING_MODEL,
+    }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",
