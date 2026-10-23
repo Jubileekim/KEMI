@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-23 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 두 역할 프로필 편집의 클라이언트·Mock 구현. 실제 API/Google·파일 저장 검증·이메일 가입 정책 충돌은 남음. 카카오 미착수. 0단계·1단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 두 역할 프로필 편집의 클라이언트·Mock 구현. 실제 API/Google·파일 저장 검증·이메일 가입 정책 충돌은 남음. 카카오 미착수. 0단계·1단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -223,7 +223,7 @@
 - **원격 Web CI:** 기능 커밋 `a408d94fd9787cc51aedbbb3d4ade789094c209c`의 [run 83](https://github.com/Jubileekim/KEMI/actions/runs/39968996079) **success**. Ubuntu/Node 24에서 npm ci·형식·단위 59개·타입/린트/빌드·Chromium 데스크톱/모바일 **64/64**·report 업로드 성공을 확인했다. 로컬 Edge 64/64와 구분하는 별도 증거다. API CI/DB/Google 실연동 성공을 뜻하지 않는다.
 - 위 링크와 원격 결과를 기록하는 최종 전달 커밋은 이 문서만 변경하며 소스·테스트는 검증한 `a408d94`와 같다. 문서 형식/공백 검사 후 푸시한다. 이 문서 커밋의 새 CI는 PR Checks에서 최신 SHA별로 확인하며, 기능 커밋의 성공으로 최신 실행을 통과 처리하지 않는다.
 
-## 1-C 의뢰인·크리에이터 프로필 편집 (2026-10-23)
+## 1-C 의뢰인·크리에이터 프로필 편집 (2026-10-23~24)
 
 ### 완료 범위·변경 파일
 
@@ -256,5 +256,9 @@
 ### Git 전달 상태
 
 - 기존 1-C 프론트 브랜치/PR 없음 확인. 백엔드 프로필 PR #13은 참고 계약이며 이번 프론트 PR이 아니다. 열린 1-B Draft PR #36의 `9734384`에서 `feat/frontend-1c-profiles` 생성. PR base는 `feat/frontend-1b-google-auth`로 두어 1-C만 검토하며 선행 PR 병합 뒤 재지정 검토가 필요하다.
-- 계약·단위 검사 커밋 [b0c0367](https://github.com/Jubileekim/KEMI/commit/b0c0367) 푸시 완료. 화면·Mock·E2E·QA·진행 기록은 별도 기능 커밋으로 전달한다.
-- PR 링크·최종 전체 E2E·원격 CI는 해당 실행 확인 뒤 아래에 추가한다. 로컬 결과로 원격 CI를 통과 처리하지 않는다. 실제 API/DB와 누락 계약·미결정 경계 때문에 Draft로 전달한다.
+- 계약·단위 검사 [b0c0367](https://github.com/Jubileekim/KEMI/commit/b0c0367), 화면·Mock·E2E·QA·진행 기록 [39c00d4](https://github.com/Jubileekim/KEMI/commit/39c00d4)를 푸시했다. 제한된 기존 fetch 목록에 이번 브랜치만 추가하고 원격/로컬 SHA 일치를 확인했다.
+- [Draft PR #37](https://github.com/Jubileekim/KEMI/pull/37) 생성·이 채팅 연결 완료. base `feat/frontend-1b-google-auth`. 실제 API/DB와 누락 선택정보 계약·미결정 경계 때문에 Draft로 전달한다. 병합/자동 병합/배포 없음.
+- 초기 24개 프로필 테스트의 서버 종료 대기는 작업 소유 프로세스만 경로·포트·PID로 확인 후 수동 정리했다(초기 러너 종료 코드 1). 이후 완료한 최종 전체 **92/92·종료 코드 0**과 구분한다. 사용한 5179 테스트/4183 preview 서버도 종료했다.
+- **별도 Vercel 상태:** 기존 GitHub 연동이 커밋 작성자의 Vercel 프로젝트 접근 권한 부족으로 `failure`를 보고했다. Web CI 결과와 별도이며 코드 빌드/테스트 실패나 배포 성공으로 해석하지 않는다. 배포/권한 변경은 실행하지 않았다.
+- **원격 Web CI:** 기능 커밋 `39c00d45155c5f57cb5fe24bb6dcb0c42f26c149`의 [run 85](https://github.com/Jubileekim/KEMI/actions/runs/39973660712) **success**. Ubuntu/Node 24에서 npm ci·형식·단위 **70/70**·타입/ESLint/빌드·Chromium 설치·데스크톱/모바일 **92/92**·report 업로드 성공과 실제 job 로그를 확인했다. 로컬 Edge 92/92와 구분하는 별도 증거다. API CI/실서버·DB·외부 제공자 검증 결과가 아니다.
+- 위 원격 결과·커밋/PR 링크를 기록하는 최종 전달 커밋은 이 문서만 변경한다. 소스·검사는 검증한 `39c00d4`와 동일하다. 문서 형식/공백 검사를 수행한 뒤 푸시하며 해당 SHA의 새 CI는 PR Checks에서 별도로 확인한다. 기능 SHA의 성공으로 새 실행을 통과 처리하지 않는다.
