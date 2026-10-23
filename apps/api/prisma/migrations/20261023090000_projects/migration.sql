@@ -11,6 +11,7 @@ CREATE TABLE "projects" (
   "recruitment_end_at" TIMESTAMPTZ(3) NOT NULL,
   "delivery_due_date" DATE NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'OPEN',
+  "close_reason" TEXT,
   "deleted_at" TIMESTAMPTZ(3),
   "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -18,8 +19,8 @@ CREATE TABLE "projects" (
   CONSTRAINT "projects_client_id_fkey" FOREIGN KEY ("client_id")
     REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "projects_purpose_check" CHECK ("purpose" IN (
-    'WEDDING', 'FIRST_BIRTHDAY', 'PROPOSAL', 'FAMILY_EVENT',
-    'TRAVEL', 'SNS_SHORTFORM', 'OTHER'
+    'WEDDING_COUPLE', 'CHILD_FAMILY', 'THANKS_CELEBRATION',
+    'TRAVEL_DAILY', 'SNS_SHORTFORM', 'OTHER'
   )),
   CONSTRAINT "projects_styles_check" CHECK (
     "styles" <@ ARRAY[
@@ -32,7 +33,17 @@ CREATE TABLE "projects" (
     "expected_duration_seconds" IS NULL
     OR "expected_duration_seconds" BETWEEN 1 AND 21600
   ),
-  CONSTRAINT "projects_status_check" CHECK ("status" IN ('OPEN', 'CLOSED', 'CONTRACTED')),
+  CONSTRAINT "projects_status_check" CHECK (
+    "status" IN ('OPEN', 'MATCHED', 'CLOSED', 'CONTRACTED')
+  ),
+  CONSTRAINT "projects_close_reason_check" CHECK (
+    "close_reason" IS NULL
+    OR "close_reason" IN ('MANUAL', 'EXPIRED', 'NO_SELECTION')
+  ),
+  CONSTRAINT "projects_close_state_check" CHECK (
+    ("status" = 'CLOSED' AND ("close_reason" IS NOT NULL OR "deleted_at" IS NOT NULL))
+    OR ("status" <> 'CLOSED' AND "close_reason" IS NULL)
+  ),
   CONSTRAINT "projects_deleted_check" CHECK ("deleted_at" IS NULL OR "status" = 'CLOSED'),
   CONSTRAINT "projects_schedule_check" CHECK (
     "recruitment_end_at" > "created_at"

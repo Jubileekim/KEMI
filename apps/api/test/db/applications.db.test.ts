@@ -290,6 +290,27 @@ describe("선정·거절 (APPLY-02, STATE-01)", () => {
     ).toBe(409);
   });
 
+  it.each(["NO_SELECTION", "EXPIRED"])(
+    "%s 사유로 종료된 프로젝트에서는 선정·거절할 수 없다 (직접 마감만 허용)",
+    async (closeReason) => {
+      const { client, project, applicationIds } =
+        await projectWithApplicants(1);
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { status: "CLOSED", closeReason },
+      });
+
+      expect((await accept(client.token, applicationIds[0] ?? "")).status).toBe(
+        409,
+      );
+      expect(
+        (await decline(client.token, applicationIds[0] ?? "")).status,
+      ).toBe(409);
+      const row = await prisma.workRequest.findFirstOrThrow();
+      expect(row.status).toBe("PENDING");
+    },
+  );
+
   it("직접 거절하면 그 지원만 거절되고 프로젝트는 계속 모집 중이다", async () => {
     const { client, project, creators, applicationIds } =
       await projectWithApplicants(2);

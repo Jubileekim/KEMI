@@ -1,11 +1,10 @@
 import { z } from "zod";
 
 export const VIDEO_PURPOSES = [
-  "WEDDING",
-  "FIRST_BIRTHDAY",
-  "PROPOSAL",
-  "FAMILY_EVENT",
-  "TRAVEL",
+  "WEDDING_COUPLE",
+  "CHILD_FAMILY",
+  "THANKS_CELEBRATION",
+  "TRAVEL_DAILY",
   "SNS_SHORTFORM",
   "OTHER",
 ] as const;
@@ -24,17 +23,22 @@ export const VIDEO_STYLES = [
 export const videoStyleSchema = z.enum(VIDEO_STYLES);
 export type VideoStyle = z.infer<typeof videoStyleSchema>;
 
-// OPEN: 모집 중 / CLOSED: 직접 마감(신규 지원만 차단, 대기 지원자 선정 가능) / MATCHED: 지원자 선정, 거래 단계
-// CONTRACTED: 계약 체결(계약 기능에서 사용) / NO_SELECTION: 선정자와 합의 실패 등으로 무선정 종료(계약 기능에서 사용)
 export const PROJECT_STATUSES = [
   "OPEN",
-  "CLOSED",
   "MATCHED",
+  "CLOSED",
   "CONTRACTED",
-  "NO_SELECTION",
 ] as const;
 export const projectStatusSchema = z.enum(PROJECT_STATUSES);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
+
+export const PROJECT_CLOSE_REASONS = [
+  "MANUAL",
+  "EXPIRED",
+  "NO_SELECTION",
+] as const;
+export const projectCloseReasonSchema = z.enum(PROJECT_CLOSE_REASONS);
+export type ProjectCloseReason = z.infer<typeof projectCloseReasonSchema>;
 
 export const PROJECT_SORTS = [
   "LATEST",
@@ -128,6 +132,7 @@ export interface ProjectSummary {
   recruitmentEndAt: string;
   deliveryDueDate: string;
   status: ProjectStatus;
+  closeReason: ProjectCloseReason | null;
   createdAt: string;
   updatedAt: string;
 }

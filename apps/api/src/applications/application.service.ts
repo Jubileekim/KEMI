@@ -128,10 +128,16 @@ export function createApplicationService({
     }
   }
 
-  // 지원을 받는 단계인지: 모집 중(OPEN)이거나 직접 마감(CLOSED)이어야 한다. 선정 후(MATCHED)에는 처리할 수 없다.
-  function requireSelectable(status: string) {
-    const parsed = projectStatusSchema.parse(status);
-    if (parsed !== "OPEN" && parsed !== "CLOSED") {
+  // 지원자를 선정·거절할 수 있는 단계인지: 모집 중(OPEN)이거나 직접 마감(CLOSED + MANUAL)이어야 한다.
+  // 선정 후(MATCHED)·계약(CONTRACTED)·무선정 종료(CLOSED + NO_SELECTION)·기한 종료(CLOSED + EXPIRED)에는 처리할 수 없다.
+  function requireSelectable(project: {
+    status: string;
+    closeReason: string | null;
+  }) {
+    const status = projectStatusSchema.parse(project.status);
+    const manuallyClosed =
+      status === "CLOSED" && project.closeReason === "MANUAL";
+    if (status !== "OPEN" && !manuallyClosed) {
       throw new AppError(
         409,
         "CONFLICT",
@@ -254,7 +260,7 @@ export function createApplicationService({
           clientId,
           applicationId,
         );
-        requireSelectable(project.status);
+        requireSelectable(project);
         requirePending(application.status);
         const respondedAt = now();
 
@@ -279,9 +285,10 @@ export function createApplicationService({
           data: { status: "DISCUSSING", respondedAt },
           include: includeCreator,
         });
+        // 직접 마감한 프로젝트에서 선정하면 마감 사유를 지운다(MATCHED에는 사유가 없다, projects_close_state_check).
         await tx.project.update({
           where: { id: project.id },
-          data: { status: "MATCHED" },
+          data: { status: "MATCHED", closeReason: null },
         });
         await notify(tx, [
           {
@@ -316,7 +323,7 @@ export function createApplicationService({
           clientId,
           applicationId,
         );
-        requireSelectable(project.status);
+        requireSelectable(project);
         requirePending(application.status);
         const declined = await tx.workRequest.update({
           where: { id: applicationId },

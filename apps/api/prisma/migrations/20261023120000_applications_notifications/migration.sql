@@ -67,11 +67,6 @@ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_work_request_id_fkey" 
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- ─── 프로젝트 상태 추가 ───
--- MATCHED: 지원자 선정(거래 단계). NO_SELECTION: 무선정 종료(계약 기능에서 사용).
-ALTER TABLE "projects" DROP CONSTRAINT "projects_status_check";
-ALTER TABLE "projects" ADD CONSTRAINT "projects_status_check" CHECK ("status" IN ('OPEN', 'CLOSED', 'MATCHED', 'CONTRACTED', 'NO_SELECTION'));
-
 -- ─── CHECK 제약 (허용 값은 @kemi/shared 배열과 같아야 한다) ───
 ALTER TABLE "work_requests" ADD CONSTRAINT "work_requests_request_type_check" CHECK ("request_type" IN ('PROJECT_APPLICATION', 'DIRECT_REQUEST'));
 ALTER TABLE "work_requests" ADD CONSTRAINT "work_requests_status_check" CHECK ("status" IN ('PENDING', 'DISCUSSING', 'CONTRACTED', 'DECLINED', 'WITHDRAWN', 'EXPIRED', 'NOT_SELECTED'));
