@@ -181,5 +181,8 @@
 ### Git 전달 상태
 
 - 기존 인증 1-A 브랜치/PR 없음 확인. 기반 Draft PR #34의 `314c831`에서 `feat/frontend-1a-email-auth`를 만들었다. 별도 PR은 기반 브랜치를 대상으로 하여 0-A~0-C diff를 중복하지 않는다.
-- 세션/계약·검사 커밋: [4320db7](https://github.com/Jubileekim/KEMI/commit/4320db7). 화면/Mock·통합검사와 문서 커밋 및 PR/원격 CI 결과는 전달 확인 후 아래에 추가한다.
+- 세션/계약·검사 커밋: [4320db7](https://github.com/Jubileekim/KEMI/commit/4320db7). 화면/Mock·통합검사·문서 커밋: [130219e](https://github.com/Jubileekim/KEMI/commit/130219e). 두 커밋 모두 원격 브랜치에 푸시했고 로컬/원격 SHA 일치를 확인했다.
+- [Draft PR #35](https://github.com/Jubileekim/KEMI/pull/35) 생성·이 채팅 연결 완료. base는 아직 열린 기반 PR #34의 `feat/frontend-0abc-foundation`. 기반 병합 뒤 main 대상 재지정 검토가 필요하다. Draft는 실제 가입 정책 충돌·프로필 완료 판정 부재·실서버 검증 경계 때문에 유지한다.
+- **원격 Web CI:** 기능 커밋 `130219e`의 [run 81](https://github.com/Jubileekim/KEMI/actions/runs/39943799612) **success** 확인. Ubuntu/Node 24에서 npm ci·형식·단위·타입/린트/빌드·Chromium 설치·데스크톱/모바일 **36/36**·report 업로드가 모두 성공했다. 로컬 Edge 결과와 별도 증거다. 기존 API CI는 이 base에서 실행 대상이 아니며 API/DB 성공을 주장하지 않는다.
+- 이 결과/PR 링크를 추가한 최종 전달 커밋은 문서만 변경한다. 해당 커밋의 최신 CI는 PR Checks에서 SHA와 함께 확인할 수 있다. 문서 변경 후 형식/공백 검사를 수행하고 푸시한다. 소스·테스트는 검증한 `130219e`와 같다.
 - 다음 작업 하나는 위의 **1-A API 정합화·실서버 검증**이며 자동 착수하지 않는다.
