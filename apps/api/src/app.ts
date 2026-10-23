@@ -1,8 +1,11 @@
 import express, { type Express } from "express";
+import createApplicationRouter from "./applications/application.router.js";
+import type { ApplicationService } from "./applications/application.service.js";
 import { createAuthRouter } from "./auth/auth.router.js";
 import type { AuthService } from "./auth/auth.service.js";
 import createDocsRouter from "./docs/docs.router.js";
 import { errorHandler, notFoundHandler } from "./http/error-handler.js";
+import type { NotificationService } from "./notifications/notification.service.js";
 import createProjectDiscoveryRouter from "./project-discovery/project-discovery.router.js";
 import type { ProjectDiscoveryService } from "./project-discovery/project-discovery.service.js";
 import createProfileRouter from "./profiles/profile.router.js";
@@ -16,6 +19,8 @@ export interface AppDependencies {
   authService: AuthService;
   profileService: ProfileService;
   projectService: ProjectService;
+  applicationService: ApplicationService;
+  notificationService: NotificationService;
   projectDiscoveryService: ProjectDiscoveryService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
@@ -30,6 +35,8 @@ export function createApp({
   authService,
   profileService,
   projectService,
+  applicationService,
+  notificationService,
   projectDiscoveryService,
   appOrigin,
   trustProxyHops = 0,
@@ -47,6 +54,15 @@ export function createApp({
   app.use("/api/auth", createAuthRouter(authService, appOrigin));
   app.use("/api/profiles", createProfileRouter(authService, profileService));
   app.use("/api/projects", createProjectRouter(authService, projectService));
+  // 지원·알림 경로(/api/projects/:id/applications 포함)는 프로젝트 라우터에 없는 경로만 받는다.
+  app.use(
+    "/api",
+    createApplicationRouter(
+      authService,
+      applicationService,
+      notificationService,
+    ),
+  );
   app.use(
     "/api",
     createProjectDiscoveryRouter(authService, projectDiscoveryService),

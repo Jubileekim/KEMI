@@ -11,6 +11,8 @@ import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
 import { createProjectDiscoveryService } from "./project-discovery/project-discovery.service.js";
 import { createProfileService } from "./profiles/profile.service.js";
+import { createApplicationService } from "./applications/application.service.js";
+import { createNotificationService } from "./notifications/notification.service.js";
 import { createProjectService } from "./projects/project.service.js";
 
 // 환경 변수가 있는 제공자만 켠다.
@@ -45,6 +47,8 @@ function start(env: Env) {
     }),
     profileService: createProfileService({ prisma }),
     projectService: createProjectService({ prisma }),
+    applicationService: createApplicationService({ prisma }),
+    notificationService: createNotificationService({ prisma }),
     projectDiscoveryService: createProjectDiscoveryService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,

@@ -31,7 +31,10 @@ export default function createProjectRouter(
 
   router.get("/:projectId", async (req, res) => {
     const projectId = projectIdSchema.parse(req.params.projectId);
-    res.json(await projectService.getPublic(projectId));
+    // 로그인한 경우(토큰이 있으면) 작성자·지원자는 마감·선정 뒤에도 볼 수 있다. 토큰이 잘못되면 401이다.
+    const token = readBearerToken(req);
+    const viewer = token ? await authService.authenticate(token) : undefined;
+    res.json(await projectService.getPublic(projectId, viewer));
   });
 
   router.patch("/:projectId", async (req, res) => {

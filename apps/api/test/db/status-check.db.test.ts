@@ -1,4 +1,7 @@
 import {
+  WORK_REQUEST_CLOSED_REASONS,
+  WORK_REQUEST_STATUSES,
+  WORK_REQUEST_TYPES,
   AUTH_PROVIDERS,
   CONTENT_STYLES,
   CREATOR_SERVICE_STATUSES,
@@ -8,6 +11,7 @@ import {
   SESSION_REVOKE_REASONS,
   USER_ROLES,
   USER_STATUSES,
+  NOTIFICATION_TYPES,
   PROJECT_STATUSES,
   VIDEO_PURPOSES,
   VIDEO_STYLES,
@@ -46,6 +50,10 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["projects_status_check", PROJECT_STATUSES],
     ["projects_close_reason_check", PROJECT_CLOSE_REASONS],
     ["projects_styles_check", VIDEO_STYLES],
+    ["work_requests_request_type_check", WORK_REQUEST_TYPES],
+    ["work_requests_status_check", WORK_REQUEST_STATUSES],
+    ["work_requests_closed_reason_check", WORK_REQUEST_CLOSED_REASONS],
+    ["notifications_event_type_check", NOTIFICATION_TYPES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

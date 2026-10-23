@@ -24,6 +24,8 @@ const APP_TABLES = [
   "client_profiles",
   "creator_profiles",
   "projects",
+  "work_requests",
+  "notifications",
   "project_bookmarks",
 ];
 const DATA_API_ROLES = ["anon", "authenticated"];
