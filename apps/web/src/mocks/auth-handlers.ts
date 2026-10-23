@@ -216,3 +216,4 @@ const authHandlers = [
   }),
 ];
 export default authHandlers;
+export { readUser as readMockUser };

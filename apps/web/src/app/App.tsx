@@ -7,6 +7,7 @@ import { screens } from "./routes";
 
 const AuthForm = lazy(() => import("../features/auth/AuthForm"));
 const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
+const ProfilePage = lazy(() => import("../features/profiles/ProfilePage"));
 const GoogleProvider = import.meta.env.DEV
   ? lazy(() => import("../mocks/GoogleProvider"))
   : null;
@@ -46,9 +47,15 @@ export default function App() {
                       {screen.path === "/auth/social/callback" && (
                         <GoogleCallback />
                       )}
-                      {!["/login", "/signup", "/auth/social/callback"].includes(
-                        screen.path,
-                      ) && <Placeholder screen={screen} />}
+                      {screen.path === "/me/profile" && <ProfilePage />}
+                      {![
+                        "/login",
+                        "/signup",
+                        "/auth/social/callback",
+                        "/me/profile",
+                      ].includes(screen.path) && (
+                        <Placeholder screen={screen} />
+                      )}
                     </Guard>
                   }
                 />

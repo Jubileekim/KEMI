@@ -70,6 +70,32 @@ export default function DevTools() {
               ))}
             </select>
           </label>
+          <label htmlFor="mock-profile">
+            Mock 프로필 응답{" "}
+            <select
+              id="mock-profile"
+              onChange={(event) => {
+                api.post("/__mock__/profiles/scenario", event.target.value, {
+                  baseURL: "/",
+                  headers: { "Content-Type": "text/plain" },
+                });
+              }}
+            >
+              {[
+                "success",
+                "delay",
+                "400",
+                "403",
+                "409",
+                "500",
+                "network",
+                "expired",
+                "malformed",
+              ].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </label>
           <label htmlFor="mock-role">
             Mock 역할{" "}
             <select

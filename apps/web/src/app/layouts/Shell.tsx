@@ -33,6 +33,9 @@ export default function Shell() {
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
             <NavLink to="/me/activity">내 활동</NavLink>
+            {(role === "client" || role === "creator") && (
+              <NavLink to="/me/profile">내 프로필</NavLink>
+            )}
             {role === "guest" ? (
               <NavLink to="/login">로그인</NavLink>
             ) : (
