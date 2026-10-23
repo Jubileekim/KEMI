@@ -6,11 +6,11 @@
 
 ## 1. 환경 현황
 
-| 구성 | 플랫폼 | 식별자 | 2026-10-23 확인 상태 |
-| --- | --- | --- | --- |
-| 프론트엔드 | Vercel | 팀 `KEMI`, 프로젝트 `kemi-web` | 최초 Production 배포 `Ready` (사용자 대시보드) |
-| API | Render | 워크스페이스 `KEMI`, 서비스명 예정 `kemi-api` | 배포 설정 중; 실행 URL 미확정 |
-| DB | Supabase | `KEMI sprint mission`, PostgreSQL | 프로젝트 `ACTIVE_HEALTHY`; DB 실제 접근 및 마이그레이션 상태는 별도 확인 필요 |
+| 구성       | 플랫폼   | 식별자                                        | 2026-10-23 확인 상태                                                          |
+| ---------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| 프론트엔드 | Vercel   | 팀 `KEMI`, 프로젝트 `kemi-web`                | 최초 Production 배포 `Ready` (사용자 대시보드)                                |
+| API        | Render   | 워크스페이스 `KEMI`, 서비스명 예정 `kemi-api` | 배포 설정 중; 실행 URL 미확정                                                 |
+| DB         | Supabase | `KEMI sprint mission`, PostgreSQL             | 프로젝트 `ACTIVE_HEALTHY`; DB 실제 접근 및 마이그레이션 상태는 별도 확인 필요 |
 
 - 정식 프론트엔드 주소: **https://kemi-web-sigma.vercel.app/**
 - 이 주소를 배포 환경의 **기준 운영 도메인**으로 사용한다. Vercel 개별 배포 URL은 재배포 시 변경될 수 있으므로 `APP_ORIGIN`에 사용하지 않는다.
@@ -19,22 +19,22 @@
 
 ## 2. Vercel 프론트엔드
 
-| 항목 | 값 |
-| --- | --- |
-| 운영 URL | https://kemi-web-sigma.vercel.app/ |
-| Vercel 팀 | `KEMI` |
-| Vercel 프로젝트 | `kemi-web` |
-| 프로젝트 관리 | https://vercel.com/kemi-7f0cb6ad/kemi-web |
-| GitHub 저장소 | https://github.com/Jubileekim/KEMI |
-| Production Branch | `main` |
-| Framework | `Vite` (React + TypeScript) |
-| Root Directory | `apps/web` |
-| Install Command | `cd ../.. && npm ci --include=dev` |
-| Build Command | `cd ../.. && npm run build:web` |
-| Output Directory | `dist` |
-| Node.js | 24.x (저장소 `.nvmrc` 기준; 실제 Vercel 프로젝트 설정값 확인 필요) |
+| 항목                | 값                                                                       |
+| ------------------- | ------------------------------------------------------------------------ |
+| 운영 URL            | https://kemi-web-sigma.vercel.app/                                       |
+| Vercel 팀           | `KEMI`                                                                   |
+| Vercel 프로젝트     | `kemi-web`                                                               |
+| 프로젝트 관리       | https://vercel.com/kemi-7f0cb6ad/kemi-web                                |
+| GitHub 저장소       | https://github.com/Jubileekim/KEMI                                       |
+| Production Branch   | `main`                                                                   |
+| Framework           | `Vite` (React + TypeScript)                                              |
+| Root Directory      | `apps/web`                                                               |
+| Install Command     | `cd ../.. && npm ci --include=dev`                                       |
+| Build Command       | `cd ../.. && npm run build:web`                                          |
+| Output Directory    | `dist`                                                                   |
+| Node.js             | 24.x (저장소 `.nvmrc` 기준; 실제 Vercel 프로젝트 설정값 확인 필요)       |
 | Root 외부 소스 접근 | `packages/shared` 의존성 때문에 활성화 필요; 프로젝트 설정에서 실측 확인 |
-| 환경 변수 | 현재 웹 빌드에 필수인 클라이언트 환경 변수 없음 |
+| 환경 변수           | 현재 웹 빌드에 필수인 클라이언트 환경 변수 없음                          |
 
 ### 최초 Production 배포 기록 (2026-10-23)
 
@@ -55,28 +55,28 @@
 
 ## 3. Render 백엔드 (연결 예정)
 
-| 항목 | 설정 기준 |
-| --- | --- |
-| GitHub | `Jubileekim/KEMI` · `main` |
-| 서비스 유형 | Web Service (Node / Express) |
-| 서비스명 | `kemi-api` (생성 시 확정) |
-| Root Directory | **비움** (모노레포 루트) |
-| Build | `npm ci --include=dev && npm run build:api` |
-| Start | `npm start -w @kemi/api` |
-| Health Check | `/health` |
-| 리전 | Supabase Tokyo와의 접근 지연을 고려해 선택 후 기록 |
-| 공개 서비스 URL | **미확정**; 생성 후 여기에 기록 |
+| 항목            | 설정 기준                                          |
+| --------------- | -------------------------------------------------- |
+| GitHub          | `Jubileekim/KEMI` · `main`                         |
+| 서비스 유형     | Web Service (Node / Express)                       |
+| 서비스명        | `kemi-api` (생성 시 확정)                          |
+| Root Directory  | **비움** (모노레포 루트)                           |
+| Build           | `npm ci --include=dev && npm run build:api`        |
+| Start           | `npm start -w @kemi/api`                           |
+| Health Check    | `/health`                                          |
+| 리전            | Supabase Tokyo와의 접근 지연을 고려해 선택 후 기록 |
+| 공개 서비스 URL | **미확정**; 생성 후 여기에 기록                    |
 
 Render에 필요한 환경 변수 이름(값은 저장소·문서에 절대 기록하지 않음):
 
-| Key | 값의 출처·관리 기준 |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Supabase Connect > Session pooler, 비밀번호 포함; Render Environment에만 보관 |
-| `DATABASE_POOL_MAX` | `5` |
-| `JWT_ACCESS_SECRET` | 충분히 긴 신규 난수, Render Environment에만 보관 |
-| `APP_ORIGIN` | **`https://kemi-web-sigma.vercel.app`** |
-| `TRUST_PROXY_HOPS` | 최초 `0`; Vercel/Render 실제 요청 경로 확인 후 조정 |
+| Key                 | 값의 출처·관리 기준                                                           |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `NODE_ENV`          | `production`                                                                  |
+| `DATABASE_URL`      | Supabase Connect > Session pooler, 비밀번호 포함; Render Environment에만 보관 |
+| `DATABASE_POOL_MAX` | `5`                                                                           |
+| `JWT_ACCESS_SECRET` | 충분히 긴 신규 난수, Render Environment에만 보관                              |
+| `APP_ORIGIN`        | **`https://kemi-web-sigma.vercel.app`**                                       |
+| `TRUST_PROXY_HOPS`  | 최초 `0`; Vercel/Render 실제 요청 경로 확인 후 조정                           |
 
 Render 배포 후에는 해당 주소의 `/health` (서버 생존)와 `/health/ready` (DB 연결)를 구분해 확인한다. 데이터베이스 마이그레이션은 팀 승인과 이력 점검을 거친 별도 절차로 수행한다. 사회관계망 로그인 콜백 및 쿠키·Origin 검증은 API rewrite 반영 이후 확인한다.
 
