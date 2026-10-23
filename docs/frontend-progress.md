@@ -118,6 +118,7 @@
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
 - 지속 작업 경로는 `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`이다. 상위 폴더의 독립 앱은 보존한 이전 원본이므로 이후 커밋/PR 작업은 이 Git 복제본에서 진행한다. 이동 후 workspace 링크를 오프라인 재설치로 갱신하고 shared 모듈 경로를 확인했다.
+- 구현 커밋 `76fd896e431551b7e54f9af7cd3f22dab7d2bdd2` 푸시 완료. [Draft PR #34](https://github.com/Jubileekim/KEMI/pull/34) 생성·이 채팅에 연결 완료. API 단위 검사 실패를 PR 본문에 명시했다. 원격 CI의 최종 결과는 미확인이고 자동 병합·배포는 실행하지 않았다.
 
 - 사용자가 단계 종료 후 커밋·푸시·PR을 요청함에 따라 위 0-C 종료 당시의 Git 미실행 상태에서 별도 진행. 기준은 `Jubileekim/KEMI` main `73057fe69916631b553723c8e14869629c17de53`이며 작업 브랜치는 `feat/frontend-0abc-foundation`이다. 이 첫 PR에는 원격에 없던 0-A·0-B 기반과 0-C를 함께 포함한다.
 - 위 0-A~0-C 기록은 독립 로컬 앱에서 검증한 당시 이력이다. 원격에는 API/shared와 웹 테스트·CI가 이미 있어 보존했다. `apps/api`, `packages/shared`, 기존 workflow 파일은 변경하지 않았다. 실제 프론트 제품 기능·API 연동을 새로 완료한 것은 아니다.
