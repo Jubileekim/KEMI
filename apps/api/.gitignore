@@ -1,0 +1,12 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+/prisma/generated/
+
+# Legacy generated client and local schema backups
+/generated/
+/prisma/*.bak
+!.env.example
+!.env.test.example
