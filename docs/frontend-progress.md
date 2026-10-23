@@ -332,4 +332,6 @@
 - 작업물 모델/단위 [b8fd618](https://github.com/Jubileekim/KEMI/commit/b8fd618), 화면·Mock·검사·QA·기록 [01e7213](https://github.com/Jubileekim/KEMI/commit/01e7213)를 푸시했다. [Draft PR #39](https://github.com/Jubileekim/KEMI/pull/39), base `feat/frontend-1d-packages`, 이 채팅 연결 완료. 원격/로컬 SHA 일치와 미커밋 변경 없음(이 종료 기록 갱신 전)을 확인했다.
 - **원격 Web CI #39:** 기능 SHA `01e72134ed500725e4109e8ded09eaf926072254`의 [run 88](https://github.com/Jubileekim/KEMI/actions/runs/39982279331)은 확인 시 npm ci·형식·단위·타입/린트/빌드 **success**, Chromium 설치 **in_progress**, 브라우저 E2E/report **pending**이다. 로컬 94/124/운영5 통과와 구분한다. 원격 E2E 최종 결과는 미검증이므로 Draft를 유지한다. #38의 반복 설치 시간 제한과 같은 환경 구간이다.
 - 마지막 링크·CI 경계 갱신은 **이 문서만 바꾸는 별도 전달 커밋**으로 푸시한다. 소스·테스트는 검증한 `01e7213`와 같고 형식/공백을 다시 확인한다. 동일 PR의 `cancel-in-progress` 설정 때문에 새 SHA 푸시 시 기능 SHA의 실행이 교체될 수 있다. 최신 문서 SHA의 Web CI는 [PR #39 Checks](https://github.com/Jubileekim/KEMI/pull/39/checks)에서 별도로 확인하며 기능 SHA의 부분 성공으로 최신 CI를 통과 처리하지 않는다. 실제 API CI·DB·제공자 검증 성공을 뜻하지 않는다.
-- 두 PR은 모두 Draft·미병합이며 자동 병합 설정·배포·다음 범위 착수 없음. 작성자가 요청하지 않은 사람 대상 댓글/메시지는 보내지 않았다. 작업 소유 개발/preview 서버는 로컬 검증 뒤 종료한다.
+- 두 PR은 모두 Draft·미병합이며 자동 병합 설정·배포·다음 범위 착수 없음. 작업 소유 5180 개발/4184 preview 서버를 종료했고 해당 포트의 listener 없음도 확인했다.
+
+- **Vercel 추가 경계:** 최종 문서 SHA의 GitHub Vercel 상태도 failure이며 대상은 기존 프로젝트의 실행 링크다. #38의 초대 화면과 같은 실패 원인이라고 단정하지 않는다. 연결된 Vercel 도구로 해당 팀/프로젝트·SHA를 읽기 전용 조회했으나 팀 범위 권한 없음 **403**으로 원인 로그를 확인하지 못했다. 이 결과는 배포 원인 미검증이며 Web CI/로컬 빌드 실패를 뜻하지 않는다. 팀 접근 승인·권한/자동 배포 설정 변경·새 배포·재배포는 이번 범위에서 실행하지 않았다.
