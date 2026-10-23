@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const validProject = {
   title: "돌잔치 성장영상 제작",
   description: "아이의 첫 생일에 상영할 감성적인 성장영상을 만들고 싶습니다.",
-  purpose: "FIRST_BIRTHDAY",
+  purpose: "CHILD_FAMILY",
   styles: ["EMOTIONAL", "CINEMATIC"],
   budget: 50_000,
   expectedDurationSeconds: 90,

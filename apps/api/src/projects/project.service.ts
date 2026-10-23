@@ -2,6 +2,7 @@ import {
   type AuthUser,
   type ProjectListQuery,
   type ProjectListResponse,
+  projectCloseReasonSchema,
   type ProjectStatus,
   type ProjectSummary,
   projectCreateSchema,
@@ -26,6 +27,7 @@ interface ProjectRow {
   recruitmentEndAt: Date;
   deliveryDueDate: Date;
   status: string;
+  closeReason: string | null;
   createdAt: Date;
   updatedAt: Date;
   client: { name: string };
@@ -55,6 +57,10 @@ function toProject(row: ProjectRow): ProjectSummary {
     recruitmentEndAt: row.recruitmentEndAt.toISOString(),
     deliveryDueDate: row.deliveryDueDate.toISOString().slice(0, 10),
     status: projectStatusSchema.parse(row.status),
+    closeReason:
+      row.closeReason === null
+        ? null
+        : projectCloseReasonSchema.parse(row.closeReason),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -299,7 +305,7 @@ export function createProjectService({
       }
       const row = await prisma.project.update({
         where: { id: projectId },
-        data: { status: "CLOSED" },
+        data: { status: "CLOSED", closeReason: "MANUAL" },
         include: includeClient,
       });
       return toProject(row);
@@ -307,7 +313,8 @@ export function createProjectService({
 
     async remove(user, projectId) {
       const existing = await getOwned(user, projectId);
-      if (projectStatusSchema.parse(existing.status) === "CONTRACTED") {
+      const status = projectStatusSchema.parse(existing.status);
+      if (status === "MATCHED" || status === "CONTRACTED") {
         throw new AppError(
           409,
           "CONFLICT",

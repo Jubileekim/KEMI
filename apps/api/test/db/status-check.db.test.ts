@@ -4,6 +4,7 @@ import {
   CREATOR_SERVICE_STATUSES,
   PRODUCT_CATEGORIES,
   PRODUCTION_ROLES,
+  PROJECT_CLOSE_REASONS,
   SESSION_REVOKE_REASONS,
   USER_ROLES,
   USER_STATUSES,
@@ -43,6 +44,7 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["creator_profiles_service_status_check", CREATOR_SERVICE_STATUSES],
     ["projects_purpose_check", VIDEO_PURPOSES],
     ["projects_status_check", PROJECT_STATUSES],
+    ["projects_close_reason_check", PROJECT_CLOSE_REASONS],
     ["projects_styles_check", VIDEO_STYLES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(

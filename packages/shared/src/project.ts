@@ -1,11 +1,10 @@
 import { z } from "zod";
 
 export const VIDEO_PURPOSES = [
-  "WEDDING",
-  "FIRST_BIRTHDAY",
-  "PROPOSAL",
-  "FAMILY_EVENT",
-  "TRAVEL",
+  "WEDDING_COUPLE",
+  "CHILD_FAMILY",
+  "THANKS_CELEBRATION",
+  "TRAVEL_DAILY",
   "SNS_SHORTFORM",
   "OTHER",
 ] as const;
@@ -24,9 +23,22 @@ export const VIDEO_STYLES = [
 export const videoStyleSchema = z.enum(VIDEO_STYLES);
 export type VideoStyle = z.infer<typeof videoStyleSchema>;
 
-export const PROJECT_STATUSES = ["OPEN", "CLOSED", "CONTRACTED"] as const;
+export const PROJECT_STATUSES = [
+  "OPEN",
+  "MATCHED",
+  "CLOSED",
+  "CONTRACTED",
+] as const;
 export const projectStatusSchema = z.enum(PROJECT_STATUSES);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
+
+export const PROJECT_CLOSE_REASONS = [
+  "MANUAL",
+  "EXPIRED",
+  "NO_SELECTION",
+] as const;
+export const projectCloseReasonSchema = z.enum(PROJECT_CLOSE_REASONS);
+export type ProjectCloseReason = z.infer<typeof projectCloseReasonSchema>;
 
 export const PROJECT_SORTS = [
   "LATEST",
@@ -120,6 +132,7 @@ export interface ProjectSummary {
   recruitmentEndAt: string;
   deliveryDueDate: string;
   status: ProjectStatus;
+  closeReason: ProjectCloseReason | null;
   createdAt: string;
   updatedAt: string;
 }

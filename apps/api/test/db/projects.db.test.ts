@@ -40,7 +40,7 @@ function projectBody(overrides: Record<string, unknown> = {}) {
   return {
     title: "돌잔치 성장영상 제작",
     description: "아이의 첫 생일에 상영할 감성적인 성장영상을 만들고 싶습니다.",
-    purpose: "FIRST_BIRTHDAY",
+    purpose: "CHILD_FAMILY",
     styles: ["EMOTIONAL", "CINEMATIC"],
     budget: 50_000,
     expectedDurationSeconds: 90,
@@ -65,7 +65,7 @@ describe("공개 프로젝트 CRUD", () => {
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       clientName: "CLIENT 1",
-      purpose: "FIRST_BIRTHDAY",
+      purpose: "CHILD_FAMILY",
       styles: ["EMOTIONAL", "CINEMATIC"],
       budget: 50_000,
       status: "OPEN",
@@ -96,13 +96,13 @@ describe("공개 프로젝트 CRUD", () => {
       projectBody({ title: "감성 돌잔치 영상", budget: 50_000 }),
       projectBody({
         title: "깔끔한 웨딩 영상",
-        purpose: "WEDDING",
+        purpose: "WEDDING_COUPLE",
         styles: ["CLEAN"],
         budget: 30_000,
       }),
       projectBody({
         title: "트렌디 여행 릴스",
-        purpose: "TRAVEL",
+        purpose: "TRAVEL_DAILY",
         styles: ["TRENDY"],
         budget: 20_000,
       }),
@@ -115,7 +115,7 @@ describe("공개 프로젝트 CRUD", () => {
     expect(created.map((response) => response.status)).toEqual([201, 201, 201]);
 
     const filtered = await request(app).get(
-      "/api/projects?purpose=WEDDING&styles=CLEAN&budgetMin=20000&budgetMax=40000",
+      "/api/projects?purpose=WEDDING_COUPLE&styles=CLEAN&budgetMin=20000&budgetMax=40000",
     );
     expect(filtered.status).toBe(200);
     expect(

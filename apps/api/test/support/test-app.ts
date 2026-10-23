@@ -38,6 +38,7 @@ const EMPTY_PROJECT = {
   recruitmentEndAt: "2026-11-01T00:00:00.000Z",
   deliveryDueDate: "2026-11-10",
   status: "OPEN" as const,
+  closeReason: null,
   createdAt: "2026-10-23T00:00:00.000Z",
   updatedAt: "2026-10-23T00:00:00.000Z",
 };
@@ -56,7 +57,12 @@ const unusedProjectService: ProjectService = {
     }),
   create: () => Promise.resolve(EMPTY_PROJECT),
   update: () => Promise.resolve(EMPTY_PROJECT),
-  close: () => Promise.resolve({ ...EMPTY_PROJECT, status: "CLOSED" }),
+  close: () =>
+    Promise.resolve({
+      ...EMPTY_PROJECT,
+      status: "CLOSED",
+      closeReason: "MANUAL",
+    }),
   remove: () => Promise.resolve(),
 };
 
