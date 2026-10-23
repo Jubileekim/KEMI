@@ -227,23 +227,61 @@ WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data
 
 ## 2. Render 백엔드 배포 설정
 
-| 항목              | 값                                          |
-| ----------------- | ------------------------------------------- |
-| Build Command     | `npm ci --include=dev && npm run build:api` |
-| Start Command     | `npm start -w @kemi/api`                    |
-| Health Check Path | `/health`                                   |
+저장소 루트의 [`render.yaml`](../../render.yaml)(Render Blueprint)로 서비스를 만든다. 대시보드에서 값을 하나씩 입력하지 않는다.
 
-| 환경 변수           | 값                                                           |
-| ------------------- | ------------------------------------------------------------ |
-| `NODE_ENV`          | `production`                                                 |
-| `DATABASE_URL`      | 1-2와 같은 Session pooler 주소                               |
-| `DATABASE_POOL_MAX` | `5`                                                          |
-| `JWT_ACCESS_SECRET` | 로컬과 **다른** 새 값                                        |
-| `APP_ORIGIN`        | Vercel 프론트엔드 주소 (예: `https://<프로젝트>.vercel.app`) |
-| `TRUST_PROXY_HOPS`  | `0`으로 시작한다. 4단계에서 확인한 값으로 바꾼다             |
+### 2-1. 선행 조건
 
+- 개발용 DB에 `main`의 마이그레이션이 모두 적용돼 있다(1단계, 2026-10-23부터는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)의 `KEMI-dev`).
+- `main`의 API CI·Web CI가 통과한 상태다.
+- Render 계정이 GitHub 저장소 `Jubileekim/KEMI`에 접근할 수 있다(Render GitHub 앱 설치·저장소 선택). 저장소 소유자 승인이 필요할 수 있다.
+- 기존에 만든 KEMI Render 서비스가 없는지 확인한다(중복 배포 방지, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)).
+
+### 2-2. Blueprint로 서비스 만들기
+
+1. Render 대시보드 → **New → Blueprint** → 저장소 `Jubileekim/KEMI`, 브랜치 `main`을 고른다.
+2. `render.yaml`을 읽어 `kemi-api` 웹 서비스 1개를 만든다고 나오는지 확인한다.
+3. `sync: false` 항목을 입력한다. 이 화면은 처음 만들 때만 나온다.
+
+   | 환경 변수      | 값                                                                          |
+   | -------------- | --------------------------------------------------------------------------- |
+   | `DATABASE_URL` | 개발용 Supabase **Session pooler** 주소 (README "DB 연결 주소 고르기")      |
+   | `APP_ORIGIN`   | Vercel 프론트엔드 주소 (예: `https://<프로젝트>.vercel.app`, 끝에 `/` 없음) |
+   - Vercel 주소가 아직 없으면 임시 값(예: `https://example.invalid`)을 넣고, 3단계 후 실제 주소로 바꾼다. 그 전에는 refresh·logout·소셜 가입이 `Origin` 검사에서 막힌다.
+
+4. **Apply**로 만든다. 나머지 값은 `render.yaml`에 정해져 있다.
+
+   | 항목                | 값                                                                          |
+   | ------------------- | --------------------------------------------------------------------------- |
+   | 플랜·리전           | `free`, `singapore` (개발용 Supabase 도쿄와 가장 가까움. 만든 뒤 변경 불가) |
+   | Build Command       | `npm ci --include=dev && npm run build:api`                                 |
+   | Start Command       | `npm start -w @kemi/api`                                                    |
+   | Health Check Path   | `/health`                                                                   |
+   | 자동 배포           | `checksPass`: `main`에 병합된 커밋 중 GitHub CI를 통과한 것만 배포          |
+   | `NODE_ENV`          | `production`                                                                |
+   | `DATABASE_POOL_MAX` | `5`                                                                         |
+   | `JWT_ACCESS_SECRET` | Render가 생성한 256비트 임의 값 (로컬과 다름. 복사해 두지 않는다)           |
+   | `TRUST_PROXY_HOPS`  | `0`으로 시작. 4단계에서 확인한 값으로 바꾼다                                |
+   | Node 버전           | 루트 `.nvmrc`(`24`)                                                         |
+
+- 마이그레이션은 배포 때 자동으로 돌리지 않는다(`preDeployCommand` 없음). 스키마 변경은 1단계 절차(이슈 공유 → 읽기 전용 점검 → `npm run db:deploy` → 확인)로 따로 적용하고, **적용한 뒤에** 그 스키마를 쓰는 코드를 배포한다.
+- 소셜 로그인 키(`GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`·`KAKAO_REST_API_KEY`·`KAKAO_CLIENT_SECRET`)는 발급되면 서비스의 **Environment**에서 직접 추가한다. `render.yaml`에 없는 변수는 Blueprint를 다시 동기화해도 지워지지 않는다.
 - 4단계 전까지는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다. 실제 사용자에게 공개하기 전에 4단계를 끝낸다.
-- 배포 후 `https://<render 서비스>.onrender.com/health` → `200`
+
+### 2-3. 배포 후 확인
+
+```bash
+curl -s -o /dev/null -w "%{http_code}
+" https://<render 서비스>.onrender.com/health
+```
+
+```bash
+curl -s https://<render 서비스>.onrender.com/health/ready
+```
+
+- `/health` → `200`, `/health/ready` → `200`이면 Render에서 DB까지 연결된 것이다. `503`이면 `DATABASE_URL`(Session pooler 주소인지, 비밀번호)을 확인한다.
+- 운영 환경에서는 Swagger UI가 꺼진다. `/api/docs` → `404`가 정상이다.
+- 무료 플랜은 15분 동안 요청이 없으면 잠들고, 다음 요청에서 약 1분 걸려 깨어난다. 첫 확인이 느려도 기다린다.
+- 결과(서비스 주소, 배포 커밋, 응답 코드)를 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)과 아래 "결과 기록"에 남긴다. 비밀값은 적지 않는다.
 
 ## 3. Vercel 프론트엔드 rewrite 설정 (프론트엔드 담당)
 

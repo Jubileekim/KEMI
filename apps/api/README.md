@@ -307,16 +307,21 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 - 마이그레이션을 다른 주소로 돌려야 할 때만 `MIGRATION_DATABASE_URL`을 추가한다.
 - Session pooler는 동시 연결 수 한도가 있으므로 `DATABASE_POOL_MAX`를 작게 유지한다.
 
-## Render 배포 설정 (예정)
+## Render 배포 설정
+
+저장소 루트의 [`render.yaml`](../../render.yaml)(Render Blueprint)이 기준이다. 서비스 생성·확인 순서는 [배포 절차서](../../docs/runbooks/auth-deploy-verification.md) 2단계에 있다.
 
 | 항목              | 값                                                                                                                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Root Directory    | (비움, 저장소 루트)                                                                                                                      |
 | Build Command     | `npm ci --include=dev && npm run build:api` (린트·Prisma CLI·TypeScript가 devDependencies라서 `NODE_ENV=production`이어도 설치되게 한다) |
 | Start Command     | `npm start -w @kemi/api`                                                                                                                 |
-| Environment       | `TRUST_PROXY_HOPS`는 배포 후 실제 `X-Forwarded-For`를 확인한 값으로 넣는다. 확인 전에는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다   |
 | Health Check Path | `/health`                                                                                                                                |
-| Environment       | `NODE_ENV=production`, `DATABASE_URL` 등                                                                                                 |
+| 플랜·리전         | `free`, `singapore`                                                                                                                      |
+| 자동 배포         | `checksPass` (`main`의 CI를 통과한 커밋만)                                                                                               |
+| Environment       | `NODE_ENV=production`, `DATABASE_URL`·`APP_ORIGIN`(생성 시 입력), `JWT_ACCESS_SECRET`(Render 생성), `TRUST_PROXY_HOPS=0`(4단계에서 확정) |
+
+마이그레이션은 배포 때 자동으로 돌리지 않는다. 팀 DB 적용 절차를 따로 거친다.
 
 헬스 체크는 DB를 보지 않는 `/health`를 쓴다. DB 장애 때문에 Render가 서버를 계속 재시작하지 않게 하기 위해서다. DB까지 확인하려면 `/health/ready`를 사용한다.
 
