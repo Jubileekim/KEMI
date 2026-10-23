@@ -151,7 +151,7 @@ model Project {
   closeReason             String?   @map("close_reason")
   deletedAt               DateTime? @map("deleted_at") @db.Timestamptz(3)
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   client User @relation(fields: [clientId], references: [id], onDelete: Restrict)
 
