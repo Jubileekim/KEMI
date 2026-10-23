@@ -142,6 +142,10 @@ const projectListParameters = [
   },
 ];
 
+const discoveryListParameters = projectListParameters.filter(
+  ({ name }) => name === "page" || name === "pageSize",
+);
+
 const idParam = (name: string) => ({
   name,
   in: "path",
@@ -188,6 +192,7 @@ const openApiDocument = {
     { name: "projects", description: "공개 맞춤 영상 제작 의뢰" },
     { name: "applications", description: "프로젝트 지원·선정·거절" },
     { name: "notifications", description: "인앱 알림" },
+    { name: "discovery", description: "프로젝트 북마크·기본 추천" },
   ],
   paths: {
     "/health": {
@@ -592,6 +597,82 @@ const openApiDocument = {
         },
       },
     },
+    "/api/bookmarks/projects": {
+      get: {
+        tags: ["discovery"],
+        summary: "내 프로젝트 북마크 목록",
+        description:
+          "CREATOR가 저장한 프로젝트를 최근 북마크 순으로 반환한다. 모집이 끝난 프로젝트도 남기되 삭제된 프로젝트는 제외한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: discoveryListParameters,
+        responses: {
+          200: {
+            description: "북마크한 프로젝트 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProjectListResponse" },
+              },
+            },
+          },
+          400: errorResponse("잘못된 페이지 조건 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/bookmarks/projects/{projectId}": {
+      put: {
+        tags: ["discovery"],
+        summary: "프로젝트 북마크 저장",
+        description:
+          "CREATOR만 모집 중인 프로젝트를 저장할 수 있다. 같은 요청을 반복해도 북마크는 한 건만 유지된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        responses: {
+          200: projectResponse,
+          400: errorResponse("잘못된 프로젝트 ID (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+          404: errorResponse("모집 중인 프로젝트가 없음 (`NOT_FOUND`)"),
+        },
+      },
+      delete: {
+        tags: ["discovery"],
+        summary: "프로젝트 북마크 해제",
+        description: "북마크가 없어도 성공하는 멱등 요청이다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        responses: {
+          204: { description: "북마크 해제 완료" },
+          400: errorResponse("잘못된 프로젝트 ID (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/recommendations/projects": {
+      get: {
+        tags: ["discovery"],
+        summary: "내 추천 프로젝트 목록",
+        description:
+          "북마크의 목적·스타일과 크리에이터 프로필의 분야·스타일에 맞는 모집 중 프로젝트를 최신순으로 반환한다. 선호 정보나 일치 결과가 없으면 최신 프로젝트를 반환하며 이미 북마크한 항목은 제외한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: discoveryListParameters,
+        responses: {
+          200: {
+            description: "추천 프로젝트 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProjectListResponse" },
+              },
+            },
+          },
+          400: errorResponse("잘못된 페이지 조건 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
     "/api/projects/{projectId}/applications": {
       post: {
         tags: ["applications"],
@@ -615,7 +696,9 @@ const openApiDocument = {
           ),
           ...bearerErrors,
           403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
-          404: errorResponse("없거나 삭제된 프로젝트 (`NOT_FOUND`)"),
+          404: errorResponse(
+            "없거나 삭제된 프로젝트, 또는 이용 제한·탈퇴 의뢰인의 프로젝트 (`NOT_FOUND`)",
+          ),
           409: errorResponse(
             "모집 마감 또는 이미 지원한 프로젝트 (`CONFLICT`)",
           ),

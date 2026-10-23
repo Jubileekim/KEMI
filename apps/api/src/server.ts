@@ -9,6 +9,7 @@ import {
 } from "./auth/social/providers.js";
 import { EnvValidationError, parseEnv, type Env } from "./config/env.js";
 import { createPrismaClient } from "./lib/prisma.js";
+import { createProjectDiscoveryService } from "./project-discovery/project-discovery.service.js";
 import { createProfileService } from "./profiles/profile.service.js";
 import { createApplicationService } from "./applications/application.service.js";
 import { createNotificationService } from "./notifications/notification.service.js";
@@ -48,6 +49,7 @@ function start(env: Env) {
     projectService: createProjectService({ prisma }),
     applicationService: createApplicationService({ prisma }),
     notificationService: createNotificationService({ prisma }),
+    projectDiscoveryService: createProjectDiscoveryService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

@@ -9,6 +9,10 @@ import { createProfileService } from "../../src/profiles/profile.service.js";
 import { createApplicationService } from "../../src/applications/application.service.js";
 import { createNotificationService } from "../../src/notifications/notification.service.js";
 import {
+  createProjectDiscoveryService,
+  type ProjectDiscoveryService,
+} from "../../src/project-discovery/project-discovery.service.js";
+import {
   createProjectService,
   type ProjectService,
 } from "../../src/projects/project.service.js";
@@ -25,6 +29,7 @@ interface TestAppOptions {
   apiDocs?: boolean;
   socialProviders?: SocialProviders;
   projectService?: ProjectService;
+  projectDiscoveryService?: ProjectDiscoveryService;
 }
 
 const EMPTY_PROJECT = {
@@ -68,6 +73,21 @@ const unusedProjectService: ProjectService = {
   remove: () => Promise.resolve(),
 };
 
+const unusedProjectDiscoveryService: ProjectDiscoveryService = {
+  listBookmarks: () =>
+    Promise.resolve({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    }),
+  addBookmark: () => Promise.resolve(EMPTY_PROJECT),
+  removeBookmark: () => Promise.resolve(),
+  listRecommendations: () =>
+    Promise.resolve({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    }),
+};
+
 // 단위 테스트용: 주소만 있고 실제로 쿼리하지 않으므로 접속하지 않는다.
 let unusedPrisma: PrismaClient | undefined;
 
@@ -79,6 +99,7 @@ export function createTestApp({
   apiDocs,
   socialProviders,
   projectService,
+  projectDiscoveryService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -102,6 +123,11 @@ export function createTestApp({
     // 지원·알림 경로는 인증을 먼저 하므로, DB 없는 단위 테스트에서도 쿼리 전에 끝난다.
     applicationService: createApplicationService({ prisma: client }),
     notificationService: createNotificationService({ prisma: client }),
+    projectDiscoveryService:
+      projectDiscoveryService ??
+      (prisma
+        ? createProjectDiscoveryService({ prisma: client })
+        : unusedProjectDiscoveryService),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

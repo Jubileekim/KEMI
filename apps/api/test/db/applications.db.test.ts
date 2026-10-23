@@ -203,6 +203,33 @@ describe("지원서 제출 (APPLY-01)", () => {
   });
 });
 
+describe("비활성 의뢰인의 프로젝트 (#22 리뷰)", () => {
+  it.each(["RESTRICTED", "WITHDRAWN"])(
+    "%s 의뢰인의 프로젝트에는 ID로 직접 지원해도 404이고, 지원·알림이 생기지 않으며 기존 지원은 남는다",
+    async (status) => {
+      const { client, project } = await projectWithApplicants(1);
+      const late = await signup("CREATOR", 9);
+      const before = await prisma.notification.count();
+      await prisma.user.update({
+        where: { id: client.userId },
+        data: { status },
+      });
+
+      const res = await apply(late.token, project.id);
+
+      expect(res.status).toBe(404);
+      expect(
+        await prisma.workRequest.count({ where: { creatorId: late.userId } }),
+      ).toBe(0);
+      expect(await prisma.notification.count()).toBe(before);
+      // 기존 지원 이력은 지우지 않는다.
+      expect(
+        await prisma.workRequest.count({ where: { projectId: project.id } }),
+      ).toBe(1);
+    },
+  );
+});
+
 describe("지원 내역 조회", () => {
   it("의뢰인은 본인 프로젝트의 지원자만, 크리에이터는 본인 지원만 본다", async () => {
     const { client, project, creators } = await projectWithApplicants(2);

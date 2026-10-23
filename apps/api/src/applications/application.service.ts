@@ -154,6 +154,12 @@ export function createApplicationService({
       return inTransaction(async (tx) => {
         const project = await lockProject(tx, projectId);
         if (!project || project.deletedAt) throw notFound("프로젝트");
+        // 이용 제한·탈퇴 의뢰인의 프로젝트는 공개 목록·상세에 없으므로, ID로 직접 지원해도 없는 것처럼 404다(#22 리뷰).
+        const client = await tx.user.findUnique({
+          where: { id: project.clientId },
+          select: { status: true },
+        });
+        if (client?.status !== "ACTIVE") throw notFound("프로젝트");
         if (project.status !== "OPEN" || project.recruitmentEndAt <= now()) {
           throw new AppError(409, "CONFLICT", "모집이 마감된 프로젝트입니다.");
         }

@@ -828,16 +828,17 @@ PRD v2.0 페이즈 2의 "지원 관리"와 "알림"이다. 프로젝트 CRUD·�
 
 **상태 흐름**
 
-| 동작      | 누가            | 조건                                                   | 결과                                                                                                         | 알림                                                              |
-| --------- | --------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| 지원      | 크리에이터      | 프로젝트 `OPEN`, 마감 시각 전, 처음 지원               | 지원 `PENDING`                                                                                               | 의뢰인 `APPLICATION_SUBMITTED`                                    |
-| 선정      | 프로젝트 의뢰인 | 프로젝트 `OPEN` 또는 `CLOSED`+`MANUAL`, 지원 `PENDING` | 지원 `DISCUSSING`, 프로젝트 `MATCHED`(종료 사유는 지움), 나머지 `PENDING` → `NOT_SELECTED`(`OTHER_SELECTED`) | 선정자 `APPLICATION_ACCEPTED`, 나머지 `APPLICATION_AUTO_REJECTED` |
-| 직접 거절 | 프로젝트 의뢰인 | 프로젝트 `OPEN` 또는 `CLOSED`+`MANUAL`, 지원 `PENDING` | 지원 `DECLINED`, 프로젝트 그대로                                                                             | 지원자 `APPLICATION_DECLINED`                                     |
-| 직접 마감 | 프로젝트 의뢰인 | 프로젝트 `OPEN`                                        | 프로젝트 `CLOSED`+`MANUAL`. 대기 지원은 그대로(선정·거절 가능)                                               | 대기 지원자 `PROJECT_CLOSED`                                      |
-| 삭제      | 프로젝트 의뢰인 | 프로젝트 `OPEN`·`CLOSED`                               | 프로젝트 숨김, 대기 지원 → `NOT_SELECTED`(`PROJECT_DELETED`)                                                 | 대기 지원자 `APPLICATION_AUTO_REJECTED`                           |
+| 동작      | 누가            | 조건                                                      | 결과                                                                                                         | 알림                                                              |
+| --------- | --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| 지원      | 크리에이터      | 프로젝트 `OPEN`, 마감 시각 전, 의뢰인 `ACTIVE`, 처음 지원 | 지원 `PENDING`                                                                                               | 의뢰인 `APPLICATION_SUBMITTED`                                    |
+| 선정      | 프로젝트 의뢰인 | 프로젝트 `OPEN` 또는 `CLOSED`+`MANUAL`, 지원 `PENDING`    | 지원 `DISCUSSING`, 프로젝트 `MATCHED`(종료 사유는 지움), 나머지 `PENDING` → `NOT_SELECTED`(`OTHER_SELECTED`) | 선정자 `APPLICATION_ACCEPTED`, 나머지 `APPLICATION_AUTO_REJECTED` |
+| 직접 거절 | 프로젝트 의뢰인 | 프로젝트 `OPEN` 또는 `CLOSED`+`MANUAL`, 지원 `PENDING`    | 지원 `DECLINED`, 프로젝트 그대로                                                                             | 지원자 `APPLICATION_DECLINED`                                     |
+| 직접 마감 | 프로젝트 의뢰인 | 프로젝트 `OPEN`                                           | 프로젝트 `CLOSED`+`MANUAL`. 대기 지원은 그대로(선정·거절 가능)                                               | 대기 지원자 `PROJECT_CLOSED`                                      |
+| 삭제      | 프로젝트 의뢰인 | 프로젝트 `OPEN`·`CLOSED`                                  | 프로젝트 숨김, 대기 지원 → `NOT_SELECTED`(`PROJECT_DELETED`)                                                 | 대기 지원자 `APPLICATION_AUTO_REJECTED`                           |
 
 - 선정 후(`MATCHED`)에는 다른 지원의 선정·거절, 신규 지원, 마감, 삭제가 모두 `409 CONFLICT`다. `NO_SELECTION`·`EXPIRED` 사유로 종료된 프로젝트도 선정·거절할 수 없다.
 - 마감(`CLOSED`)은 2장·ERD 업무 규칙대로 **신규 접수만** 막는다. 이미 들어온 지원은 선정할 수 있다.
+- 이용 제한·탈퇴 의뢰인의 프로젝트는 공개 목록·상세에 없으므로(#19), 프로젝트 ID로 직접 지원해도 `404`다. 기존 지원·거래 이력은 그대로 둔다(#22 리뷰).
 
 **트랜잭션과 잠금**
 
