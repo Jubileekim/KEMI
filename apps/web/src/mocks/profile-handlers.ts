@@ -8,6 +8,16 @@ import { readMockUser } from "./auth-handlers";
 
 // Contract-shaped UI fixtures, not a server or a permission implementation.
 const profiles = new Map<string, MyProfileResponse>();
+const serviceStatuses = new Map<string, "DRAFT" | "PUBLIC" | "PRIVATE">();
+export function setMockServiceStatus(
+  id: string,
+  status: "DRAFT" | "PUBLIC" | "PRIVATE",
+) {
+  serviceStatuses.set(id, status);
+  const profile = profiles.get(id);
+  if (profile?.profile.type === "CREATOR")
+    profile.profile.serviceStatus = status;
+}
 let scenario = "success";
 const fail = (status: number, code: string) =>
   HttpResponse.json({ error: { code } }, { status });
@@ -38,7 +48,7 @@ function ownProfile(request: Request) {
               contentStyles: [],
               productionRoles: [],
               workMethod: null,
-              serviceStatus: "DRAFT",
+              serviceStatus: serviceStatuses.get(user.id) ?? "DRAFT",
               isAvailable: false,
               availableFrom: null,
             },
