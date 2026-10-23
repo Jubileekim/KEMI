@@ -8,6 +8,7 @@ on:
         feat/frontend-0abc-foundation,
         feat/frontend-1a-email-auth,
         feat/frontend-1b-google-auth,
+        feat/frontend-1c-profiles,
       ]
   push:
     branches: [main]

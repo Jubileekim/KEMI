@@ -262,3 +262,31 @@
 - **별도 Vercel 상태:** 기존 GitHub 연동이 커밋 작성자의 Vercel 프로젝트 접근 권한 부족으로 `failure`를 보고했다. Web CI 결과와 별도이며 코드 빌드/테스트 실패나 배포 성공으로 해석하지 않는다. 배포/권한 변경은 실행하지 않았다.
 - **원격 Web CI:** 기능 커밋 `39c00d45155c5f57cb5fe24bb6dcb0c42f26c149`의 [run 85](https://github.com/Jubileekim/KEMI/actions/runs/39973660712) **success**. Ubuntu/Node 24에서 npm ci·형식·단위 **70/70**·타입/ESLint/빌드·Chromium 설치·데스크톱/모바일 **92/92**·report 업로드 성공과 실제 job 로그를 확인했다. 로컬 Edge 92/92와 구분하는 별도 증거다. API CI/실서버·DB·외부 제공자 검증 결과가 아니다.
 - 위 원격 결과·커밋/PR 링크를 기록하는 최종 전달 커밋은 이 문서만 변경한다. 소스·검사는 검증한 `39c00d4`와 동일하다. 문서 형식/공백 검사를 수행한 뒤 푸시하며 해당 SHA의 새 CI는 PR Checks에서 별도로 확인한다. 기능 SHA의 성공으로 새 실행을 통과 처리하지 않는다.
+
+## 1-D-A 패키지·대표 지정·서비스 공개 (2026-10-24)
+
+### 완료 범위·변경 파일
+
+- 지정 저장소 `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`의 `apps/web`에서 PACK-01~03·PROFILE-03/04의 **명시적 클라이언트/Mock** 구현. 기능 엑셀 해당 행과 P04/P05·D01/D03, 기술 PDF·계획 1단계·API 대조·현재 API/shared·KEMI 디자인을 확인했다. 상위 독립 앱은 수정하지 않았다.
+- 여러 독립 상품의 초안/공개 저장·조건 조회·수정·비공개와 명시적 대표 단일 지정, 별도 서비스 공개/비공개를 구현했다. 공개 후보는 조건 누락·숫자·상업 광고 활용을 검사한다. 미완성 저장을 허용하고 상품 저장으로 대표/서비스를 자동 지정하지 않는다. 패키지는 협의 출발점이며 옵션 구매를 추가하지 않았다.
+- D01은 UNKNOWN/READY/MISSING 모의 결과만 사용한다. 실제 필수 프로필을 임의로 정하지 않는다. P04 공개 대표가 필요하고 작업물은 필수가 아니다. 공개 서비스의 대표 비공개는 다른 대표 지정 또는 서비스 명시적 비공개를 먼저 안내한다. 마지막 상품과 서비스 자동 연동 D03은 미확정으로 유지한다.
+- 계정별 Query·모듈 메모리·revision 명령으로 저장/충돌/지연 응답을 처리한다. 오류 입력 보존·명시적 최신 조회·중복 제출 차단·쓰기 자동 재시도 없음·epoch 확인을 유지한다. 최신 조회 실패도 기존 폼을 보존한다. 기존 프로필의 Mock 상태 표시와 일치시켰다.
+- 신규: `apps/web/src/features/packages/PackagesPage.tsx`, `src/mocks/{studio-model,studio-api,studio-handlers}.ts`, `src/mocks/{StudioMock,PackageEditorMock}.tsx`, `test/studio-packages.test.ts`, `e2e/studio-packages.spec.ts`, `docs/frontend-studio-1d.md`, `qa/frontend-1d/{README.md,capture.cjs,production-smoke.cjs,production-results.json,package-{editor,list}-{390,1280}.png}`.
+- 연결 수정: `src/app/{App.tsx,layouts/Shell.tsx}`, `src/mocks/{browser,profile-handlers}.ts`; Web CI의 기존 절차를 유지하고 stacked base `feat/frontend-1c-profiles`만 허용했다. API/shared·DB·의존성/lockfile·브랜드 원본/토큰 변경 없음.
+
+### 로컬 검증과 검토
+
+- `npm run test:web`: **82/82** (기존 70 + 후보 모델 12). 여러 상품·빈 초안·숫자/상업 조건·대표 단일성·미공개 차단·D01·수동 비공개·모의 계약 참조 불변을 확인했다.
+- `npm run build:web` (타입·기존 ESLint 포함), `npm run format:check`, `npm run check:tokens`, `git diff --check`: 통과. 11개 타입 역할·16개 대비·6개 재생성 유지.
+- 패키지 전용 Edge 데스크톱/모바일 E2E **18/18, 종료 코드 0**. 로그인→초안/다중 상품→대표→모의 공개→가격 변경→비공개→프로필 상태 일치, 오류 401/403/409/500/network/malformed 입력 보존·재시도, revision 충돌·권한·지연/중복/로그아웃·320/390/600/768/1024/1280px 넘침 확인.
+- 운영 빌드에 AUTH_API/MOCK 플래그를 켜도 Mock 코드/엔드포인트/worker 제외. 독립 모의 HTTP 인증 smoke **3개 통과, 페이지 오류 0**: 산출물 제외·CREATOR 준비 안내·CLIENT 차단·미정의 기능 쓰기/Mock 요청 없음. 실제 API 검증이 아니다.
+- 390/1280px 편집/목록 캡처 4개 생성, 모바일 편집·데스크톱 목록을 시각 확인했다. 큰 화면/작은 화면 가로 넘침은 브라우저로 확인했다. 스크린리더·브라우저 메뉴 200% 확대·다른 브라우저는 미검증.
+- 명세·코드 품질·보안 축의 자체 검토와 대표 비밀값 패턴 검사를 수행했다. UI 가드와 별개로 Mock 계정/역할·버전·늦은 응답을 실행 검증했다. 실제 서버 권한/원자성·다중 탭 경쟁 검증을 대체하지 않는다.
+- 중간 실패: 기존 lint 라벨/선언 규칙·unknown JSX 타입을 수정하고 빌드 재통과. D01 오류가 공통 문구로 숨겨져 화면 사전 검사를 추가했다. 의뢰인 로그인 완료 전 이동하는 신규 E2E 경쟁을 수정했다. 초기 겹친 별도 러너의 trace ENOENT와 1회 초기 탐색 타임아웃 뒤 전용 검사를 단독 실행해 18/18을 확인했다. 검사 완화/자동 재시도 추가 없음.
+- 기존 전체 110개 회귀 검사는 공용 shared 빌드와 실행이 겹쳤고 프로필 성공 문구 검사 실패가 발생했다. trace에서 중간 페이지 재로드·refresh/me/프로필 재조회가 확인됐다. 최종 1-D 통합 때 **소스/빌드 변경 없이 단독 전체 재실행**이 필요하며 현재 전체 회귀 통과로 표시하지 않는다.
+
+### 남은 일·Git 전달
+
+- 실제 API·DB·권한·서비스 공개/탐색/신규 활동·계약 보존 미검증. 7개 기능의 API 정의가 없어서 가상 `/__mock__/studio`로만 동작한다. 모의 계약 참조는 별도 테스트 복사본이며 실제 계약/제안 보존 구현이 아니다. 기존 API `.env`/실행 서버도 없다. D01/D03·기존 인증/외부 제공자 경계는 유지한다.
+- 이번 1-D의 작업물 PORT-01/02와 최종 통합 검증은 아직 진행 중이다. **1-D 전체·1단계 전체 완료 아님.** 다음 외부 작업을 자동 시작하거나 병합/자동 병합/배포하지 않는다.
+- 기존 1-D 브랜치/PR 없음 확인 후 열린 1-C Draft #37의 `ff71bab`에서 `feat/frontend-1d-packages`를 생성했다. 기능 커밋·푸시·Draft PR 링크와 원격 CI는 생성 후 기록한다. 로컬 결과를 원격 CI 통과로 표시하지 않는다.
