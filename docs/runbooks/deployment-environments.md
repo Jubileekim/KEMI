@@ -6,11 +6,11 @@
 
 ## 1. 환경 현황
 
-| 구성       | 플랫폼   | 식별자                                        | 2026-10-23 확인 상태                                                          |
-| ---------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
-| 프론트엔드 | Vercel   | 팀 `KEMI`, 프로젝트 `kemi-web`                | 최초 Production 배포 `Ready` (사용자 대시보드)                                |
-| API        | Render   | 워크스페이스 `KEMI`, 서비스명 예정 `kemi-api` | 배포 설정 중; 실행 URL 미확정                                                 |
-| DB         | Supabase | `KEMI sprint mission`, PostgreSQL             | 프로젝트 `ACTIVE_HEALTHY`; DB 실제 접근 및 마이그레이션 상태는 별도 확인 필요 |
+| 구성       | 플랫폼   | 식별자                                 | 2026-10-23 확인 상태                                                          |
+| ---------- | -------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| 프론트엔드 | Vercel   | 팀 `KEMI`, 프로젝트 `kemi-web`         | 최초 Production 배포 `Ready` (사용자 대시보드)                                |
+| API        | Render   | 워크스페이스 `KEMI`, 서비스 `kemi-api` | 최초 배포 성공, 서버·DB 헬스 체크 HTTP 200 (2026-10-23)                       |     |
+| DB         | Supabase | `KEMI sprint mission`, PostgreSQL      | 프로젝트 `ACTIVE_HEALTHY`; DB 실제 접근 및 마이그레이션 상태는 별도 확인 필요 |
 
 - 정식 프론트엔드 주소: **https://kemi-web-sigma.vercel.app/**
 - 이 주소를 배포 환경의 **기준 운영 도메인**으로 사용한다. Vercel 개별 배포 URL은 재배포 시 변경될 수 있으므로 `APP_ORIGIN`에 사용하지 않는다.
@@ -53,19 +53,19 @@
 4. SPA fallback 설정은 [Vercel 배포 설정 PR #32](https://github.com/Jubileekim/KEMI/pull/32)에 작업 중이다. `main` 병합 및 실제 새로고침 검증 전에는 적용 완료로 표시하지 않는다.
 5. Pull Request는 Preview에서 검증하고, 리뷰·CI 확인 후 `main`에 병합하여 Production에 반영한다. 보호 규칙과 실제 자동 배포는 Vercel/GitHub 설정에서 확인한다.
 
-## 3. Render 백엔드 (연결 예정)
+## 3. Render 백엔드 (배포 완료)
 
-| 항목            | 설정 기준                                          |
-| --------------- | -------------------------------------------------- |
-| GitHub          | `Jubileekim/KEMI` · `main`                         |
-| 서비스 유형     | Web Service (Node / Express)                       |
-| 서비스명        | `kemi-api` (생성 시 확정)                          |
-| Root Directory  | **비움** (모노레포 루트)                           |
-| Build           | `npm ci --include=dev && npm run build:api`        |
-| Start           | `npm start -w @kemi/api`                           |
-| Health Check    | `/health`                                          |
-| 리전            | Supabase Tokyo와의 접근 지연을 고려해 선택 후 기록 |
-| 공개 서비스 URL | **미확정**; 생성 후 여기에 기록                    |
+| 항목            | 설정 기준                                                                    |
+| --------------- | ---------------------------------------------------------------------------- |
+| GitHub          | `Jubileekim/KEMI` · `main`                                                   |
+| 서비스 유형     | Web Service (Node / Express)                                                 |
+| 서비스명        | `kemi-api`                                                                   |
+| Root Directory  | **비움** (모노레포 루트)                                                     |
+| Build           | `npm ci --include=dev && npm run build:api`                                  |
+| Start           | `npm start -w @kemi/api`                                                     |
+| Health Check    | 실제 `/health` HTTP 200 확인; Render 설정의 healthCheckPath는 아직 비어 있음 |
+| 리전            | `Singapore` (실제 서비스 설정 확인)                                          |
+| 공개 서비스 URL | **https://kemi-api.onrender.com**                                            |
 
 Render에 필요한 환경 변수 이름(값은 저장소·문서에 절대 기록하지 않음):
 
@@ -80,6 +80,19 @@ Render에 필요한 환경 변수 이름(값은 저장소·문서에 절대 기�
 
 Render 배포 후에는 해당 주소의 `/health` (서버 생존)와 `/health/ready` (DB 연결)를 구분해 확인한다. 데이터베이스 마이그레이션은 팀 승인과 이력 점검을 거친 별도 절차로 수행한다. 사회관계망 로그인 콜백 및 쿠키·Origin 검증은 API rewrite 반영 이후 확인한다.
 
+### 최초 Render 배포 검증 (2026-10-23 KST)
+
+- Render 서비스 ID: `srv-dbdj8ha9lscs73bv4hc0`
+- 관리 화면: https://dashboard.render.com/web/srv-dbdj8ha9lscs73bv4hc0
+- Production URL: **https://kemi-api.onrender.com**
+- Git 소스: `Jubileekim/KEMI`, `main`, 커밋 [`73057fe`](https://github.com/Jubileekim/KEMI/commit/73057fe69916631b553723c8e14869629c17de53)
+- Render 빌드: 성공; 첫 배포 상태: `live`; 자동 배포: `main` 커밋 기준 활성화; Free 인스턴스
+- 서버 점검: **GET `/health` → HTTP 200**, `status: ok` (실제 외부 HTTP 요청)
+- DB 점검: **GET `/health/ready` → HTTP 200**, `checks.database: ok` (실제 외부 HTTP 요청)
+- 연결 대상: Supabase Tokyo DB; Render Singapore 리전
+- 주의: Render 설정상 `healthCheckPath`가 비어 있어 별도 `/health` 등록은 아직 미완료이며, Free 인스턴스는 유휴 시 절전된다.
+- 범위: 위 검증은 Render 서버 및 DB의 실행 상태만 검증한다. **Vercel → Render `/api/*` rewrite는 아직 연결되지 않았다.**
+
 ## 4. 남은 작업 및 완료 조건
 
 - [x] Vercel KEMI 팀 및 프론트엔드 프로젝트 생성 (2026-10-23, 사용자 대시보드)
@@ -89,9 +102,9 @@ Render 배포 후에는 해당 주소의 `/health` (서버 생존)와 `/health/r
 - [ ] 다운그레이드 후 운영 URL 정상 응답 및 팀 병합/권한 상태 확인
 - [ ] Vercel의 Root Directory 외부 소스 접근 설정과 Node.js 24.x 확인
 - [ ] Vercel SPA fallback 설정 PR #32 검토·병합 후 직접 진입·새로고침 검증
-- [ ] Render 서비스 생성 및 실제 URL 문서 반영
-- [ ] Render 환경 변수 설정 및 `/health`, `/health/ready` 확인
-- [ ] Vercel `/api/*` → Render rewrite 추가, 실서비스 API 통신 확인
+- [x] Render 서비스 생성 및 실제 URL 문서 반영 (2026-10-23)
+- [x] Render 환경 변수 적용 및 `/health`, `/health/ready` HTTP 200 확인 (2026-10-23)
+- [ ] Vercel `/api/*` → Render rewrite 추가, 실서비스 API 통신 확인 (별도 후속)
 - [ ] 로그인/로그아웃/토큰 갱신 시 Origin·HttpOnly 쿠키 동작 검증
 - [ ] Github PR Preview / `main` Production 자동배포 실제 확인
 - [ ] 발표 전 무료 서버 콜드 스타트 여부 및 시연 환경 검증
