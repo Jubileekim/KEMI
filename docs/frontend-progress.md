@@ -218,4 +218,7 @@
 ### Git 전달 상태
 
 - 기존 Google 백엔드 PR #14는 참고 계약이며 이번 프론트 PR이 아니다. 기존 1-B 브랜치/PR 없음 확인 후 1-A Draft PR #35의 `c9a78e0`에서 `feat/frontend-1b-google-auth`를 만들었다. 1-A가 아직 열려 있어 새 PR의 base도 해당 브랜치로 두어 이번 Google 변경만 검토한다.
-- 커밋·푸시·Draft PR과 해당 SHA의 원격 CI는 아래 전달 기록에 추가한다. 로컬 검사 성공은 원격 CI 성공을 뜻하지 않는다.
+- 계약·세션/단위 검사 [377eacc](https://github.com/Jubileekim/KEMI/commit/377eacc), 화면·Mock·E2E·문서 [a408d94](https://github.com/Jubileekim/KEMI/commit/a408d94)를 푸시했다. 로컬과 원격 SHA 일치, 작업 트리 clean 확인. 기존 제한 fetch 설정에는 이번 브랜치 추적 항목만 추가했다.
+- [Draft PR #36](https://github.com/Jubileekim/KEMI/pull/36) 생성·이 채팅 연결 완료. base `feat/frontend-1a-email-auth`, 선행 PR #35 병합 후 재지정 검토 필요. 실제 API/Google·D01/D05 검증 경계 때문에 Draft 유지. 병합/자동 병합/배포 없음.
+- **원격 Web CI:** 기능 커밋 `a408d94fd9787cc51aedbbb3d4ade789094c209c`의 [run 83](https://github.com/Jubileekim/KEMI/actions/runs/39968996079) **success**. Ubuntu/Node 24에서 npm ci·형식·단위 59개·타입/린트/빌드·Chromium 데스크톱/모바일 **64/64**·report 업로드 성공을 확인했다. 로컬 Edge 64/64와 구분하는 별도 증거다. API CI/DB/Google 실연동 성공을 뜻하지 않는다.
+- 위 링크와 원격 결과를 기록하는 최종 전달 커밋은 이 문서만 변경하며 소스·테스트는 검증한 `a408d94`와 같다. 문서 형식/공백 검사 후 푸시한다. 이 문서 커밋의 새 CI는 PR Checks에서 최신 SHA별로 확인하며, 기능 커밋의 성공으로 최신 실행을 통과 처리하지 않는다.
