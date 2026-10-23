@@ -16,6 +16,7 @@ import {
   PROJECT_STATUSES,
   projectCreateSchema,
   projectUpdateSchema,
+  pricingAnalysisRequestSchema,
   signupRequestSchema,
   socialSignupRequestSchema,
   USER_ROLES,
@@ -193,6 +194,7 @@ const openApiDocument = {
     { name: "applications", description: "프로젝트 지원·선정·거절" },
     { name: "notifications", description: "인앱 알림" },
     { name: "discovery", description: "프로젝트 북마크·기본 추천" },
+    { name: "pricing", description: "AI 제작 단가 분석·예산 입력 보조" },
   ],
   paths: {
     "/health": {
@@ -232,6 +234,32 @@ const openApiDocument = {
               },
             },
           },
+        },
+      },
+    },
+    "/api/pricing/analyze": {
+      post: {
+        tags: ["pricing"],
+        summary: "AI 제작 단가 분석 (AI-01)",
+        description:
+          "활성 의뢰인만 요청할 수 있다. 입력 설명을 바탕으로 작업 단위·단가를 AI로 추정한다. 서버가 합계를 정수로 다시 계산하며, 실측 시장 단가나 확정 견적이 아니다. 사용자가 검토한 후 신규 프로젝트 생성 또는 본인 모집 중 프로젝트의 PATCH budget에 반영한다(AI-02). 저장/예산 수정은 자동으로 하지 않는다. 로그인 사용자당 1시간 10회(인증 실패는 차감되지 않음).",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(pricingAnalysisRequestSchema),
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse("AI 추정 단가 보고서", "PricingAnalysisResponse"),
+          400: errorResponse("입력값 오류 (VALIDATION_FAILED)"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인 외 요청·비활성 사용자 (FORBIDDEN)"),
+          429: rateLimited,
+          502: errorResponse("외부 AI 분석 실패 (SERVICE_UNAVAILABLE)"),
+          503: errorResponse("AI 서비스 미설정 (SERVICE_UNAVAILABLE)"),
         },
       },
     },
@@ -837,6 +865,46 @@ const openApiDocument = {
       },
     },
     schemas: {
+      PricingAnalysisResponse: {
+        type: "object",
+        required: [
+          "source",
+          "currency",
+          "summary",
+          "workUnits",
+          "estimatedBudgetKrw",
+          "assumptions",
+          "notice",
+        ],
+        properties: {
+          source: { type: "string", const: "AI_ESTIMATE" },
+          currency: { type: "string", const: "KRW" },
+          summary: { type: "string" },
+          workUnits: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "name",
+                "quantity",
+                "unitPriceKrw",
+                "rationale",
+                "subtotalKrw",
+              ],
+              properties: {
+                name: { type: "string" },
+                quantity: { type: "integer" },
+                unitPriceKrw: { type: "integer", minimum: 1000 },
+                rationale: { type: "string" },
+                subtotalKrw: { type: "integer", minimum: 1000 },
+              },
+            },
+          },
+          estimatedBudgetKrw: { type: "integer", minimum: 1 },
+          assumptions: { type: "array", items: { type: "string" } },
+          notice: { type: "string" },
+        },
+      },
       Error: {
         type: "object",
         required: ["error"],
