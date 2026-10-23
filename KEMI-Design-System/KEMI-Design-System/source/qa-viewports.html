@@ -1,0 +1,15 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KEMI 디자인 시스템 화면 폭 확인</title>
+<style>body{font:14px/1.6 system-ui;background:#eae9e7;margin:20px;color:#1f2937}main{display:flex;gap:24px;align-items:flex-start}section{flex:none}h1{font-size:22px}iframe{height:900px;border:1px solid #7d8aa0;background:#f4f4f6}#mobile{width:390px}#tablet{width:768px}#desktop{width:1280px}</style>
+<h1>화면 폭 확인 · 문서 검증용</h1><p>각 문서의 실제 내부 너비는 390 / 768 / 1280px입니다. 가로 스크롤로 비교할 수 있습니다.</p><pre id="metrics" aria-live="polite"></pre>
+<main><section><h2>모바일 390px</h2><iframe id="mobile" title="모바일 문서" src="../reference/KEMI_Design_System_1.1.html#primary-system"></iframe></section><section><h2>태블릿 768px</h2><iframe id="tablet" title="태블릿 문서" src="../reference/KEMI_Design_System_1.1.html#typography-system"></iframe></section><section><h2>데스크톱 1280px</h2><iframe id="desktop" title="데스크톱 문서" src="../reference/KEMI_Design_System_1.1.html#primary-system"></iframe></section></main>
+<script>
+const frames = [...document.querySelectorAll('iframe')];
+const results = {};
+function measure(frame) {
+  const doc = frame.contentDocument, win = frame.contentWindow;
+  if (!doc.querySelector('.type-heading-lg')) return;
+  results[frame.id] = {viewport:win.innerWidth,scroll:doc.documentElement.scrollWidth,client:doc.documentElement.clientWidth,typeRows:doc.querySelectorAll('#typography-system tbody tr').length,navOpen:doc.querySelector('#ds-nav-fold').open,headingSize:win.getComputedStyle(doc.querySelector('.type-heading-lg')).fontSize,contrastFailures:doc.querySelectorAll('.contrast-fail').length};
+  document.getElementById('metrics').textContent = JSON.stringify(results,null,2);
+}
+frames.forEach(frame => {frame.addEventListener('load',()=>measure(frame));measure(frame);});
+</script>

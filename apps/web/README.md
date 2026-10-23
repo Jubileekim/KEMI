@@ -11,7 +11,7 @@ npm run dev:web
 ```
 
 `http://localhost:5173`에서 열린다. API 서버 없이도 화면 개발이 가능하다.
-`API 연결 확인`은 API가 실행 중이어야 성공한다. 브라우저 새로고침 시 폼·화면 상태는 초기화된다.
+`API 연결 확인`은 개발 전용 `/__dev/health`로 이동했다. 해당 진단은 API가 실행 중이어야 성공한다. 브라우저 새로고침 시 폼·화면 상태는 초기화된다.
 
 백엔드를 함께 실행할 때는 [API 실행 안내](../api/README.md)에 따라 별도 터미널에서 `npm run dev:api`를 실행한다. DB 접속 정보는 API 담당자에게 받는다. 프론트엔드 `.env`에 DB 비밀번호나 JWT 비밀값을 넣지 않는다.
 
@@ -24,7 +24,7 @@ Copy-Item apps/web/.env.example apps/web/.env.local
 
 브라우저는 `/api/*`로 호출하고 Vite가 API 서버로 전달한다. `/health`, `/health/ready`도 로컬에서 같은 서버로 전달한다. 경로에서 `/api`를 제거하지 않는다. `Origin`은 그대로 유지하므로 추후 인증 API의 허용 출처에 `http://localhost:5173`을 등록해야 한다.
 
-`API_PROXY_TARGET`은 개발 서버 전용이다. `VITE_*` 값은 번들에 공개되므로 비밀값을 넣지 않는다. 현재 클라이언트 환경 변수는 필요 없다. ([Vite 공식 문서](https://vite.dev/guide/env-and-mode))
+`API_PROXY_TARGET`은 개발 서버 전용이다. `VITE_*` 값은 번들에 공개되므로 비밀값을 넣지 않는다. 0-C Mock 실행용 `VITE_ENABLE_MOCKS`와 향후 Origin용 `VITE_API_BASE_URL`은 `.env.example`과 [기반 실행 안내](../../docs/frontend-setup.md)를 참고한다. ([Vite 공식 문서](https://vite.dev/guide/env-and-mode))
 
 ## 명령어 (저장소 루트)
 

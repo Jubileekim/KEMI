@@ -1,0 +1,209 @@
+/* Adapter only: canonical values remain in design-tokens/tokens.css. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+:root {
+  color-scheme: light;
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--action-primary);
+  --primary-foreground: var(--action-primary-text);
+  --secondary: var(--action-primary-subtle);
+  --secondary-foreground: var(--action-primary);
+  --muted: var(--surface-subtle);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--action-primary-subtle);
+  --accent-foreground: var(--action-primary);
+  --destructive: var(--status-danger);
+  --destructive-foreground: var(--action-danger-text);
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--focus-ring);
+  --radius: var(--radius-card);
+}
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-sm: 600px;
+  --breakpoint-lg: 1024px;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-family);
+  --text-xs: var(--font-caption);
+  --text-xs--line-height: var(--leading-caption);
+  --text-sm: var(--font-body-sm);
+  --text-sm--line-height: var(--leading-body-sm);
+  --text-base: var(--font-body-md);
+  --text-base--line-height: var(--leading-body-md);
+  --text-lg: var(--font-body-lg);
+  --text-lg--line-height: var(--leading-body-lg);
+  --spacing: var(--space-1);
+  --radius-dialog: var(--radius-modal);
+  --radius-control: var(--radius-button);
+}
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    font-size: var(--font-body-md);
+    line-height: var(--leading-body-md);
+    letter-spacing: var(--tracking-body);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  button:not(:disabled),
+  [role="combobox"]:not([data-disabled]) {
+    cursor: pointer;
+  }
+}
+/* KEMI role geometry/states take precedence over registry defaults. */
+[data-kemi-button] {
+  border-radius: var(--radius-button);
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-easing);
+}
+[data-kemi-button][data-size^="icon"] {
+  min-width: 44px;
+}
+[data-kemi-button][data-variant="default"]:hover:not(:disabled) {
+  background: var(--action-primary-hover);
+}
+[data-kemi-button][data-variant="default"]:active:not(:disabled) {
+  background: var(--action-primary-press);
+}
+[data-kemi-button]:focus-visible,
+[data-slot="input"]:focus-visible,
+[data-slot="textarea"]:focus-visible,
+[data-slot="select-trigger"]:focus-visible,
+[data-slot="checkbox"]:focus-visible,
+[data-slot="tabs-trigger"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+[data-slot="input"],
+[data-slot="textarea"],
+[data-slot="select-trigger"] {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  font-size: var(--font-body-md);
+  line-height: var(--leading-body-md);
+  min-height: 44px;
+  transition-duration: var(--motion-fast);
+}
+[data-slot="input"],
+[data-slot="select-trigger"] {
+  border-radius: var(--radius-pill);
+}
+/* Textareas and popup lists reuse the card radius. */
+[data-slot="textarea"],
+[data-slot="select-content"] {
+  border-radius: var(--radius-card);
+}
+[data-slot="textarea"] {
+  min-height: 96px;
+  resize: vertical;
+}
+[data-slot="input"][aria-invalid="true"],
+[data-slot="textarea"][aria-invalid="true"],
+[data-slot="select-trigger"][aria-invalid="true"] {
+  border-color: var(--status-danger);
+}
+[data-slot="input"]:read-only {
+  background: var(--surface-base);
+}
+[data-slot="badge"],
+[data-slot="tabs-list"],
+[data-slot="tabs-trigger"] {
+  border-radius: var(--radius-pill);
+}
+[data-slot="tabs-list"] {
+  min-height: 48px;
+  height: auto;
+  flex-wrap: wrap;
+}
+[data-slot="tabs-trigger"] {
+  min-height: 44px;
+  white-space: normal;
+}
+[data-slot="tabs-trigger"][data-state="active"] {
+  background: var(--surface-raised);
+  color: var(--action-primary);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+[data-slot="checkbox"] {
+  border-color: var(--border-strong);
+}
+[data-slot="checkbox"][data-state="checked"] {
+  border-color: var(--primary);
+}
+[data-slot="dialog-content"] {
+  border-radius: var(--radius-modal);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-modal);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+[data-kemi-dialog-dismiss] {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+}
+[data-slot="dialog-title"] {
+  padding-right: var(--space-10);
+  line-height: var(--leading-title);
+}
+[data-sonner-toast] {
+  font-family: var(--font-family);
+}
+[data-sonner-toast] [data-close-button] {
+  min-width: 28px;
+  min-height: 28px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
+
+[data-slot="tabs-trigger"] {
+  flex: none;
+  padding-inline: var(--space-3);
+}

@@ -21,3 +21,7 @@ npm run dev:web
 ```
 
 웹은 `http://localhost:5173`에서 실행된다. 백엔드 실행은 별도 터미널에서 `npm run dev:api`를 사용한다(API 환경 변수 필요).
+
+## 프론트엔드 0-A~0-C
+
+[실행·Mock 안내](docs/frontend-setup.md), [진행 기록](docs/frontend-progress.md)를 참고하세요. 기존 API·shared·검사 명령은 유지합니다.

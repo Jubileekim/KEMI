@@ -5,3 +5,9 @@
 **/test-results/
 apps/api/src/generated/
 package-lock.json
+
+KEMI-Design-System/
+apps/web/src/design-tokens/tokens.*
+apps/web/public/brand/
+apps/web/public/mockServiceWorker.js
+qa/frontend-0c/
