@@ -70,6 +70,14 @@ function dateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+// DATE와 TIMESTAMPTZ의 비교는 KST 달력 날짜를 기준으로 한다.
+const seoulDateFormatter = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function validateSchedule(
   recruitmentEndAt: Date,
   deliveryDueDate: Date,
@@ -82,7 +90,10 @@ function validateSchedule(
       "모집 마감 시각은 현재보다 뒤여야 합니다.",
     );
   }
-  if (deliveryDueDate <= recruitmentEndAt) {
+  if (
+    deliveryDueDate.toISOString().slice(0, 10) <=
+    seoulDateFormatter.format(recruitmentEndAt)
+  ) {
     throw new AppError(
       400,
       "VALIDATION_FAILED",
