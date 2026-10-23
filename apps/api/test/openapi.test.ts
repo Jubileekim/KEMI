@@ -80,6 +80,7 @@ describe("OpenAPI 문서", () => {
         const agent = request(app);
         let res;
         if (method === "get") res = await agent.get(path);
+        else if (method === "put") res = await agent.put(path).send({});
         else if (method === "patch") res = await agent.patch(path).send({});
         else if (method === "delete") res = await agent.delete(path);
         else res = await agent.post(path).send({});
