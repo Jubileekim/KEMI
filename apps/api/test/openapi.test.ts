@@ -2,7 +2,7 @@ import SwaggerParser from "@apidevtools/swagger-parser";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import request from "supertest";
-import type { Express } from "express";
+import express, { Router, type Express } from "express";
 import { describe, expect, it } from "vitest";
 import openApiDocument from "../src/docs/openapi.js";
 import { createTestApp } from "./support/test-app.js";
@@ -15,11 +15,28 @@ function field(value: unknown, key: string): unknown {
   return Reflect.get(value, key);
 }
 
+// 마운트 하나가 경로 조각과 정확히 맞는지 본다. Express 5는 마운트 경로 문자열을 보관하지 않아서
+// matcher로만 확인할 수 있다.
+type MountMatch = (segment: string) => boolean;
+
 interface MountedRoute {
-  // 문서 경로의 앞부분이 이 라우터의 마운트 경로와 정확히 같은지
-  matchesMount: (prefix: string) => boolean;
+  // 바깥 마운트부터 순서대로
+  mounts: MountMatch[];
   route: string;
   methods: string[];
+}
+
+function mountMatcher(layer: unknown): MountMatch {
+  // app.use(router)·router.use("/", router)는 slash로 표시되고 경로 조각이 빈 문자열이다.
+  if (field(layer, "slash") === true) return (segment) => segment === "";
+  const matchers = field(layer, "matchers");
+  return (segment) =>
+    Array.isArray(matchers) &&
+    matchers.some((match: unknown) => {
+      if (typeof match !== "function") return false;
+      const result: unknown = Reflect.apply(match, undefined, [segment]);
+      return field(result, "path") === segment;
+    });
 }
 
 function routeOf(layer: unknown): { path: string; methods: string[] } | null {
@@ -29,48 +46,77 @@ function routeOf(layer: unknown): { path: string; methods: string[] } | null {
   if (typeof path !== "string" || typeof methods !== "object" || !methods) {
     return null;
   }
+  // router.all()은 methods에 `_all`로 남는다. OpenAPI 메서드 하나로 적을 수 없으므로
+  // 버리지 않고 `all`로 남겨, 문서 대조에서 항상 누락으로 보고되게 한다.
   return {
     path,
-    methods: Object.keys(methods).filter((method) => method !== "_all"),
+    methods: Object.keys(methods).map((method) =>
+      method === "_all" ? "all" : method,
+    ),
   };
 }
 
-// app에 마운트된 라우터의 라우트를 모은다. Express 5는 마운트 경로 문자열을 보관하지 않아서,
-// 각 마운트의 matcher로 경로 앞부분이 맞는지만 확인할 수 있다.
-function mountedRoutes(app: Express): MountedRoute[] {
-  const stack = field(field(app, "router"), "stack");
-  if (!Array.isArray(stack))
-    throw new Error("Express 라우터 구조를 읽지 못했습니다.");
+// 라우터 스택을 끝까지 내려가며 라우트를 모은다. 하위 라우터(router.use)도 포함한다.
+function collectRoutes(stack: unknown, mounts: MountMatch[]): MountedRoute[] {
+  if (!Array.isArray(stack)) return [];
   return stack.flatMap((layer: unknown): MountedRoute[] => {
-    const own = routeOf(layer);
-    if (own) {
-      return [
-        {
-          matchesMount: (prefix) => prefix === "",
-          route: own.path,
-          methods: own.methods,
-        },
-      ];
-    }
+    const route = routeOf(layer);
+    if (route) return [{ mounts, route: route.path, methods: route.methods }];
     const children = field(field(layer, "handle"), "stack");
     if (!Array.isArray(children)) return [];
-    const matchers = field(layer, "matchers");
-    // app.use(router)·app.use("/", router)는 slash로 표시되고 앞부분이 빈 문자열이다.
-    const matchesMount = (prefix: string) =>
-      field(layer, "slash") === true
-        ? prefix === ""
-        : Array.isArray(matchers) &&
-          matchers.some((match: unknown) => {
-            if (typeof match !== "function") return false;
-            const result: unknown = Reflect.apply(match, undefined, [prefix]);
-            return field(result, "path") === prefix;
-          });
-    return children.flatMap((child: unknown) => {
-      const route = routeOf(child);
-      return route
-        ? [{ matchesMount, route: route.path, methods: route.methods }]
-        : [];
-    });
+    return collectRoutes(children, [...mounts, mountMatcher(layer)]);
+  });
+}
+
+function mountedRoutes(app: Express): MountedRoute[] {
+  const stack = field(field(app, "router"), "stack");
+  if (!Array.isArray(stack)) {
+    throw new Error("Express 라우터 구조를 읽지 못했습니다.");
+  }
+  return collectRoutes(stack, []);
+}
+
+// prefix를 마운트 순서대로 나눠 각 마운트에 정확히 맞출 수 있는지 본다. 나누는 위치는 "/" 앞이다.
+function matchesMounts(prefix: string, mounts: MountMatch[]): boolean {
+  const [first, ...rest] = mounts;
+  if (!first) return prefix === "";
+  for (let end = 0; end <= prefix.length; end += 1) {
+    const atBoundary = end === prefix.length || prefix[end] === "/";
+    if (
+      atBoundary &&
+      first(prefix.slice(0, end)) &&
+      matchesMounts(prefix.slice(end), rest)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 문서 경로를 Express 표기로 바꾼다: /api/projects/{projectId} → /api/projects/:projectId
+const documentedOperations = Object.entries(openApiDocument.paths).map(
+  ([path, methods]) => ({
+    path: path.replace(/\{(\w+)\}/g, ":$1"),
+    methods: new Set(Object.keys(methods)),
+  }),
+);
+
+// 문서에 없는 실제 라우트를 "메서드 경로"로 돌려준다.
+function undocumentedRoutes(routes: MountedRoute[]): string[] {
+  return routes.flatMap(({ mounts, route, methods }) => {
+    // 문서 경로 중 뒷부분이 라우트 경로와 같고, 앞부분이 마운트들에 정확히 맞는 것을 찾는다.
+    const suffix = route === "/" ? "" : route;
+    const full = documentedOperations.find(
+      ({ path }) =>
+        path.endsWith(suffix) &&
+        matchesMounts(path.slice(0, path.length - suffix.length), mounts),
+    );
+    return (
+      methods
+        .filter((method) => !full?.methods.has(method))
+        // 문서에 경로가 없으면 마운트 앞부분을 알 수 없어 라우터 기준 경로(…/경로)로 표시한다.
+        .map((method) => `${method.toUpperCase()} ${full?.path ?? `…${route}`}`)
+    );
   });
 }
 
@@ -162,37 +208,31 @@ describe("OpenAPI 문서", () => {
 
   // 반대 방향: 실제 라우터의 모든 경로·메서드가 문서에 있는지 확인한다(이슈 #25).
   it("실제 라우터의 모든 경로·메서드가 문서에 있다", () => {
-    const app = createTestApp();
-    // 문서 경로를 Express 표기로 바꾼다: /api/projects/{projectId} → /api/projects/:projectId
-    const documented = Object.entries(openApiDocument.paths).map(
-      ([path, methods]) => ({
-        path: path.replace(/\{(\w+)\}/g, ":$1"),
-        methods: new Set(Object.keys(methods)),
-      }),
-    );
-
-    const routes = mountedRoutes(app);
+    const routes = mountedRoutes(createTestApp());
     // Express 내부 구조가 바뀌어 라우트를 못 읽으면 이 테스트가 아무것도 확인하지 않게 된다.
-    expect(routes.length).toBeGreaterThanOrEqual(documented.length);
+    expect(routes.length).toBeGreaterThanOrEqual(documentedOperations.length);
+    expect(undocumentedRoutes(routes)).toEqual([]);
+  });
 
-    const undocumented = routes.flatMap(({ matchesMount, route, methods }) => {
-      // Express 5는 마운트 경로 문자열을 보관하지 않는다. 그래서 문서 경로 중에서
-      // 뒷부분이 라우트 경로와 같고 앞부분이 이 마운트에 정확히 맞는 것을 찾는다.
-      const full = documented.find(({ path }) => {
-        const suffix = route === "/" ? "" : route;
-        if (!path.endsWith(suffix)) return false;
-        return matchesMount(path.slice(0, path.length - suffix.length));
-      });
-      return (
-        methods
-          .filter((method) => !full?.methods.has(method))
-          // 문서에 경로가 없으면 마운트 앞부분을 알 수 없어 라우터 기준 경로(…/경로)로 표시한다.
-          .map(
-            (method) => `${method.toUpperCase()} ${full?.path ?? `…${route}`}`,
-          )
-      );
-    });
-    expect(undocumented).toEqual([]);
+  it("하위 라우터와 router.all()의 문서 누락도 찾아낸다", () => {
+    const ok = (_req: express.Request, res: express.Response) => {
+      res.end();
+    };
+    const profiles = Router();
+    profiles.get("/me", ok); // 문서에 있음: GET /api/profiles/me (두 단계 마운트)
+    const nested = Router();
+    nested.get("/debug", ok); // 문서에 없음
+    const api = Router();
+    api.use("/profiles", profiles);
+    api.use("/nested", nested);
+    api.all("/all-debug", ok); // 문서에 없음 (메서드를 특정할 수 없음)
+    const app = express();
+    app.use("/api", api);
+
+    expect(undocumentedRoutes(mountedRoutes(app))).toEqual([
+      "GET …/debug",
+      "ALL …/all-debug",
+    ]);
   });
 
   it("apiDocs를 켜면 /api/openapi.json과 /api/docs를 제공한다", async () => {
