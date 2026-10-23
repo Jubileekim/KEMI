@@ -92,19 +92,21 @@ npm run test:web:e2e
 - 갱신 요청을 하나로 모으는 것은 확정 사항이다. Web Locks·`REFRESH_RACE` 재시도 횟수 등은 문서의 제안 기준을 인증 PR에서 맞춘다.
 - 오류 화면은 서버 메시지 문구 대신 shared의 오류 코드로 분기한다. 오류 코드가 추가되면 shared도 함께 갱신한다.
 
-## Vercel 배포 준비
+## Vercel 배포·운영 현황
 
-**Render 주소가 아직 없어 배포 연결은 미완료다.** `vercel.example.json`은 자동 적용되지 않는 템플릿이다.
+**2026-10-23 최초 Production 배포 완료 (`Ready`, 사용자 대시보드 확인).** 운영 주소는 **https://kemi-web-sigma.vercel.app/** 이다. 배포·연동·후속 검증 현황과 기록은 [배포 환경 및 운영 기록](../../docs/runbooks/deployment-environments.md)에서 관리한다.
 
-1. Vercel에 이 저장소를 연결하고 Root Directory를 `apps/web`으로 지정한다.
-2. 모노레포에서 루트·shared 파일에 접근할 수 있도록 Root Directory 밖의 소스 포함 설정을 켠다.
-3. Build Command: `cd ../.. && npm run build:web`, Output Directory: `dist`.
-4. Render 주소가 확정되면 `vercel.example.json`을 `vercel.json`으로 복사하고 `YOUR_RENDER_SERVICE`를 실제 서비스 이름으로 바꾼다. API rewrite를 SPA fallback보다 먼저 둔다.
-5. SPA 경로를 직접 열거나 새로고침했을 때도 화면이 뜨는지 확인한다.
-6. 배포 연결 확인은 **Render 주소의 `/health`를 직접** 연다. DB 준비 여부는 `/health/ready`로 확인한다. `/api/health`는 사용하지 않는다.
-7. 인증 기능이 추가되면 실제 배포에서 쿠키·Origin 검사·OAuth 콜백을 별도로 확인한다.
+- Vercel 팀: `KEMI` (Pro Trial), 프로젝트: `kemi-web`, 연결 저장소: `Jubileekim/KEMI`, Production Branch: `main`.
+- Root Directory: `apps/web`; 모노레포 루트 및 `packages/shared` 접근 설정을 확인한다.
+- Install Command: `cd ../.. && npm ci --include=dev`
+- Build Command: `cd ../.. && npm run build:web`
+- Output Directory: `dist`; Framework: `Vite`; Node.js: 저장소 `.nvmrc`는 24.
+- 최초 확인 커밋: [`73057fe`](https://github.com/Jubileekim/KEMI/commit/73057fe69916631b553723c8e14869629c17de53).
+- API 서버 주소는 아직 확정되지 않았다. 현재 프로덕션 초기 화면 표시만 성공했으며 실제 API·인증 검증을 마쳤다는 의미는 아니다.
 
-실제 Vercel 배포·Render 연결·인증 쿠키 검증은 아직 수행하지 않았다. [Vercel rewrite 공식 문서](https://vercel.com/docs/rewrites)
+Render 주소가 확정되면 `vercel.json`의 `/api/:path*` rewrite를 Render의 같은 경로로 전달하도록 추가하고, **SPA fallback보다 먼저** 두어야 한다. SPA fallback 기본 구성은 [PR #32](https://github.com/Jubileekim/KEMI/pull/32)에서 검토 중이며, `main` 반영 이후 실제 페이지 직접 진입·새로고침을 검증한다.
+
+배포 연결은 Render 서비스 주소의 `/health`를 직접 열어 확인하고, DB 준비 상태는 `/health/ready`로 확인한다. `/api/health`를 사용하지 않는다. Render의 `APP_ORIGIN`에는 `https://kemi-web-sigma.vercel.app` (끝 슬래시 없음)을 넣고, 로그인 화면 구현 이후 쿠키·Origin 검사·OAuth 콜백을 검증한다.
 
 ## CI와 작업 방식
 
