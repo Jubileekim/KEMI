@@ -14,7 +14,7 @@
 
 - 정식 프론트엔드 주소: **https://kemi-web-sigma.vercel.app/**
 - 이 주소를 배포 환경의 **기준 운영 도메인**으로 사용한다. Vercel 개별 배포 URL은 재배포 시 변경될 수 있으므로 `APP_ORIGIN`에 사용하지 않는다.
-- Vercel 팀은 **Pro Trial**로 사용 중이다. Trial 종료일, 유료 전환·자동결제 조건, 수출·창업 지원금 정산 조건은 Billing 화면 및 지원기관 규정에서 별도로 확인한다.
+- **2026-10-23 사용자 보고:** KEMI 팀 Pro Trial에서 **Downgrade**를 실행했다. 공식 안내상 Trial 중 Downgrade는 즉시 Hobby 플랜으로 전환되며 Pro 구독료 자동 청구는 발생하지 않는다. 다만 최종 팀 플랜, 결제 이력, 운영 URL 응답과 팀 병합 여부는 아직 대시보드에서 재검증되지 않았다. Hobby 플랜은 비상업적 용도 및 무료 리소스 한도의 적용을 받는다.
 - Supabase 프로젝트 리전: `ap-northeast-1` (Tokyo). Render 리전은 실제 배포 시 선택한 값을 기록한다.
 
 ## 2. Vercel 프론트엔드
@@ -84,7 +84,9 @@ Render 배포 후에는 해당 주소의 `/health` (서버 생존)와 `/health/r
 
 - [x] Vercel KEMI 팀 및 프론트엔드 프로젝트 생성 (2026-10-23, 사용자 대시보드)
 - [x] 프론트엔드 첫 Production 배포 `Ready` 확인 (2026-10-23, 사용자 대시보드)
-- [ ] Vercel Billing의 Pro Trial 종료·자동 결제·지출 알림 확인
+- [x] Pro Trial에서 Downgrade 실행 (2026-10-23, 사용자 보고)
+- [ ] KEMI 팀 Billing에서 Hobby 최종 적용·유료 결제 내역 없음 확인
+- [ ] 다운그레이드 후 운영 URL 정상 응답 및 팀 병합/권한 상태 확인
 - [ ] Vercel의 Root Directory 외부 소스 접근 설정과 Node.js 24.x 확인
 - [ ] Vercel SPA fallback 설정 PR #32 검토·병합 후 직접 진입·새로고침 검증
 - [ ] Render 서비스 생성 및 실제 URL 문서 반영
