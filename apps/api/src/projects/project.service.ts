@@ -72,6 +72,14 @@ function dateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+// DATE와 TIMESTAMPTZ의 비교는 KST 달력 날짜를 기준으로 한다.
+const seoulDateFormatter = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function validateSchedule(
   recruitmentEndAt: Date,
   deliveryDueDate: Date,
@@ -84,7 +92,10 @@ function validateSchedule(
       "모집 마감 시각은 현재보다 뒤여야 합니다.",
     );
   }
-  if (deliveryDueDate <= recruitmentEndAt) {
+  if (
+    deliveryDueDate.toISOString().slice(0, 10) <=
+    seoulDateFormatter.format(recruitmentEndAt)
+  ) {
     throw new AppError(
       400,
       "VALIDATION_FAILED",
@@ -168,7 +179,12 @@ export function createProjectService({
     const where: Prisma.ProjectWhereInput = {
       deletedAt: null,
       ...(ownerId === undefined
-        ? { status: "OPEN", recruitmentEndAt: { gt: current } }
+        ? {
+            status: "OPEN",
+            recruitmentEndAt: { gt: current },
+            // 이용 제한·탈퇴 회원의 프로젝트는 공개하지 않는다(기존 지원·거래 이력은 그대로 둔다).
+            client: { status: "ACTIVE" },
+          }
         : { clientId: ownerId }),
       ...filterOf(query),
     };
@@ -215,6 +231,7 @@ export function createProjectService({
           status: "OPEN",
           recruitmentEndAt: { gt: now() },
           deletedAt: null,
+          client: { status: "ACTIVE" },
         },
         include: includeClient,
       });
@@ -259,6 +276,14 @@ export function createProjectService({
           409,
           "CONFLICT",
           "모집 중인 프로젝트만 수정할 수 있습니다.",
+        );
+      }
+      // 마감 시각이 지나면 제목만 고치거나 마감을 연장하는 요청도 받지 않는다.
+      if (existing.recruitmentEndAt <= now()) {
+        throw new AppError(
+          409,
+          "CONFLICT",
+          "모집 마감 시각이 지나 수정할 수 없습니다.",
         );
       }
       const parsed = projectUpdateSchema.parse(input);

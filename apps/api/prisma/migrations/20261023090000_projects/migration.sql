@@ -47,7 +47,7 @@ CREATE TABLE "projects" (
   CONSTRAINT "projects_deleted_check" CHECK ("deleted_at" IS NULL OR "status" = 'CLOSED'),
   CONSTRAINT "projects_schedule_check" CHECK (
     "recruitment_end_at" > "created_at"
-    AND "delivery_due_date" > "recruitment_end_at"::DATE
+    AND "delivery_due_date" > ("recruitment_end_at" AT TIME ZONE 'Asia/Seoul')::DATE
   )
 );
 

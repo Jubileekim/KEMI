@@ -467,7 +467,7 @@ const openApiDocument = {
         tags: ["projects"],
         summary: "모집 중인 공개 프로젝트 탐색",
         description:
-          "마감 전이며 삭제되지 않은 OPEN 프로젝트만 반환한다. 제목·설명을 검색하고 목적·스타일·예산으로 필터링한다.",
+          "마감 전이며 삭제되지 않은 OPEN 프로젝트만 반환한다. 이용 제한·탈퇴 회원이 등록한 프로젝트는 제외한다. 제목·설명을 검색하고 목적·스타일·예산으로 필터링한다.",
         parameters: projectListParameters,
         responses: {
           200: {
@@ -528,6 +528,8 @@ const openApiDocument = {
       get: {
         tags: ["projects"],
         summary: "공개 프로젝트 상세 조회",
+        description:
+          "모집 중(OPEN)이고 마감 전이며, 이용 제한·탈퇴되지 않은 회원의 프로젝트만 보여준다. 그 밖에는 404다.",
         parameters: [projectIdParam],
         responses: {
           200: projectResponse,
@@ -554,7 +556,9 @@ const openApiDocument = {
           ...bearerErrors,
           403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
           404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
-          409: errorResponse("모집 중인 프로젝트가 아님 (`CONFLICT`)"),
+          409: errorResponse(
+            "모집 중인 프로젝트가 아니거나, 모집 마감 시각이 지남 (`CONFLICT`). 마감 시각이 지나면 제목만 고치거나 마감을 연장하는 요청도 받지 않는다.",
+          ),
         },
       },
       delete: {

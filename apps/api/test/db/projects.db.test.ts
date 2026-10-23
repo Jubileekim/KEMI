@@ -164,4 +164,171 @@ describe("공개 프로젝트 CRUD", () => {
     expect(row.status).toBe("CLOSED");
     expect(row.deletedAt).not.toBeNull();
   });
+
+  it("KST 달력 날짜로 납품일을 검증한다 (UTC 자정 근처)", async () => {
+    const token = await signup("CLIENT");
+    const deadline = "2090-11-02T01:00:00+09:00";
+
+    const sameDay = await request(app)
+      .post("/api/projects")
+      .set(auth(token))
+      .send(
+        projectBody({
+          recruitmentEndAt: deadline,
+          deliveryDueDate: "2090-11-02",
+        }),
+      );
+    expect(sameDay.status).toBe(400);
+
+    const nextDay = await request(app)
+      .post("/api/projects")
+      .set(auth(token))
+      .send(
+        projectBody({
+          recruitmentEndAt: deadline,
+          deliveryDueDate: "2090-11-03",
+        }),
+      );
+    expect(nextDay.status).toBe(201);
+  });
+
+  it("DB CHECK도 세션 시간대와 관계없이 KST 날짜를 사용한다", async () => {
+    await signup("CLIENT");
+    const client = await prisma.user.findUniqueOrThrow({
+      where: { email: "client-1@example.com" },
+    });
+    const tryInsert = (timeZone: string) =>
+      prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT set_config('TimeZone', ${timeZone}, true)`;
+        // @db.Date를 JS Date로 바인딩하면 세션 시간대에 따라 입력 날짜가
+        // 재해석될 수 있으므로, CHECK 자체는 명시적 SQL DATE로 검사한다.
+        return tx.$executeRaw`
+          INSERT INTO "projects" (
+            "client_id", "title", "description", "purpose", "styles",
+            "budget", "recruitment_end_at", "delivery_due_date"
+          ) VALUES (
+            ${client.id}, 'KST 날짜 경계 테스트',
+            '세션 시간대와 무관하게 납품일을 검사합니다.',
+            'CHILD_FAMILY', ARRAY['EMOTIONAL']::TEXT[],
+            50000, TIMESTAMPTZ '2090-11-02 01:00:00+09',
+            DATE '2090-11-02'
+          )
+        `;
+      });
+
+    await expect(tryInsert("UTC")).rejects.toThrow();
+    await expect(tryInsert("Asia/Seoul")).rejects.toThrow();
+  });
+});
+
+describe("마감·상태·회원 상태 정책 (#19 리뷰)", () => {
+  async function createdProject(token: string, overrides = {}) {
+    const res = await request(app)
+      .post("/api/projects")
+      .set(auth(token))
+      .send(projectBody(overrides));
+    expect(res.status).toBe(201);
+    return BigInt(String(res.body.id));
+  }
+
+  // 마감 시각만 과거로 옮긴다. CHECK(recruitment_end_at > created_at)를 지키려고 생성 시각도 함께 당긴다.
+  async function expire(projectId: bigint) {
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        recruitmentEndAt: new Date(Date.now() - 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  it.each([
+    ["제목만 수정", () => ({ title: "제목만 바꿔요" })],
+    ["마감 연장", () => ({ recruitmentEndAt: futureDate(5).toISOString() })],
+  ])(
+    "마감 시각이 지난 프로젝트는 %s도 409이고 바뀌지 않는다",
+    async (_label, body) => {
+      const token = await signup("CLIENT");
+      const projectId = await createdProject(token);
+      await expire(projectId);
+
+      const res = await request(app)
+        .patch(`/api/projects/${projectId}`)
+        .set(auth(token))
+        .send(body());
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe("CONFLICT");
+      expect(res.body.error.message).toContain("마감");
+      const row = await prisma.project.findUniqueOrThrow({
+        where: { id: projectId },
+      });
+      expect(row.title).toBe(projectBody().title);
+    },
+  );
+
+  it("마감 시각이 지난 프로젝트는 공개 목록·상세에서 빠지고, 내 목록에는 남는다", async () => {
+    const token = await signup("CLIENT");
+    const projectId = await createdProject(token);
+    await expire(projectId);
+
+    const list = await request(app).get("/api/projects");
+    const detail = await request(app).get(`/api/projects/${projectId}`);
+    const mine = await request(app).get("/api/projects/me").set(auth(token));
+
+    expect(list.body.items).toHaveLength(0);
+    expect(detail.status).toBe(404);
+    expect(mine.body.items).toHaveLength(1);
+  });
+
+  it.each(["MATCHED", "CONTRACTED"])(
+    "%s 프로젝트는 삭제할 수 없다 (409)",
+    async (status) => {
+      const token = await signup("CLIENT");
+      const projectId = await createdProject(token);
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { status },
+      });
+
+      const res = await request(app)
+        .delete(`/api/projects/${projectId}`)
+        .set(auth(token));
+
+      expect(res.status).toBe(409);
+      const row = await prisma.project.findUniqueOrThrow({
+        where: { id: projectId },
+      });
+      expect(row.deletedAt).toBeNull();
+    },
+  );
+
+  it.each(["RESTRICTED", "WITHDRAWN"])(
+    "%s 회원의 프로젝트는 공개 목록·상세에서 빠지고, 프로젝트 행은 남는다",
+    async (status) => {
+      const token = await signup("CLIENT");
+      const projectId = await createdProject(token);
+      await prisma.user.updateMany({ data: { status } });
+
+      const list = await request(app).get("/api/projects");
+      const detail = await request(app).get(`/api/projects/${projectId}`);
+
+      expect(list.body.items).toHaveLength(0);
+      expect(list.body.pagination.total).toBe(0);
+      expect(detail.status).toBe(404);
+      expect(await prisma.project.count()).toBe(1);
+    },
+  );
+
+  it("알 수 없는 필드로 상태를 바꾸려 하면 400이다", async () => {
+    const token = await signup("CLIENT");
+    const projectId = await createdProject(token);
+
+    const res = await request(app)
+      .patch(`/api/projects/${projectId}`)
+      .set(auth(token))
+      .send({ status: "CLOSED" });
+
+    expect(res.status).toBe(400);
+  });
 });
