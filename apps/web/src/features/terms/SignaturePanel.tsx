@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { session, useSession } from "../../app/session";
 import Button from "../../components/ui/button";
@@ -321,7 +322,17 @@ export default function SignaturePanel({
             {round.contractId && (
               <>
                 <p>모의 계약 식별: {round.contractId}</p>
-                <p>선정 완료 · 결제 미연결 · 제작 시작 전</p>
+                <p>선정 완료 · 실제 결제 API 미연결 · 제작 시작 전</p>
+                {user?.role === "CLIENT" && (
+                  <Link to={`/contracts/${round.contractId}/payment`}>
+                    전액 테스트 결제 확인 (Mock)
+                  </Link>
+                )}
+                {user?.role === "CREATOR" && (
+                  <Link to={`/payments/result?contractId=${round.contractId}`}>
+                    테스트 결제 내역 확인 (Mock)
+                  </Link>
+                )}
               </>
             )}
           </article>

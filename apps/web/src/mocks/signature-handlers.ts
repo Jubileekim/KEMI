@@ -13,6 +13,30 @@ import {
 } from "./signature-model";
 
 const records = new Map<string, SignatureRound[]>();
+export function readMockSignedContract(id: string) {
+  const entry = [...records.entries()].find(([, rounds]) =>
+    rounds.some(
+      (round) => round.contractId === id && round.signatures.length === 2,
+    ),
+  );
+  if (!entry) return undefined;
+  const [requestId, rounds] = entry;
+  const round = rounds.find((r) => r.contractId === id);
+  const item = readMockProposal(requestId);
+  const version = readMockTerms(requestId)?.versions.find(
+    (v) => v.id === round?.versionId,
+  );
+  if (!item?.contracted || !round || !version) return undefined;
+  return {
+    id,
+    requestId,
+    versionId: version.id,
+    clientId: item.clientId,
+    creatorId: item.creatorId,
+    amount: Number(version.values.amount),
+    currency: "KRW",
+  };
+}
 let scenario = "success";
 const fail = (status: number) =>
   HttpResponse.json({ message: "모의 서명 요청 실패" }, { status });

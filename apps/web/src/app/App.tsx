@@ -17,6 +17,10 @@ const CampaignBrowsePage = lazy(
   () => import("../features/campaigns/CampaignBrowsePage"),
 );
 const ProposalPage = lazy(() => import("../features/campaigns/ProposalPage"));
+const PaymentPage = lazy(() => import("../features/payments/PaymentPage"));
+const PaymentResultPage = lazy(
+  () => import("../features/payments/PaymentResultPage"),
+);
 const proposalPaths = [
   "/campaigns/:campaignId/apply",
   "/campaigns/:campaignId/proposals",
@@ -67,6 +71,12 @@ export default function App() {
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
                       {proposalPaths.includes(screen.path) && <ProposalPage />}
+                      {screen.path === "/contracts/:contractId/payment" && (
+                        <PaymentPage />
+                      )}
+                      {screen.path === "/payments/result" && (
+                        <PaymentResultPage />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -77,6 +87,8 @@ export default function App() {
                       )}
                       {![
                         ...proposalPaths,
+                        "/contracts/:contractId/payment",
+                        "/payments/result",
                         "/login",
                         "/signup",
                         "/auth/social/callback",
