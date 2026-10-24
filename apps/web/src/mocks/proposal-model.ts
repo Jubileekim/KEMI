@@ -30,7 +30,14 @@ export const proposalSchema = z.strictObject({
   quote: z.string(),
   days: z.string(),
   works: z.array(z.strictObject({ id: z.string(), title: text })),
-  status: z.enum(["PENDING", "DISCUSSING", "DECLINED", "WITHDRAWN", "ENDED"]),
+  status: z.enum([
+    "PENDING",
+    "DISCUSSING",
+    "DECLINED",
+    "WITHDRAWN",
+    "ENDED",
+    "NOT_SELECTED",
+  ]),
   reason: z.string(),
   revision: z.number().int().nonnegative(),
   createdAt: z.iso.datetime(),
@@ -126,6 +133,9 @@ export function changeProposals(
       !campaign ||
       campaign.ownerId === user.id ||
       state.ended.includes(campaign.id) ||
+      state.items.some(
+        (item) => item.campaignId === campaign.id && item.contracted,
+      ) ||
       recruitmentStatus(campaign, now.getTime()) !== "OPEN"
     )
       throw new ProposalError("모집 마감·본인 공고·공개 상태를 확인해 주세요.");
@@ -325,4 +335,5 @@ export const proposalLabels = {
   DECLINED: "의뢰인 거절",
   WITHDRAWN: "제작자 철회",
   ENDED: "무선정 종료",
+  NOT_SELECTED: "미선정",
 };
