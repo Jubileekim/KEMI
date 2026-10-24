@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 카카오·서명·만료·선정·결제 미착수. 0단계·1단계·2단계·3단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 카카오·결제 미착수. 0단계·1단계·2단계·3단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -113,7 +113,7 @@
 
 ## 다음 작업 하나
 
-**3-A D08 및 조건서 작성/버전 API 계약 조율:** 편집 권한·동시 편집과 참조 사본/버전·멱등 저장 계약을 합의한다. 별도 요청 후 착수한다. 서명·만료·선정·결제와 이전 단계의 실환경/정책 검증은 미완료다.
+**3-B D08 및 서명·원자적 선정 API 계약 조율:** 서명 형식·서버 시간/만료 경계·고정 버전/멱등 요청과 공고당 단일 계약·미선정/알림 트랜잭션을 합의한다. 별도 요청 후 착수한다. 결제와 이전 단계의 실환경/정책 검증은 미완료다.
 
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
@@ -508,3 +508,41 @@
 - **원격 Web CI 기능 SHA:** [run99/40067765470](https://github.com/Jubileekim/KEMI/actions/runs/40067765470), job120794501995에서 npm ci·형식·단위는 success, 확인 시 build:web은 in_progress·Chromium 설치와 E2E는 pending이었다. 로컬145/220/운영16과 별개다. 전달 문서 커밋 푸시로 cancel-in-progress에 따라 실행이 교체될 수 있으며 **최신 문서 SHA의 최종 CI는 미검증**이다. [PR #44 Checks](https://github.com/Jubileekim/KEMI/pull/44/checks)에서 확인한다. 수동 CI 재실행·timeout/재시도 완화 없음.
 - **기존 Vercel 연결 검사:** 기능 SHA status는 failure다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/44#issuecomment-6380561857)은 작성자 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제이며 배포 성공으로 표시하지 않는다. 초대·권한·배포 설정 변경·배포/재배포는 실행하지 않았다. Git 푸시/PR로 생긴 기존 서비스 연결 검사는 명시적 배포와 구분한다.
 - **종료 경계:** 최종 전체220/220(3-A12개 포함)·단위145/145·운영16개·타입/린트/빌드·형식·토큰·diff 검사 통과. 이번 3-A 클라이언트·명시적 Mock 통합까지만 완료다. 실제 API/DB·D08·서명/만료/선정/결제·3단계 전체는 미완료다. 다음 작업 자동 착수·PR 병합·자동 병합 설정·명시적 배포 없음. 전용5186 개발 서버는 정상 종료했고4190 preview도 명령행/소유 프로세스를 확인해 정리했다. 다른 기능의 캡처 생성물4개는 제외하고3-A 캡처2개만 전달한다. 문서 전달 커밋 푸시 후 원격 SHA/PR head/깨끗한 작업 트리를 최종 대조한다.
+
+## 3-B 양측 서명·만료·최종 선정 (2026-10-24)
+
+### 구현·변경 파일
+
+- **TERMS-02·CONTRACT-01·TERMS-03의 공개 제안 협의방 경로를 클라이언트·명시적 Mock으로 구현.** 최신 저장본 전체 최종 값을 확인하고 별도 확인창에서 버전을 고정한다. 요청자·한국 시간 요청/48시간 만료, 한쪽/양측 서명, 대체·만료·종료 상태를 구분한다. 요청/첫 서명으로 선정하지 않으며 같은 버전의 두 번째 유효 서명 때 한 후보만 모의 계약 확정·모집 종료·타후보 미선정을 반영한다.
+- 변경 시 구버전 값·서명·시각을 보존하고 구버전 서명을 차단한다. 만료 후 같은 버전 재요청 대신 같은 값의 새 확인 버전을 만든다. 서명은 복사하지 않는다. 버전이 바뀌면 이름·동의를 새로 입력한다. 계약 전후 같은 방·메시지를 유지하고 미선정 방은 읽기 전용이다. 계약 후 조건 편집·거절/철회·무선정 종료와 신규 제안은 차단한다. 결제/제작 시작은 발생하지 않는다.
+- 실제 조건서/서명/계약 API가 없고 accept는 P07과 충돌하므로 DEV/MSW `/__mock__/signatures/:requestId`로 분리했다. Bearer·ACTIVE·역할/당사자·방·버전/revision·지연 후 epoch/현재 상태를 검사한다. 중복 요청은 기한을 연장하지 않고 결과 불명확 시 같은 명령/ID 재시도·저장 결과 조회로 확인한다. 운영은 기존 준비 안내를 유지한다.
+- **D08 유지:** 이름100자/동의·동시 편집/revision·만료 정각 차단은 Mock 검토 예시다. 법적 서명 형식·정확한 서버 시간/만료 경계·실제 인증 강도를 확정하지 않았다. 상세는 `frontend-signatures-3b.md`.
+- 모델/통신: `apps/web/src/mocks/{signature-model,signature-api,signature-handlers}.ts`, 기존 `{proposal-model,proposal-handlers,terms-handlers,browser}.ts`.
+- 화면: `apps/web/src/features/terms/{SignaturePanel,TermsEditor,TermsVersionView}.tsx`, `src/mocks/{TermsMock,ProposalMock,ProposalCard,ChatPanelMock}.tsx`. 실제 서명 이후에도 저장본 제목이 '서명 요청 전'이라고 표시되던 문구를 일반 작성본 제목으로 변경했다. 기존 KEMI 토큰·로고·주요 색·카드·600/1024px 구간을 유지한다.
+- 검사/근거: `apps/web/test/signatures.test.ts`, `apps/web/e2e/signatures.spec.ts`, 기존 `e2e/terms.spec.ts`의 버튼/제목 기대값, `docs/{frontend-signatures-3b,frontend-feature-matrix,frontend-progress}.md`, `qa/frontend-3b/{README.md,playwright.edge.config.ts,production-smoke.cjs,production-results.json,signatures-390.png,signatures-1280.png}`. `.github/workflows/web-ci.yml`에는 선행3-A base만 허용한다. API/shared·의존성/lockfile·검사 규칙/timeout/retry·원본 엑셀/PDF/디자인·상위 독립 앱은 변경하지 않았다.
+
+### 검증·검토
+
+- 최종 보완본 로컬 단위 **153/153**(기존145+신규8), `npm run build:web`(타입·ESLint·운영 빌드), `npm run format:check`, `npm run check:tokens`, `git diff --check` 통과. Mock/인증 flag를 켜고 빌드해도 개발 코드/worker는 운영에서 제외한다.
+- 3-B 관련 Edge 데스크톱/모바일 **12/12·exit0·1.4분**: 공개→제안→협의→조건 작성→요청→첫 서명→양측 서명/선정→기존 대화, 타후보 미선정/읽기 전용과 무단 조회/서명404, 버전 변경/구서명 보존, 만료 정각/새 버전, 유실 응답 재전송/조회, malformed 조회·Bearer/지연 로그아웃을 확인했다. 이후 최종 검토에서 요청자 기록·이름 trim·확인 버전 ID 재사용 충돌을 보완하고 최종 전체 회귀에 포함한다.
+- 운영 산출물+독립 HTTP 인증 fixture **16개·페이지 오류0**: 비회원/의뢰인/크리에이터의5개 경로, 서명/조건서/제안 Mock 코드·endpoint·worker 제외, 제품/Mock 호출 없음. 실서버 인증/API 검증이 아니다. 최종 보완본 빌드 후 반복 결과는 아래 최종 검증에 기록한다.
+- 390/1280px 서명 화면 시각 확인. 최종 전체 통합에320/390/600/768/1024/1280px 넘침·React 텍스트 이스케이프·제품 계약/서명/결제 API 호출0 검사를 포함한다. 실제 브라우저 메뉴200% 확대·스크린리더·다른 브라우저·실제 다중 탭은 미검증이다.
+- 커밋 전 surgical-change·verify-before-claiming·fresh-context-review·security-review·react-best-practices 관점 자체 검토: 원본/P07/P09/D08과 API 경계, DEV lazy/운영 제외·unknown/Zod·본인/역할/지연 epoch·불변 저장본·버전별 동의·중복/유실·단일 후보 선정/종료 후 전송 차단을 대조했다. 무단 endpoint/서명 입력 script 문자열을 브라우저로 실행 검증했다. 실제 서버 보안/DB 원자성을 검증한 것은 아니며 사람 검토가 필요해 Draft로 전달한다.
+- 중간 실패: 초기 타입 좁히기·fixture enum/공고 status·non-null/배열 반복과 render 중 Date.now의 기존 ESLint 위반을 규칙 변경 없이 수정했다. 최초 관련 실행에서 선정 이후 마감 문구 assertion이 실제 전체 문구와 달랐고, 타후보 시나리오가 이미 서명한 의뢰인으로 재서명하려 해 대기했다. 실제 문구와 계정 전환을 수정한12/12 재검증이 통과했다. 최초 실행은 테스트 추가 편집/프로세스 종료 대기로 최종 종료 요약을 확보하지 못했으므로 통과로 합산하지 않는다. Stop-Process 오류 뒤 QA 서버 종료 재시도는 자동 승인 검토의 워크스페이스 크레딧 부족으로 실행되지 않았다. 재개 후 해당 PID/포트가 없음을 확인했고, 새 전용 서버/승인된 검사 실행은 정상 종료했다. 비밀값·불필요 생성물은 포함하지 않는다.
+
+### 남은 일·다음 작업 하나
+
+- **실제 API·DB 트랜잭션/공고당 unique·서버 시각·전자서명 제공자·영구 저장/다중 탭·알림/outbox는 미연결/미검증.** 단일 탭 메모리의 동기 처리/후보 차단을 서버 잠금/원자성 증거로 표시하지 않는다. 새로고침하면 초기화된다.
+- 공개 제안 경로의3-B 클라이언트/Mock과 구분해 직접 의뢰 경로 통합·3-C 테스트 결제·3단계 전체 통합은 남는다. **3단계 전체 완료가 아니다.** 다음 작업 하나는 **3-B D08 및 서명·원자적 선정 API 계약 조율**이다. 자동 착수·PR 병합·자동 병합 설정·명시적 배포/재배포는 하지 않는다.
+
+### Git 전달·최종 검증
+
+- 기존3-B PR/브랜치 없음, 선행 #44의 open/Draft와 로컬/원격 일치 `9df00cc`를 확인해 `feat/frontend-3b-signatures`에서 작업했다. base는 선행 `feat/frontend-3a-terms`(#44)이며 선행 병합 후 base 조정 검토가 필요하다.
+- 모델/단위/근거 커밋 [19c1e9f](https://github.com/Jubileekim/KEMI/commit/19c1e9f)을 푸시했다. 화면/통신·통합 검사/기록·PR과 최종 전체 회귀/원격 CI 상태는 검증 종료 후 이 절에 추가한다.
+
+- **최종 전체 회귀:** 최종 기능/검사 SHA `60faffa071d38342c510403058585e883c0270d1`에서 **232/232·실패0·exit0·10.2분** 통과. 기존220+3-B12개이며3-A12개와3-B12개 통합도 포함한다. 로컬 Edge 두 프로젝트/workers2·retry0·기존 timeout·전용5187이다. 최종153/153 단위·타입/린트/운영 빌드·형식·토큰·diff와 별개로 확인했다. 최종 보완본 운영 산출물/HTTP fixture도 **16개·페이지 오류0·exit0** 재검증했다. 실서버/DB/외부 제공자 증거가 아니다. MSW의 기존 favicon 미일치 warning이 있어 콘솔 전체 오류/경고0으로 표시하지 않는다.
+- 화면/통신 커밋 [caf782f](https://github.com/Jubileekim/KEMI/commit/caf782f), 통합/회귀·CI 허용 커밋 [60faffa](https://github.com/Jubileekim/KEMI/commit/60faffa)을 푸시했고 [Draft PR #45](https://github.com/Jubileekim/KEMI/pull/45)를 생성·이 채팅에 연결했다. 확인 시 PR head가 `60faffa`와 일치하고 open/Draft·미병합·mergeable=true였다. 서명/만료에서 선정까지 같은 검증 흐름을 한 PR에 묶고 모델·화면/통신·검사 커밋은 분리했다. QA/최종 전달 기록도 같은 브랜치에 포함하며 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/45/commits)에서 최종 head를 확인한다.
+- **원격 Web CI 기능 SHA:** [run101/40087355656](https://github.com/Jubileekim/KEMI/actions/runs/40087355656), job120852897686에서 npm ci·형식·단위·build:web은 success, 확인 시 Chromium 설치는 in_progress·브라우저 E2E/report는 pending이었다. 로컬232/153/운영16과 별개다. QA/전달 기록 푸시로 cancel-in-progress에 따라 실행이 교체될 수 있으며 **최신 전달 SHA의 최종 CI는 미검증**이다. [PR #45 Checks](https://github.com/Jubileekim/KEMI/pull/45/checks)에서 별도로 확인한다. 수동 CI 재실행·timeout/retry 완화 없음.
+- **기존 Vercel 연결 검사:** 기능 SHA status는 failure/Blocked다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/45#issuecomment-6383287399)은 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제이며 배포 성공으로 표시하지 않는다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포는 실행하지 않았다. Git 푸시/PR로 생긴 기존 서비스 연결 검사와 구분한다.
+- **종료 경계:** 공개 제안 경로의3-B 클라이언트/명시적 Mock 통합까지만 완료다. 실제 API·DB·알림·D08·직접 의뢰 통합·결제와3단계 전체는 미완료다. 다음 작업 자동 착수·PR 병합·자동 병합 설정·명시적 배포 없음. 전용 전체 QA 서버는 exit0으로 종료했고4191 preview도 세션을 통해 정상 정리했다. 최종 QA/기록 커밋 푸시 후 원격/PR head와 작업 트리를 대조한다.
+- 최종 소스에서 서명 통합2개 프로젝트를 별도 **2/2·exit0·17.2초** 재검증하며390/1280px 캡처2개를 재생성·시각 확인했다. 전체232개 결과와 합산하지 않는다. `--reporter=list --output ../../tmp/3b-capture-results`로 전체 회귀 HTML 보고서는 보존했다. 검사/소스 추가 변경은 없다.
