@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 카카오·결제 미착수. 0단계·1단계·2단계·3단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현, 최종 검증 진행 중. 실제 Toss Sandbox·카카오 미연결. 0단계·1단계·2단계·3단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -113,7 +113,7 @@
 
 ## 다음 작업 하나
 
-**3-B D08 및 서명·원자적 선정 API 계약 조율:** 서명 형식·서버 시간/만료 경계·고정 버전/멱등 요청과 공고당 단일 계약·미선정/알림 트랜잭션을 합의한다. 별도 요청 후 착수한다. 결제와 이전 단계의 실환경/정책 검증은 미완료다.
+**3-C 주문·결제 승인/조회 API 및 Toss Sandbox 계약 조율:** 고정 계약 금액·결제 권한·멱등 키·기존 주문 조회/복귀·서버 PG 검증과 webhook 원자성을 합의한다. 별도 요청 후 착수한다. 이전 단계의 실환경/정책 검증도 미완료다.
 
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
@@ -546,3 +546,32 @@
 - **기존 Vercel 연결 검사:** 기능 SHA status는 failure/Blocked다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/45#issuecomment-6383287399)은 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제이며 배포 성공으로 표시하지 않는다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포는 실행하지 않았다. Git 푸시/PR로 생긴 기존 서비스 연결 검사와 구분한다.
 - **종료 경계:** 공개 제안 경로의3-B 클라이언트/명시적 Mock 통합까지만 완료다. 실제 API·DB·알림·D08·직접 의뢰 통합·결제와3단계 전체는 미완료다. 다음 작업 자동 착수·PR 병합·자동 병합 설정·명시적 배포 없음. 전용 전체 QA 서버는 exit0으로 종료했고4191 preview도 세션을 통해 정상 정리했다. 최종 QA/기록 커밋 푸시 후 원격/PR head와 작업 트리를 대조한다.
 - 최종 소스에서 서명 통합2개 프로젝트를 별도 **2/2·exit0·17.2초** 재검증하며390/1280px 캡처2개를 재생성·시각 확인했다. 전체232개 결과와 합산하지 않는다. `--reporter=list --output ../../tmp/3b-capture-results`로 전체 회귀 HTML 보고서는 보존했다. 검사/소스 추가 변경은 없다.
+
+## 3-C 테스트 결제·결과 확인·재조회 (2026-10-24)
+
+### 구현·변경 파일
+
+- **PAY-01/02의 공개 제안 계약 경로를 클라이언트·명시적 PG Mock으로 구현.** 동일 버전 양측 서명으로 확정된 계약의 전액·당사자를 표시하고 의뢰인이 주문 생성/Mock 결제, 양 당사자가 결과/이력을 조회한다. 준비/결과 불명확/성공 시 새 주문을 차단하고 확정 실패/취소 이후에만 별도 확인으로 새 주문을 만든다. 주문 생성만으로 결제/제작을 시작하지 않는다.
+- 복귀 URL의 success·amount·paymentKey로 승인하지 않는다. 기존 주문 식별·고정 금액/KRW를 모의 서버에서 대조하고 응답 유실/결과 불명확은 실패와 구분한다. 같은 명령/ID 재전송과 기존 주문 조회를 제공하며 중복/과거 이벤트·늦은 실패가 성공을 되돌리지 않는다. 지연 요청 후 epoch·당사자·계약을 재검사한다.
+- 실제 API/shared에 주문·결제/승인·조회 계약이 없어 **DEV/MSW `/__mock__/payments/:contractId`**로 분리했다. **Toss SDK·실제 Sandbox·API·DB·알림은 미연결/미검증**이다. 단일 탭 메모리이며 새로고침 후 없는 계약을 성공으로 복원하지 않는다. D08·D10~D12, 만료/취소와 늦은 승인 충돌·실제 PG 상태/멱등 키/webhook 계약은 확정하지 않았다. 상세는 `frontend-payments-3c.md`.
+- 모델/통신: `apps/web/src/mocks/{payment-model,payment-api,payment-handlers}.ts`, 기존 `signature-handlers.ts`의 서명 저장본 조회와 `browser.ts` 등록.
+- 화면: `apps/web/src/features/payments/{PaymentPage,PaymentResultPage}.tsx`, `src/mocks/PaymentMock.tsx`, 기존 `src/app/App.tsx`와 `src/features/terms/SignaturePanel.tsx`의 양측 계약/결제 조회 링크. KEMI 토큰·브랜드·공통 Dialog/Button·600/1024px 구간을 유지한다.
+- 검사/근거: `apps/web/test/payments.test.ts`, `apps/web/e2e/{payments.spec,payments-helpers}.ts`, `docs/{frontend-payments-3c,frontend-feature-matrix,frontend-progress}.md`, `qa/frontend-3c/{README.md,playwright.edge.config.ts,production-smoke.cjs,production-results.json,payments-390.png,payments-1280.png}`. `.github/workflows/web-ci.yml`에는 선행3-B base만 허용했다. API/shared·의존성/lockfile·검사 규칙/timeout/retry·원본 엑셀/PDF/디자인·상위 독립 앱은 변경하지 않았다.
+
+### 검증·검토
+
+- 최종 보강본 `npm run test:web`: **162/162**(기존153+신규9), 두 Mock/auth flag를 켠 `npm run build:web`(타입·ESLint·운영 빌드), `npm run format:check`, `npm run check:tokens`, `git diff --check` 통과. 종료 문서 반영 뒤 형식/diff를 다시 확인한다.
+- 보강 전 3-C Edge 데스크톱/모바일 **12/12·exit0·4.3분**. 조건→첫 서명 결제 불가→양측 서명/계약→전액 주문→검증→양측 재조회·기존 방, 금액 불일치/결과 불명확/지연 결과 재조회, 실패·취소·유실·동일 ID/새 주문 차단, URL 위조·형식/HTTP/네트워크 오류·타인/Bearer·지연 로그아웃·새로고침을 확인했다. 이후 저장된 명령 결과 확인·유실 중 결과 확인 표시·제작자 최신 주문 링크를 보강했고 최종 전체 회귀에 포함한다.
+- 최종 보강본 운영 산출물+독립 HTTP 인증 fixture **7개·페이지 오류0·exit0**. 두 flag를 켜도 결제/서명/조건서 Mock 코드·endpoint·worker 제외, 비회원/의뢰인/크리에이터×결제/결과2경로의 가드/준비 안내, 제품·Mock 호출/worker 없음. 실서버 인증/PG 검증이 아니다.
+- surgical-change·verify-before-claiming·fresh-context-review·security-review·React 품질 관점 자체 검토로 명세/P10/API 부재, DEV lazy·unknown/Zod·객체별 권한·지연 epoch·고정 금액/버전·멱등/조회 우선·React 텍스트 출력을 대조했다. 브라우저에서 금액/URL/body 변조와 무단 조회·전송을 실행했다. 실제 서버 보안/DB 원자성 검증을 대체하지 않으며 사람 검토가 필요해 Draft로 전달한다.
+- 중간 오류: 중첩 삼항식 ESLint2건을 기존 규칙 변경 없이 수정했다. 형식 검사에서 테스트1파일을 발견해 재포맷했다. 기본 제한 환경의 Playwright 서버 종료 대기에서 명령행으로 이번 KEMI/5188 PID만 확인했다. Stop-Process 내부 오류 뒤 같은 확인된 PID를 .NET API로 종료해 최종12/12·exit0을 확보했다. 최종 전체 회귀는 승인된 실행으로 정상 종료를 확인한다. `preview:web` 별칭의 인수 전달 실패는 workspace Vite 명령으로 수정했고7검사가 통과했다. 중간 실패/종료 대기를 통과로 합산하지 않는다. 기존 favicon/MSW·DevTools 경고가 있어 전체 콘솔 경고0으로 표시하지 않는다.
+
+### 남은 일·다음 작업 하나
+
+- **3-C 클라이언트/PG Mock 범위만 구현했다.** 실제 API·DB 트랜잭션·Toss Sandbox 결제창/승인/조회·영구 저장/다중 탭·알림·미결정 정책은 남는다. 공개 제안 경로 통합과 실제 PG/직접 의뢰 경로를 구분하며 **3단계 전체 완료가 아니다.** 제작·다음 단계는 착수하지 않는다.
+- 다음 작업 하나: **3-C 주문·결제 승인/조회 API 및 Toss Sandbox 계약 조율**. 자동 착수·PR 병합·자동 병합 설정·명시적 배포/재배포는 하지 않는다.
+
+### Git 전달·최종 통합 검증
+
+- 기존3-C 브랜치/PR 없음, 선행 #45 open/Draft와 로컬/원격 `d72d308` 일치를 확인해 `feat/frontend-3c-payments`에서 작업했다. base는 선행 `feat/frontend-3b-signatures`(#45)이며 선행 병합 후 base 조정 검토가 필요하다.
+- 모델·단위·근거 [039e772](https://github.com/Jubileekim/KEMI/commit/039e772)을 푸시했다. 화면·통신/검사/기록 커밋, Draft PR, 최종 전체244개 회귀와 원격 CI 결과는 아래에 추가한다. 초기12개와 최종 전체 결과는 합산하지 않는다.

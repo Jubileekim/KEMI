@@ -1,0 +1,13 @@
+{
+  "source": "production bundle with independent HTTP fixtures; NOT live API/PG",
+  "results": [
+    "Payment/Signature/Terms Mock code, endpoints and worker excluded from production",
+    "GUEST /contracts/10000000-0000-4000-8000-000000000001/payment: production boundary verified",
+    "GUEST /payments/result?contractId=10000000-0000-4000-8000-000000000001&success=true&amount=1: production boundary verified",
+    "CLIENT /contracts/10000000-0000-4000-8000-000000000001/payment: production boundary verified",
+    "CLIENT /payments/result?contractId=10000000-0000-4000-8000-000000000001&success=true&amount=1: production boundary verified",
+    "CREATOR /contracts/10000000-0000-4000-8000-000000000001/payment: production boundary verified",
+    "CREATOR /payments/result?contractId=10000000-0000-4000-8000-000000000001&success=true&amount=1: production boundary verified"
+  ],
+  "pageErrors": []
+}
