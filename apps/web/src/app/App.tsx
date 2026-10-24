@@ -18,6 +18,9 @@ const CampaignBrowsePage = lazy(
 );
 const ProposalPage = lazy(() => import("../features/campaigns/ProposalPage"));
 const PaymentPage = lazy(() => import("../features/payments/PaymentPage"));
+const ReadinessPanel = lazy(
+  () => import("../features/production/ReadinessPanel"),
+);
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -77,6 +80,9 @@ export default function App() {
                       {screen.path === "/payments/result" && (
                         <PaymentResultPage />
                       )}
+                      {screen.path === "/contracts/:contractId/production" && (
+                        <ReadinessPanel />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -89,6 +95,7 @@ export default function App() {
                         ...proposalPaths,
                         "/contracts/:contractId/payment",
                         "/payments/result",
+                        "/contracts/:contractId/production",
                         "/login",
                         "/signup",
                         "/auth/social/callback",

@@ -87,7 +87,7 @@ export default function PaymentMock({
       </p>
       <p>
         복귀 URL은 성공 증거가 아니에요. 계약·당사자·금액·기존 주문을 모의
-        서버에서 확인해요. 제작 시작은 후속 범위예요.
+        서버에서 확인해요. 제작 시작은 준비 화면에서 필수 조건을 확인해요.
       </p>
       {!valid && (
         <p role="alert">
@@ -209,6 +209,9 @@ export default function PaymentMock({
           )}
           <Link to={`/workspace/${query.data.contract.requestId}`}>
             같은 작업 공간으로 돌아가기
+          </Link>
+          <Link to={`/contracts/${contractId}/production`}>
+            제품·자료 준비와 납기 (Mock)
           </Link>
           <details>
             <summary>주문 이력</summary>

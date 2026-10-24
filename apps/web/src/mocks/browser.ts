@@ -9,6 +9,7 @@ import proposalHandlers from "./proposal-handlers";
 import termsHandlers from "./terms-handlers";
 import signatureHandlers from "./signature-handlers";
 import paymentHandlers from "./payment-handlers";
+import productionHandlers from "./production-handlers";
 
 const worker = setupWorker(
   ...handlers,
@@ -21,6 +22,7 @@ const worker = setupWorker(
   ...termsHandlers,
   ...signatureHandlers,
   ...paymentHandlers,
+  ...productionHandlers,
 );
 
 export default worker;

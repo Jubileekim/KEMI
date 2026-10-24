@@ -323,6 +323,9 @@ export default function SignaturePanel({
               <>
                 <p>모의 계약 식별: {round.contractId}</p>
                 <p>선정 완료 · 실제 결제 API 미연결 · 제작 시작 전</p>
+                <Link to={`/contracts/${round.contractId}/production`}>
+                  제품·자료 준비와 납기 (Mock)
+                </Link>
                 {user?.role === "CLIENT" && (
                   <Link to={`/contracts/${round.contractId}/payment`}>
                     전액 테스트 결제 확인 (Mock)

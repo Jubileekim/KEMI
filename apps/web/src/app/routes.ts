@@ -92,6 +92,12 @@ export const screens: Screen[] = [
     roles: ["client"],
   },
   {
+    path: "/contracts/:contractId/production",
+    title: "제작 준비·납기",
+    layout: "workspace",
+    roles: members,
+  },
+  {
     path: "/payments/result",
     title: "결제 결과 확인",
     layout: "member",

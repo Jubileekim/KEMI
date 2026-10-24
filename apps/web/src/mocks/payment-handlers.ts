@@ -12,6 +12,8 @@ import {
 } from "./payment-model";
 
 const records = new Map<string, PaymentOrder[]>();
+export const mockContractPaid = (id: string) =>
+  records.get(id)?.some((order) => order.status === "SUCCEEDED") ?? false;
 let scenario = "success";
 const fail = (status: number) =>
   HttpResponse.json({ message: "모의 결제 확인 실패" }, { status });
