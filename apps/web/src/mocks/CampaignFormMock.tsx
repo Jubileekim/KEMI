@@ -1,6 +1,9 @@
+import { Link } from "react-router";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNow } from "./discovery-ui";
+import { recruitmentStatus } from "./discovery-model";
 import Button from "../components/ui/button";
 import Input from "../components/ui/input";
 import Textarea from "../components/ui/textarea";
@@ -35,6 +38,7 @@ export default function CampaignFormMock({
   busy: boolean;
   onSave: (command: CampaignCommand) => Promise<boolean>;
 }) {
+  const now = useNow();
   const form = useForm({
     defaultValues: item
       ? {
@@ -55,7 +59,7 @@ export default function CampaignFormMock({
   const [problems, setProblems] = useState<string[]>([]);
   const [failed, setFailed] = useState(false);
   const pending = busy || form.formState.isSubmitting;
-  const published = item?.status === "OPEN";
+  const published = !!item && item.status !== "DRAFT";
   const currentValues = useWatch({ control: form.control });
   const conditionsKey = JSON.stringify([
     currentValues.title,
@@ -177,12 +181,18 @@ export default function CampaignFormMock({
       )}
       {published && item.publishedAt && item.recruitmentEndAt ? (
         <div role="status" className="grid gap-2">
-          <p>모의 공개 완료 · 모집 중</p>
+          <p>
+            모의 공개 완료 ·{" "}
+            {recruitmentStatus(item, now) === "CLOSED"
+              ? "모집 마감"
+              : "모집 중"}
+          </p>
+          <Link to={`/campaigns/${item.id}`}>모집 상세에서 상태 확인</Link>
           <p>공개: {campaignTime(item.publishedAt)}</p>
           <p>마감: {campaignTime(item.recruitmentEndAt)}</p>
           <p>
-            공개 후 수정·삭제와 마감 상태 전이는 후속 범위예요. 실제 공개
-            목록·제안 접수는 미연결이에요.
+            공개 후 수정·삭제는 후속 범위예요. 실제 공개 목록·제안 접수는
+            미연결이에요.
           </p>
         </div>
       ) : (

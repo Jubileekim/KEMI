@@ -13,6 +13,9 @@ const PackagesPage = lazy(() => import("../features/packages/PackagesPage"));
 const CampaignEditor = lazy(
   () => import("../features/campaigns/CampaignEditor"),
 );
+const CampaignBrowsePage = lazy(
+  () => import("../features/campaigns/CampaignBrowsePage"),
+);
 const GoogleProvider = import.meta.env.DEV
   ? lazy(() => import("../mocks/GoogleProvider"))
   : null;
@@ -59,6 +62,10 @@ export default function App() {
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
                       )}
+                      {(screen.path === "/campaigns" ||
+                        screen.path === "/campaigns/:campaignId") && (
+                        <CampaignBrowsePage />
+                      )}
                       {![
                         "/login",
                         "/signup",
@@ -66,6 +73,8 @@ export default function App() {
                         "/me/profile",
                         "/studio/packages",
                         "/studio/portfolio",
+                        "/campaigns",
+                        "/campaigns/:campaignId",
                         "/campaigns/new",
                         "/campaigns/:campaignId/edit",
                       ].includes(screen.path) && (

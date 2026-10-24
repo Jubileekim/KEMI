@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNow } from "./discovery-ui";
+import { recruitmentStatus } from "./discovery-model";
 import { session, useSession } from "../app/session";
 import Button from "../components/ui/button";
 import Label from "../components/ui/label";
@@ -26,6 +28,7 @@ function CampaignContent({
   reload: () => void;
   queryKey: readonly unknown[];
 }) {
+  const now = useNow();
   const { campaignId } = useParams();
   const navigate = useNavigate();
   const cache = useQueryClient();
@@ -131,6 +134,7 @@ function CampaignContent({
       )}
       <section aria-label="내 모의 캠페인" className="showcase-card grid gap-4">
         <h2 className="type-heading-sm">내 모의 캠페인</h2>
+        <Link to="/campaigns">공개 모집 둘러보기</Link>
         <Link to="/campaigns/new">새 캠페인 작성</Link>
         {!state.items.length && <p>저장한 캠페인이 없어요.</p>}
         {state.items.map((candidate) => (
@@ -141,7 +145,13 @@ function CampaignContent({
           >
             <h3>
               {candidate.title || "제목 없는 초안"} ·{" "}
-              {candidate.status === "DRAFT" ? "비공개 초안" : "모집 중 (Mock)"}
+              {
+                {
+                  DRAFT: "비공개 초안",
+                  CLOSED: "모집 마감 (Mock)",
+                  OPEN: "모집 중 (Mock)",
+                }[recruitmentStatus(candidate, now)]
+              }
             </h3>
             {candidate.recruitmentEndAt && (
               <p>마감: {campaignTime(candidate.recruitmentEndAt)}</p>
@@ -157,8 +167,8 @@ function CampaignContent({
       <section aria-label="모의 공개 확인" className="showcase-card grid gap-3">
         <h2 className="type-heading-sm">모의 공개 확인</h2>
         <p>
-          초안 노출 제외를 확인하는 본인 테스트용 영역이에요. 실제 캠페인 탐색은
-          후속 범위예요.
+          초안 노출 제외를 확인하는 본인 테스트용 영역이에요. 공개 모집 화면에서
+          모의 목록·상세를 확인할 수 있어요.
         </p>
         {!publicCampaigns(state).length && <p>모의 공개 캠페인 없음</p>}
         {publicCampaigns(state).map((candidate) => (

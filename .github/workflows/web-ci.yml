@@ -12,6 +12,7 @@ on:
         feat/frontend-1d-packages,
         feat/frontend-1d-portfolio,
         feat/frontend-2a-campaigns,
+        feat/frontend-2b-ai-budget,
       ]
   push:
     branches: [main]

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  listingSchema,
   browseCampaigns,
   browseQuerySchema,
   closeCampaign,
@@ -32,6 +33,34 @@ const state = applyCampaign(
   now,
 );
 describe("2-C 명시적 Mock", () => {
+  it("공개 예시도 3/7/14일 간격·과거 공개·만료 예시를 일관되게 유지", () => {
+    expect(new Set(fixtures.map((item) => item.days))).toEqual(
+      new Set(["3", "7", "14"]),
+    );
+    fixtures.forEach((item) => {
+      expect(
+        Date.parse(item.recruitmentEndAt ?? "") -
+          Date.parse(item.publishedAt ?? ""),
+      ).toBe(Number(item.days) * 86400000);
+      expect(Date.parse(item.publishedAt ?? "")).toBeLessThanOrEqual(
+        now.getTime(),
+      );
+    });
+  });
+  it("공개 응답의 초안 상태·빈 마감·금액 오류도 거부", () => {
+    const item = fixtures[0];
+    if (!item) throw new Error("fixture");
+    const projected = projectPublic(item);
+    expect(
+      listingSchema.safeParse({ ...projected, status: "DRAFT" }).success,
+    ).toBe(false);
+    expect(
+      listingSchema.safeParse({ ...projected, recruitmentEndAt: null }).success,
+    ).toBe(false);
+    expect(
+      listingSchema.safeParse({ ...projected, budget: "NaN" }).success,
+    ).toBe(false);
+  });
   it("초안·참고 자료·AI 분석 입력은 공개하지 않음", () => {
     const draft = applyCampaign(
       emptyCampaignState(),
@@ -82,6 +111,11 @@ describe("2-C 명시적 Mock", () => {
       "150000",
     ]);
     const first = browseCampaigns(fixtures, {}, now.getTime());
+    expect(first.nextDeadline).toBe(fixtures[0]?.recruitmentEndAt);
+    expect(
+      browseCampaigns(fixtures, { status: "CLOSED", page: "99" }, now.getTime())
+        .nextDeadline,
+    ).toBe(first.nextDeadline);
     const second = browseCampaigns(fixtures, { page: "2" }, now.getTime());
     expect(first.total).toBe(8);
     expect(second.totalPages).toBe(2);

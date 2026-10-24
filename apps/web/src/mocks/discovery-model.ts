@@ -8,20 +8,32 @@ import {
 } from "./campaign-model";
 
 // A deliberately smaller public projection: no references, pricing reports or drafts.
-export const listingSchema = campaignSchema.pick({
-  id: true,
-  ownerId: true,
-  title: true,
-  product: true,
-  purpose: true,
-  scope: true,
-  budget: true,
-  days: true,
-  status: true,
-  publishedAt: true,
-  recruitmentEndAt: true,
-  closedAt: true,
-});
+export const listingSchema = campaignSchema
+  .pick({
+    id: true,
+    ownerId: true,
+    title: true,
+    product: true,
+    purpose: true,
+    scope: true,
+    budget: true,
+    days: true,
+    status: true,
+    publishedAt: true,
+    recruitmentEndAt: true,
+    closedAt: true,
+  })
+  .extend({
+    status: z.enum(["OPEN", "CLOSED"]),
+    publishedAt: z.iso.datetime(),
+    recruitmentEndAt: z.iso.datetime(),
+    budget: z
+      .string()
+      .regex(/^\d+$/)
+      .refine(
+        (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0,
+      ),
+  });
 export type Listing = z.infer<typeof listingSchema>;
 export function recruitmentStatus(
   item: Pick<Campaign, "status" | "recruitmentEndAt">,
@@ -69,6 +81,7 @@ export const browseQuerySchema = z
   );
 export const browseResultSchema = z.strictObject({
   items: z.array(listingSchema),
+  nextDeadline: z.iso.datetime().nullable(),
   total: z.number().int().nonnegative(),
   totalPages: z.number().int().nonnegative(),
   page: z.number().int().positive(),
@@ -110,11 +123,23 @@ export function browseCampaigns(
         order = Number(b.budget) - Number(a.budget);
       return order || a.id.localeCompare(b.id);
     });
+  const upcoming = items
+    .filter(
+      (item) =>
+        item.status === "OPEN" &&
+        item.recruitmentEndAt &&
+        Date.parse(item.recruitmentEndAt) > now,
+    )
+    .map((item) => Date.parse(item.recruitmentEndAt ?? ""));
+  const nextDeadline = upcoming.length
+    ? new Date(Math.min(...upcoming)).toISOString()
+    : null;
   const size = 6; // Mock presentation size, not a product policy.
   return {
     items: matches
       .slice((query.page - 1) * size, query.page * size)
       .map((item) => listingSchema.strip().parse(item)),
+    nextDeadline,
     total: matches.length,
     totalPages: Math.ceil(matches.length / size),
     page: query.page,
@@ -145,20 +170,24 @@ export function closeCampaign(
   };
 }
 export function discoveryFixtures(now = new Date()): Campaign[] {
-  return Array.from({ length: 9 }, (_, index) => ({
-    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-    ownerId: "fixture-client",
-    title: `모의 ${index % 2 ? "가족 기념" : "제품 소개"} 영상 ${index + 1}`,
-    product: index % 2 ? "가족 영상" : "생활용품",
-    purpose: "소개·기념",
-    scope: "편집 영상 1편",
-    budget: String((index + 1) * 50000),
-    references: "PRIVATE_FIXTURE_REFERENCE",
-    days: "7",
-    status: "OPEN",
-    publishedAt: new Date(now.getTime() - index * 1000).toISOString(),
-    recruitmentEndAt: new Date(
-      now.getTime() + (index === 8 ? -1 : index + 1) * 86400000,
-    ).toISOString(),
-  }));
+  return Array.from({ length: 9 }, (_, index) => {
+    let days: Campaign["days"] = "7";
+    if (index < 3) days = "3";
+    if (index === 7) days = "14";
+    const deadline = now.getTime() + (index === 8 ? -1 : index + 1) * 86400000;
+    return {
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      ownerId: "fixture-client",
+      title: `모의 ${index % 2 ? "가족 기념" : "제품 소개"} 영상 ${index + 1}`,
+      product: index % 2 ? "가족 영상" : "생활용품",
+      purpose: "소개·기념",
+      scope: "편집 영상 1편",
+      budget: String((index + 1) * 50000),
+      references: "PRIVATE_FIXTURE_REFERENCE",
+      days,
+      status: "OPEN",
+      publishedAt: new Date(deadline - Number(days) * 86400000).toISOString(),
+      recruitmentEndAt: new Date(deadline).toISOString(),
+    };
+  });
 }
