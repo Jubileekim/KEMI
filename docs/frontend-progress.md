@@ -503,4 +503,8 @@
 ### Git 전달 상태
 
 - 기존3-A 브랜치/PR 없음, 선행 #43의 open/Draft와 원격/로컬 일치 `722ba68`을 확인해 `feat/frontend-3a-terms`에서 작업했다. base는 선행 `feat/frontend-2d-proposals-chat`이며 #43 병합 후 base 조정 검토가 필요하다.
-- 모델/단위/근거 로컬 커밋 [f9305b6](https://github.com/Jubileekim/KEMI/commit/f9305b6). 화면 묶음은 최종 전체220개 통과 후 검토·커밋/푸시/PR 생성한다. Git/원격 검사 결과는 아래 전달 기록에 추가한다.
+- 모델/단위/근거 [f9305b6](https://github.com/Jubileekim/KEMI/commit/f9305b6), 화면/통신 [3837831](https://github.com/Jubileekim/KEMI/commit/3837831), 브라우저 검증/QA/기록 [172c1be](https://github.com/Jubileekim/KEMI/commit/172c1be) 모두 푸시했다. [Draft PR #44](https://github.com/Jubileekim/KEMI/pull/44)을 생성·이 채팅에 연결했다. 기능 SHA `172c1be80f5767619d57bd0f94c6a817821aaa22`와 PR head 일치, open/Draft·미병합·mergeable=true를 확인했다. 최종 Git 전달 기록은 문서 전용 커밋으로 추가 푸시한다.
+
+- **원격 Web CI 기능 SHA:** [run99/40067765470](https://github.com/Jubileekim/KEMI/actions/runs/40067765470), job120794501995에서 npm ci·형식·단위는 success, 확인 시 build:web은 in_progress·Chromium 설치와 E2E는 pending이었다. 로컬145/220/운영16과 별개다. 전달 문서 커밋 푸시로 cancel-in-progress에 따라 실행이 교체될 수 있으며 **최신 문서 SHA의 최종 CI는 미검증**이다. [PR #44 Checks](https://github.com/Jubileekim/KEMI/pull/44/checks)에서 확인한다. 수동 CI 재실행·timeout/재시도 완화 없음.
+- **기존 Vercel 연결 검사:** 기능 SHA status는 failure다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/44#issuecomment-6380561857)은 작성자 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제이며 배포 성공으로 표시하지 않는다. 초대·권한·배포 설정 변경·배포/재배포는 실행하지 않았다. Git 푸시/PR로 생긴 기존 서비스 연결 검사는 명시적 배포와 구분한다.
+- **종료 경계:** 최종 전체220/220(3-A12개 포함)·단위145/145·운영16개·타입/린트/빌드·형식·토큰·diff 검사 통과. 이번 3-A 클라이언트·명시적 Mock 통합까지만 완료다. 실제 API/DB·D08·서명/만료/선정/결제·3단계 전체는 미완료다. 다음 작업 자동 착수·PR 병합·자동 병합 설정·명시적 배포 없음. 전용5186 개발 서버는 정상 종료했고4190 preview도 명령행/소유 프로세스를 확인해 정리했다. 다른 기능의 캡처 생성물4개는 제외하고3-A 캡처2개만 전달한다. 문서 전달 커밋 푸시 후 원격 SHA/PR head/깨끗한 작업 트리를 최종 대조한다.
