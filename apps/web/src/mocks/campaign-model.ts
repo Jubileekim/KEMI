@@ -34,7 +34,8 @@ export const emptyCampaign: CampaignValues = {
 export const campaignSchema = campaignValuesSchema.extend({
   id: z.string().uuid(),
   ownerId: z.string(),
-  status: z.enum(["DRAFT", "OPEN"]),
+  status: z.enum(["DRAFT", "OPEN", "CLOSED"]),
+  closedAt: z.iso.datetime().optional(),
   publishedAt: z.iso.datetime().nullable(),
   recruitmentEndAt: z.iso.datetime().nullable(),
 });
@@ -104,8 +105,10 @@ export function applyCampaign(
   if (item && item.ownerId !== owner.id)
     throw new Error("본인 캠페인이 아니에요.");
   // Idempotent publish: neither content nor the first deadline may be reset.
-  if (item?.status === "OPEN" && command.type === "publish") return state;
-  if (item?.status === "OPEN") throw new Error("공개 후 수정은 후속 범위예요.");
+  if (item && item.status !== "DRAFT" && command.type === "publish")
+    return state;
+  if (item && item.status !== "DRAFT")
+    throw new Error("공개 후 수정은 후속 범위예요.");
   if (revision !== state.revision)
     throw new CampaignConflict("최신 값 확인 후 다시 저장해 주세요.");
   if (command.type === "publish") {
@@ -132,5 +135,5 @@ export function applyCampaign(
   };
 }
 export function publicCampaigns(state: CampaignState) {
-  return state.items.filter((item) => item.status === "OPEN");
+  return state.items.filter((item) => item.status !== "DRAFT");
 }
