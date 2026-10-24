@@ -14,6 +14,44 @@ import {
 } from "./terms-model";
 
 const documents = new Map<string, TermsDocument>();
+export const readMockTerms = (id: string) => documents.get(id);
+export function renewMockTerms(
+  id: string,
+  versionId: string,
+  revision: number,
+  commandId: string,
+  authorId: string,
+) {
+  const doc = documents.get(id);
+  if (!doc) throw new ProposalError("작성본이 없어요.");
+  const prior = doc.versions.find((v) => v.id === commandId);
+  if (prior) {
+    if (
+      prior.authorId === authorId &&
+      prior.number === revision + 1 &&
+      doc.versions.find((v) => v.number === revision)?.id === versionId
+    )
+      return;
+    throw new ProposalError("확인 버전 식별자가 충돌해요.");
+  }
+  const latest = doc.versions.at(-1);
+  if (!latest || latest.id !== versionId || doc.revision !== revision)
+    throw new ProposalError("최신 버전을 확인해 주세요.");
+  documents.set(id, {
+    ...doc,
+    revision: doc.revision + 1,
+    versions: [
+      ...doc.versions,
+      {
+        ...structuredClone(latest),
+        id: commandId,
+        number: doc.revision + 1,
+        authorId,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  });
+}
 let scenario = "success";
 const fail = (status: number) =>
   HttpResponse.json({ message: "모의 조건서 요청 실패" }, { status });

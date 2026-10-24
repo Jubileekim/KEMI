@@ -190,6 +190,7 @@ function Content() {
                 <TermsMock
                   key={`${items[0].id}-${session.epoch()}`}
                   requestId={items[0].id}
+                  item={items[0]}
                   active={
                     items[0].status === "DISCUSSING" && !items[0].contracted
                   }

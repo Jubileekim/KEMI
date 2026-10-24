@@ -55,9 +55,7 @@ export default function TermsVersionView({
       aria-label={`작성본 v${version.number}`}
       className="rounded-xl border p-4"
     >
-      <h3 className="type-heading-md">
-        작성본 v{version.number} · 서명 요청 전
-      </h3>
+      <h3 className="type-heading-md">작성본 v{version.number}</h3>
       <p>
         저장자 {version.authorId} ·{" "}
         <time dateTime={version.createdAt}>

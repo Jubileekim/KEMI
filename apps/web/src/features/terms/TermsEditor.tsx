@@ -60,8 +60,8 @@ export default function TermsEditor({
     <div className="grid min-w-0 gap-4">
       <TermsReferences sources={document.sources} />
       <p>
-        작성본은 서명 요청 전의 저장 이력이에요. 양측 서명·48시간
-        만료·선정·결제는 후속 범위예요.
+        작성본과 서명 이력은 구분돼요. 저장 후 아래 양측 확인·서명에서 대상
+        버전과 최종 조건을 다시 확인해 주세요. 결제는 미연결이에요.
       </p>
       {!editable && (
         <p role="status">
@@ -198,7 +198,6 @@ export default function TermsEditor({
       >
         입력 취소·최신 작성본 불러오기
       </Button>
-      <Button disabled>서명 요청 · 후속 범위</Button>
       <Label htmlFor="terms-history">저장된 버전 이력</Label>
       <select
         id="terms-history"

@@ -7,6 +7,8 @@ import TermsEditor from "../features/terms/TermsEditor";
 import { loadTerms, updateTerms } from "./terms-api";
 import type { TermsCommand, TermsDocument } from "./terms-model";
 import { ApiError } from "../shared/api/client";
+import SignaturePanel from "../features/terms/SignaturePanel";
+import type { Proposal } from "./proposal-model";
 
 function failure(error: unknown) {
   if (!error) return "";
@@ -19,9 +21,11 @@ function failure(error: unknown) {
 export default function TermsMock({
   requestId,
   active,
+  item,
 }: {
   requestId: string;
   active: boolean;
+  item: Proposal;
 }) {
   const { user } = useSession();
   const [notice, setNotice] = useState("");
@@ -153,6 +157,13 @@ export default function TermsMock({
         />
       )}
       {notice && <p role="status">{notice}</p>}
+      {query.data && (
+        <SignaturePanel
+          document={query.data.document}
+          item={item}
+          locked={busy || Boolean(pending) || Boolean(query.error)}
+        />
+      )}
     </section>
   );
 }

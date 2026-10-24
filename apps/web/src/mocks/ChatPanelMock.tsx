@@ -37,7 +37,9 @@ export default function ChatPanelMock({
     <section className="showcase-card grid gap-4" aria-label="의뢰 대화">
       <h2 className="type-heading-md">의뢰 대화</h2>
       <p>
-        {proposalLabels[item.status]}
+        {item.contracted
+          ? "계약 확정 · 기존 대화 유지"
+          : proposalLabels[item.status]}
         {closed ? " · 읽기 전용" : " · 일반 대화는 48시간 만료 없음"}
       </p>
       {item.reason && <p>종료 사유: {item.reason}</p>}

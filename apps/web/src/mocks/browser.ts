@@ -7,6 +7,7 @@ import campaignHandlers from "./campaign-handlers";
 import pricingHandlers from "./pricing-handlers";
 import proposalHandlers from "./proposal-handlers";
 import termsHandlers from "./terms-handlers";
+import signatureHandlers from "./signature-handlers";
 
 const worker = setupWorker(
   ...handlers,
@@ -17,6 +18,7 @@ const worker = setupWorker(
   ...pricingHandlers,
   ...proposalHandlers,
   ...termsHandlers,
+  ...signatureHandlers,
 );
 
 export default worker;

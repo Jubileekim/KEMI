@@ -10,6 +10,7 @@ import {
 
 export const signatureRoundSchema = z.strictObject({
   versionId: z.string().uuid(),
+  requestedBy: z.string(),
   requestedAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   signatures: z.array(
@@ -89,6 +90,7 @@ export function changeSignatures(
       ...rounds,
       {
         versionId: latest.id,
+        requestedBy: user.id,
         requestedAt: now.toISOString(),
         expiresAt: new Date(now.getTime() + 48 * 3600000).toISOString(),
         signatures: [],

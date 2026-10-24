@@ -31,7 +31,7 @@ export default function ProposalCard({
         {user.role === "CLIENT" ? item.creatorName : item.clientName}
       </h2>
       <p>
-        {proposalLabels[item.status]}
+        {item.contracted ? "선정 완료" : proposalLabels[item.status]}
         {item.contracted ? " · 확정 계약" : " · 계약 미확정"}
       </p>
       <p className="whitespace-pre-wrap">{item.direction}</p>

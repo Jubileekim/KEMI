@@ -3,6 +3,7 @@ import { readMockUser, readMockDisplayName } from "./auth-handlers";
 import { allCampaigns, endMockCampaign } from "./campaign-handlers";
 import { readMockStudio } from "./studio-handlers";
 import { session } from "../app/session";
+import { selectContract } from "./signature-model";
 import {
   changeProposals,
   emptyProposals,
@@ -16,6 +17,14 @@ import {
 let state = emptyProposals();
 export const readMockProposal = (id: string) =>
   state.items.find((item) => item.id === id);
+export function confirmMockContract(id: string) {
+  const next = selectContract(state, id);
+  if (next === state) return;
+  const winner = next.items.find((item) => item.id === id);
+  if (!winner) throw new ProposalError("협의가 없어요.", 404);
+  endMockCampaign(winner.campaignId, winner.clientId);
+  state = next;
+}
 let scenario = "success";
 const fail = (status: number, message: string) =>
   HttpResponse.json({ message }, { status });

@@ -109,6 +109,7 @@ describe("3-B explicit Mock signatures", () => {
     const rounds = requested();
     expect(rounds[0]?.expiresAt).toBe("2026-10-26T00:00:00.000Z");
     expect(rounds[0]?.signatures).toHaveLength(0);
+    expect(rounds[0]?.requestedBy).toBe(client.id);
     expect(
       changeSignatures(
         rounds,
