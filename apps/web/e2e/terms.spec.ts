@@ -28,7 +28,7 @@ async function save(page: Page, version: number) {
     .getByRole("button", { name: "새 작성본 저장", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: `작성본 v${version} · 서명 요청 전` }),
+    page.getByRole("heading", { name: `작성본 v${version}` }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "새 작성본 저장", exact: true }),
@@ -64,7 +64,7 @@ test("3-A 통합: 패키지 불러오기·최종 값·불완전/새 버전·양�
     page.getByText("미입력 조건: 취소 조건", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "서명 요청 · 후속 범위", exact: true }),
+    page.getByRole("button", { name: "서명 요청", exact: true }),
   ).toBeDisabled();
   await page.getByLabel("취소 조건", { exact: true }).fill("제작 전 상호 협의");
   await save(page, 2);
@@ -87,9 +87,7 @@ test("3-A 통합: 패키지 불러오기·최종 값·불완전/새 버전·양�
   }
   await login(page);
   await navigate(page, `/workspace/${room}`);
-  await expect(
-    page.getByRole("heading", { name: "작성본 v2 · 서명 요청 전" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "작성본 v2" })).toBeVisible();
   await page.getByLabel("저장된 버전 이력").selectOption("1");
   await expect(page.getByLabel("작성본 v1", { exact: true })).toContainText(
     "미입력",
@@ -165,9 +163,7 @@ test("3-A 편집 충돌: 최신 재조회도 입력을 보존하고 명시적 �
   await page
     .getByRole("button", { name: "최신 조건서 확인", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "작성본 v1 · 서명 요청 전" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "작성본 v1" })).toBeVisible();
   await expect(page.getByLabel("최종 금액 (원)", { exact: true })).toHaveValue(
     "121000",
   );
@@ -207,9 +203,7 @@ test("3-A 응답 유실: 같은 ID 재전송·재조회·중복 방지·텍스�
   await page
     .getByRole("button", { name: "같은 저장 재시도", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "작성본 v1 · 서명 요청 전" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "작성본 v1" })).toBeVisible();
   await expect(page.getByLabel("작성본 v1", { exact: true })).toContainText(
     "<script>",
   );
@@ -264,9 +258,7 @@ test("3-A 조회 실패·잘못된 응답·저장 실패 후 수동 회복과 �
   await page
     .getByRole("button", { name: "같은 저장 재시도", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "작성본 v1 · 서명 요청 전" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "작성본 v1" })).toBeVisible();
   await page.getByLabel("규격·수량", { exact: true }).fill("보존할 입력");
   await scenario(page, "malformed");
   await page
@@ -332,9 +324,7 @@ test("3-A 유실된 응답 이후 새 작성본이 있으면 기준을 자동 �
   await page
     .getByRole("button", { name: "같은 저장 재시도", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "작성본 v2 · 서명 요청 전" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "작성본 v2" })).toBeVisible();
   await expect(page.getByLabel("최종 금액 (원)", { exact: true })).toHaveValue(
     "170000",
   );

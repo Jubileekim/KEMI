@@ -15,6 +15,7 @@ on:
         feat/frontend-2b-ai-budget,
         feat/frontend-2c-discovery,
         feat/frontend-2d-proposals-chat,
+        feat/frontend-3a-terms,
       ]
   push:
     branches: [main]
