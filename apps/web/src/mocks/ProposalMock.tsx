@@ -11,6 +11,7 @@ import ProposalCard from "./ProposalCard";
 import ProposalEditorMock from "./ProposalEditorMock";
 import ChatPanelMock from "./ChatPanelMock";
 import ProposalConfirm from "./ProposalConfirm";
+import TermsMock from "./TermsMock";
 
 function failure(error: unknown) {
   if (!error) return "";
@@ -186,14 +187,13 @@ function Content() {
                 />
               )}
               {workspace && items[0] && (
-                <section className="showcase-card">
-                  <h2 className="type-heading-md">계약 전 작업</h2>
-                  <p>
-                    최종 조건·양측 서명은 3단계에서 연결해요. 현재 협의만으로
-                    선정·결제·제작을 시작하지 않아요. PC/모바일 배치 D20은 제안
-                    상태예요.
-                  </p>
-                </section>
+                <TermsMock
+                  key={`${items[0].id}-${session.epoch()}`}
+                  requestId={items[0].id}
+                  active={
+                    items[0].status === "DISCUSSING" && !items[0].contracted
+                  }
+                />
               )}
             </>
           )}

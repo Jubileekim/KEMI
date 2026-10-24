@@ -14,6 +14,8 @@ import {
 } from "./proposal-model";
 
 let state = emptyProposals();
+export const readMockProposal = (id: string) =>
+  state.items.find((item) => item.id === id);
 let scenario = "success";
 const fail = (status: number, message: string) =>
   HttpResponse.json({ message }, { status });
