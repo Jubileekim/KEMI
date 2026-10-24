@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현, 최종 검증 진행 중. 실제 Toss Sandbox·카카오 미연결. 0단계·1단계·2단계·3단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현 및 공개 제안 통합 검증 완료. 실제 Toss Sandbox·카카오 미연결. 0단계·1단계·2단계·3단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -575,3 +575,10 @@
 
 - 기존3-C 브랜치/PR 없음, 선행 #45 open/Draft와 로컬/원격 `d72d308` 일치를 확인해 `feat/frontend-3c-payments`에서 작업했다. base는 선행 `feat/frontend-3b-signatures`(#45)이며 선행 병합 후 base 조정 검토가 필요하다.
 - 모델·단위·근거 [039e772](https://github.com/Jubileekim/KEMI/commit/039e772)을 푸시했다. 화면·통신/검사/기록 커밋, Draft PR, 최종 전체244개 회귀와 원격 CI 결과는 아래에 추가한다. 초기12개와 최종 전체 결과는 합산하지 않는다.
+
+- **최종 전체 회귀:** 기능/검사 SHA `7616b9217b91ebf0e47cabe335b58f59e2b3ccf2`에서 **244/244·실패0·exit0·12.0분** 통과(기존232+3-C12). 3-A12개·3-B12개와 공개 제안 조건→양측 서명/선정→전액 Mock 결제→양측 재조회/기존 방 통합을 포함한다. 최종 단위162/162·운영7개·타입/린트/빌드·형식·토큰 검사와 별개다. Edge 두 프로젝트/workers2·retry0·기존 timeout·전용5188로 실행했으며 원격 CI와 구분한다.
+- 최종390/1280px 캡처2개를 시각 확인했다. 320/390/600/768/1024/1280px 넘침·페이지 오류0·실제 계약/서명/결제 API 요청0을 통합 검사에서 확인했다. 실제 브라우저 메뉴200% 확대·스크린리더·Edge 이외 브라우저·실제 다중 탭은 미검증이다. 공용 캡처 flag로 생성된 타기능 캡처8개는 제거하고3-C2개만 포함한다.
+- 화면/통신 [7213d51](https://github.com/Jubileekim/KEMI/commit/7213d51), 검사/CI/기록 [7616b92](https://github.com/Jubileekim/KEMI/commit/7616b92)을 푸시했고 [Draft PR #46](https://github.com/Jubileekim/KEMI/pull/46)을 생성·이 채팅에 연결했다. 확인 시 PR head=`7616b92`, open/Draft·미병합·mergeable=true였다. 결제→결과→재조회는 독립 검증 가능한 한 흐름이므로 한 PR에 묶고 모델·화면/통신·검사 커밋은 분리했다. 최종 캡처/전달 기록도 같은 브랜치로 푸시한다. [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/46/commits)에서 최종 head를 확인한다.
+- **원격 Web CI 기능/검사 SHA:** [run103/40088945822](https://github.com/Jubileekim/KEMI/actions/runs/40088945822), job120857469805에서 npm ci·형식·단위·build:web·Chromium 설치는 success, 확인 시 브라우저 E2E는 in_progress·report는 pending이었다. 로컬244/162/운영7과 별개다. 최종 QA/문서 전달 푸시로 cancel-in-progress에 따라 실행이 교체될 수 있으며 **최신 전달 SHA의 최종 CI는 미검증**이다. [PR #46 Checks](https://github.com/Jubileekim/KEMI/pull/46/checks)에서 별도로 확인한다. 수동 CI 재실행·timeout/retry 완화 없음.
+- **기존 Vercel 연결 검사:** 기능/검사 SHA status는 failure/Blocked다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/46#issuecomment-6383505769)은 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포는 실행하지 않았다. 푸시/PR로 생긴 기존 서비스 연결 검사와 구분한다.
+- **종료 경계:** 이번3-C 클라이언트/명시적 PG Mock과 공개 제안 경로 통합까지만 완료다. 실제 Toss Sandbox·API·DB·알림·미결정 계약/정책은 남고3단계 전체 완료가 아니다. 다음 작업 자동 착수·병합·자동 병합 설정·명시적 배포 없음. 전체 QA 서버는 exit0으로 정상 종료했고4192 preview도 q로 exit0 종료했다. 최종 문서/QA 커밋 푸시 후 원격 SHA·PR head·깨끗한 작업 트리를 대조한다.
