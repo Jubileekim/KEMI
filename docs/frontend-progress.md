@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현 및 공개 제안 통합 검증 완료. 실제 Toss Sandbox·카카오 미연결. 0단계·1단계·2단계·3단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현 및 공개 제안 통합 검증 완료. 실제 Toss Sandbox·카카오 미연결. 4-A 준비·제작 시작·납기 클라이언트/명시적 Mock 구현 진행. 0단계·1단계·2단계·3단계·4단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -582,3 +582,32 @@
 - **원격 Web CI 기능/검사 SHA:** [run103/40088945822](https://github.com/Jubileekim/KEMI/actions/runs/40088945822), job120857469805에서 npm ci·형식·단위·build:web·Chromium 설치는 success, 확인 시 브라우저 E2E는 in_progress·report는 pending이었다. 로컬244/162/운영7과 별개다. 최종 QA/문서 전달 푸시로 cancel-in-progress에 따라 실행이 교체될 수 있으며 **최신 전달 SHA의 최종 CI는 미검증**이다. [PR #46 Checks](https://github.com/Jubileekim/KEMI/pull/46/checks)에서 별도로 확인한다. 수동 CI 재실행·timeout/retry 완화 없음.
 - **기존 Vercel 연결 검사:** 기능/검사 SHA status는 failure/Blocked다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/46#issuecomment-6383505769)은 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드 실패와 별개의 접근 권한 문제다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포는 실행하지 않았다. 푸시/PR로 생긴 기존 서비스 연결 검사와 구분한다.
 - **종료 경계:** 이번3-C 클라이언트/명시적 PG Mock과 공개 제안 경로 통합까지만 완료다. 실제 Toss Sandbox·API·DB·알림·미결정 계약/정책은 남고3단계 전체 완료가 아니다. 다음 작업 자동 착수·병합·자동 병합 설정·명시적 배포 없음. 전체 QA 서버는 exit0으로 정상 종료했고4192 preview도 q로 exit0 종료했다. 최종 문서/QA 커밋 푸시 후 원격 SHA·PR head·깨끗한 작업 트리를 대조한다.
+
+## 4-A 제품·자료 준비 확인·제작 시작·납기 (2026-10-24)
+
+### 구현·변경 파일
+
+- READY-01/02·WORK-01 및 WORK-02 납기 날짜 합의를 **클라이언트/명시적 Mock**으로 구현했다. 선행 공개 제안 조건서→양측 서명 계약→전액 Mock 결제 저장본을 이어 받는다. 미서명 계약 조회/미결제 변경 차단, 구조화 Mock 준비 조건 양측 확인, 제품 발송·자료명 제공·정상 확인·문제/정정 이력, 마지막 필수 준비 충족 시 1회 시작, 시작 후 문제 보류와 기존 납기 보존, 상대 승인 후 납기 반영/거절을 제공한다.
+- API 문서·현재 API/shared에 준비/납기 계약이 없어 DEV/MSW `/__mock__/production/:contractId`로 분리했다. 서버 역할/당사자·Bearer·지연 epoch·revision·ID/내용/행위자 대조, 유실 조회/동일 명령 재시도와 신규 명령 차단을 적용한다. 단일 탭 메모리의 모의 처리이며 실제 서버 보안/DB 원자성 증거가 아니다.
+- D09 시작일 포함/마감 시각은 미결정이다. 시작일 미포함·동일 시각+달력일 수/한국 시간·조회 기준 카운트다운을 **모의 계산 예시**로 표시한다. 자유 텍스트 계약의 기간/자료를 자동 해석하지 않고 별도 구조화 예시를 양측 확인한다. 실제 계약 변경이 아니다.
+- WORK-02 날짜 변경만 구현했다. 금액·범위·추가금·차감/작업 중단은 D10 조율 전 미완료로 유지한다. 파일은 자료명만 기록하며 실제 업로드/저장/검사는 미연결이다. 실제 API/DB/배송사/알림·영구 저장/다중 탭·서버 시각·직접 의뢰 통합은 미검증이다.
+- 모델/통신: `apps/web/src/mocks/{production-model,production-handlers,production-api}.ts`, `ProductionMock.tsx`, 기존 `payment-handlers.ts`의 결제 성공 읽기와 `browser.ts` 등록.
+- 화면/진입: `apps/web/src/features/production/{ReadinessPanel,DeadlineChangePanel}.tsx`, `time.ts`, `app/{App.tsx,routes.ts}`, 기존 `SignaturePanel.tsx`, `PaymentMock.tsx`. KEMI 토큰/공통 UI·600/1024px 구간을 유지했다.
+- 검사/근거: `apps/web/test/production.test.ts`, `e2e/production.spec.ts`, `qa/frontend-4a/`, `docs/{frontend-production-4a,frontend-feature-matrix,frontend-progress}.md`, 선행3-C base의 Web CI 허용1행. 의존성/lockfile·API/shared·원본 엑셀/PDF/디자인·검사 규칙/timeout/retry·상위 독립 앱은 변경하지 않았다.
+
+### 로컬 검증·검토
+
+- 최종 단위 **172/172**(기존162+신규10), 두 개발 flag를 켠 `npm run build:web`(타입·ESLint·운영 빌드), `npm run format:check`, `npm run check:tokens`, `git diff --check` 통과. 운영 산출물+독립 HTTP 인증 fixture **4개·exit0**: Mock endpoint/코드/worker 제외 및 비회원/의뢰인/크리에이터 준비 화면 경계. 실 API/인증 검증이 아니다.
+- 추가 납기 거절 검사 전 관련 Edge 데스크톱/모바일 **8/8·exit0·1.5분**. 공개 제안→서명→결제→발송/자료→정상 준비→1회 시작→문제 정정→양측 납기 승인/같은 방, 미결제·위조 필드/타인/Bearer·유실/동일 ID·형식/HTTP/네트워크 오류·지연 로그아웃·새로고침을 포함한다. 320~1280px 넘침/페이지 오류0/관련 제품 API 호출0은 정상 통합 검사에서 확인했다. 최종 추가 검사와 전체 회귀/캡처 결과는 종료 후 추가한다.
+- senior-engineer-mindset·premortem·surgical-change·verify-before-claiming 적용 후 fresh-context-review·security-review·React 품질 관점으로 원본/P11/P12/D09/D10·DEV 경계·입력/Zod·객체 권한·epoch/중복/정정·React 텍스트 출력을 자체 검토했다. 금액/범위 변경을 날짜 변경의 완료로 확대하지 않는다. 실제 서버 보안 검증과 사람 검토는 남아 Draft로 전달한다.
+- 중간 실패: 엑셀 일반 로드의 원본 조건부 서식 오류는 read_only로 원본 변경 없이 읽었다. 기본 Python launcher 권한 오류는 번들 Python 실행으로 해결했다. 타입은 통과했으나 초기 린트의 export/삼항/단언·테스트 규칙을 수정했고 최종 build:web이 통과했다. 첫 브라우저8개는 타인 계정 fixture 부재와 실행 중 소스 변경에 따른 세션 오류 등으로4개 실패해 합산하지 않는다. 타인 Mock 가입/새로고침 기대를 수정하고 고정 소스의8/8 재검증이 통과했다. 최초 운영 검사는 auth flag 없이 빌드해 로그인 기대가 달랐고 두 flag 명시 빌드에서4검사가 통과했다. 기존 favicon MSW/DevTools 경고가 있어 전체 콘솔 경고0으로 주장하지 않는다.
+
+### 남은 일·다음 작업 하나
+
+- 4-A의 위 클라이언트/Mock 흐름만 구현했다. 실제 계약/API/파일·알림·서버 시각 및 D09/D10 조율, WORK-02 금액/범위 변경이 남는다. **4-B 납품·검토·수정·최종 수령·정산 및 4단계 전체 통합은 미완료**이며 자동 착수하지 않는다.
+- 다음 작업 하나: **4-A 준비·시작·납기 API 및 D09/D10 계약 조율**. PR 병합·자동 병합 설정·명시적 배포/재배포 없음.
+
+### Git 전달·최종 통합 검증
+
+- 기존4-A 브랜치/PR 없음, 선행 #46 open/Draft 및 로컬/원격 `decaa15` 일치를 확인해 `feat/frontend-4a-production` 생성. base는 `feat/frontend-3c-payments`(#46)이며 선행 병합 후 base 조정 검토가 필요하다.
+- 모델/단위/근거 커밋 [05ec101](https://github.com/Jubileekim/KEMI/commit/05ec101) 푸시 완료. 화면/통신·최종 검사/기록 커밋과 Draft PR·원격 CI·전체 회귀 결과는 아래에 추가한다.

@@ -17,6 +17,7 @@ on:
         feat/frontend-2d-proposals-chat,
         feat/frontend-3a-terms,
         feat/frontend-3b-signatures,
+        feat/frontend-3c-payments,
       ]
   push:
     branches: [main]
