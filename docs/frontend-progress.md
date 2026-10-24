@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 카카오 미착수. 0단계·1단계·2단계 전체 완료 아님.
+갱신: 2026-10-24 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 카카오 미착수. 0단계·1단계·2단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -435,3 +435,32 @@
 - **원격 Web CI:** 기능 SHA의 [run40062812220](https://github.com/Jubileekim/KEMI/actions/runs/40062812220) / web job120779748327은 확인 시 `in_progress`, 최종 결론 없음이었다. 로컬117/28/198/운영7과 별개다. 이 최종 Git/CI 기록은 문서 전용 전달 커밋으로 푸시하므로 cancel-in-progress에 따라 실행이 교체될 수 있다. **최신 문서 SHA의 최종 CI는 미검증**이며 [PR #42 Checks](https://github.com/Jubileekim/KEMI/pull/42/checks)에서 확인한다. 검사/재시도/timeout 완화나 수동 CI 재실행은 하지 않았다.
 - **기존 Vercel 연결 검사:** 기능 SHA의 status는 failure이며 설명은 `Git author Dev-Yuncheol must have access to the project on Vercel to create deployments.`다. Web CI/로컬 검사 실패와 다른 접근 권한 문제다. 초대·권한·배포 설정 변경·배포/재배포 명령은 실행하지 않았다. Git 푸시/PR에 따라 생긴 기존 연결 서비스 검사와 명시적 배포는 구분한다.
 - **종료 경계:** 2-C 클라이언트·명시적 Mock 통합/관련 재검증 완료. 2단계 전체 완료가 아니다. 다음 작업 자동 착수·병합·자동 병합 설정·배포 없음. 사용한 전용 QA 개발 서버/preview는 정리했다. 문서 전달 커밋까지 푸시 후 PR head/작업 트리를 최종 확인한다.
+
+## 2-D 제안 제출·후보 조회·협의 진입·기본 채팅 (2026-10-24)
+
+### 완료 범위·변경 파일
+
+- **APPLY-01~03·CAMP-06·CHAT-02/03/05의 공개 제안 경로와 CHAT-01 텍스트 기본 채팅을 명시적 Mock으로 연결.** 공개 서비스/본인 공개 작업물의 제안, 제출 확인·견적/기간/작업물 제목 사본, 본인 후보 비교, 협의 요청, 당사자별 방 생성·재사용, 거절/철회/무선정 종료·사유/기록 보존을 구현했다. 협의만으로 선정/계약하거나 타후보를 종료하지 않는다.
+- 일반 채팅에48시간 만료를 적용하지 않고 모집 마감 뒤에도 기존 협의를 유지한다. 협의 자체가 종료되면 기존 방을 읽기 전용으로 표시한다. 텍스트 전송 중/실패/같은 ID 수동 재시도·중복 차단, 최근 대화·방별 미확인 수·명시적 읽음을 제공한다. 채팅 읽음과 인앱 알림을 혼합하지 않고 대화의 동의로 계약·승인·납품·정산을 처리하지 않는다.
+- 실제 API의 accept는 조기 MATCHED/타후보 종료로 P07과 충돌한다. 철회·무선정·채팅 API도 없으므로 `/__mock__/proposals`로 분리했다. Bearer·활성 역할·소유자/당사자·지연 후 epoch를 재검사한다. 운영 경로는 연결 준비 안내이며 실제 제품 API를 추정해 호출하지 않는다.
+- **D06/D07/D19/D20 유지:** 종료 후 재지원은 결정 대기 안내와 임시 차단, 글자수4,000/작업물20개·양의 정수 견적/기간·수동 갱신/읽음은 Mock 보호 후보다. 미디어 snapshot/재생·첨부 업로드·자동 갱신/다중 기기·계약 완료/분쟁/보관/재개 정책은 구현 완료로 표시하지 않는다. 상세는 `frontend-proposals-2d.md`.
+- 모델/통신: `apps/web/src/mocks/{proposal-model,proposal-api,proposal-handlers}.ts`, 기존 `campaign-handlers.ts`·`studio-handlers.ts`의 상태 읽기/무선정 마감 연결과 `auth-handlers.ts`의 Mock 상대 표시 이름 조회, `browser.ts` 등록.
+- 화면/경로: `apps/web/src/features/campaigns/ProposalPage.tsx`, `src/mocks/{ProposalMock,ProposalCard,ProposalConfirm,ProposalEditorMock,ChatPanelMock}.tsx`, `src/app/{App.tsx,layouts/Shell.tsx}`, `DiscoveryDetailMock.tsx`. 기존 Guard·Shell·KEMI 로고/색/타이포·카드24px·600/1024px 구간을 유지한다.
+- 검사/근거: `apps/web/test/proposals.test.ts`, `apps/web/e2e/{proposal-helpers.ts,proposals.spec.ts}`, `docs/frontend-proposals-2d.md`, `docs/frontend-feature-matrix.md`, 이 문서, `qa/frontend-2d/{README.md,playwright.edge.config.ts,production-smoke.cjs,production-results.json,candidates-390.png,candidates-1280.png,workspace-390.png,workspace-1280.png}`. CI는 선행 base `feat/frontend-2c-discovery`만 추가하며 검사·재시도·timeout은 유지한다.
+- API/shared·Workspaces/의존성/lockfile·원본 엑셀/PDF/디자인 토큰·수정된 계획과 상위 독립 앱은 수정하지 않았다. Senior Engineer Mindset는 사용하지 않았다.
+
+### 검증·검토
+
+- 로컬 `npm run test:web`: **130/130**(기존117+신규13). 공개/마감 정각/권한·중복/D06·작업물 제목 사본·후보/의뢰 분리·마감 후 대화·거절/철회/무선정·계약 합성 경계·읽음 전진·메시지 멱등을 확인했다.
+- `VITE_ENABLE_MOCKS=true`, `VITE_ENABLE_AUTH_API=true` 조건의 `npm run build:web`(타입·ESLint·운영 빌드), `npm run format:check`, `npm run check:tokens`, `git diff --check`: 통과. 최종 문서/검토 보정 후 관련 검사를 다시 확인한다.
+- 2-D Edge 전용 **10/10·exit0·51.2초**: 두 후보 유지/타후보 조회·전송 차단, 공개→제안→협의→마감 후 양방향 대화·읽음→거절, 무선정 종료, 응답 유실 후 동일 ID 재전송1회 저장, 빈 상태/실패/Bearer 거절을 확인했다. 기존 검사/timeout/재시도는 완화하지 않았다.
+- 운영 산출물+독립 HTTP 인증 fixture **16개 통과·페이지 오류0**: 비회원/의뢰인/제작자×5경로의 인증·역할·연결 준비 안내, 제품 API/Mock 호출·worker 없음, Mock 코드/endpoint/scenario/worker 제외. 실제 서버 인증/API/외부 제공자 검증이 아니다.
+- 최초 전체 회귀는 **204/208·4실패·exit1·8.0분**이었다. 새 목록의 H1을 바꾸면서 기존 인증/Google 복귀가 기대하는 `의뢰 현황` 제목을 깨뜨렸다. 기존 제목을 복원하고 해당 기존 검사4개와 2-D10개를 합친 **14/14·exit0·1.1분** 재검증이 통과했다. 확인창을 Radix DialogTrigger에 연결하여 Escape 취소 후 초점 복귀·Enter 재진입도 검증했다. 390/1280px 후보·대화 캡처4개는 재조회 완료 대기 후 재생성·시각 확인했다. 최종 전체 회귀를 다시 실행하며 로컬과 원격 CI를 구분한다.
+- 커밋 전 fresh-context-review·security-review·React 품질 관점 자체 검토: 원본 기능/정책과 API 대조, DEV lazy/운영 제외, 당사자 권한·지연 epoch·React 텍스트 이스케이프·입력/출력 스키마·단방향 읽음·중복 ID·상태별 전송 차단을 확인했다. 무단 조회/전송과 script 문자열을 브라우저로 실행 검증했다. 새 의존성/비밀값/파일 bytes/외부 링크 방문 없음. 실제 서버 보안/인증/DB 검증으로 표시하지 않고 남은 계약/정책/미디어 연동 때문에 Draft로 전달한다.
+- 초기 실패: ChatPanel의 마지막 배열 원소 타입·테스트의 잘못된 SUSPENDED enum·브라우저 동적 import의 TS 경로 및 기존 ESLint의 assertion/중첩 조건/label/순차 처리 규칙 위반을 규칙 변경 없이 수정했다. 첫 브라우저 실행 중 소스 편집으로 모바일1건의 실행 context가 사라져 중단했으며 최종 통과로 계산하지 않는다. 전용 프로세스를 확인해 종료하고 고정된 소스로 다시 실행했다. 운영 smoke의 최초 로그인 제목 assertion을 실제 제목으로 수정하고16개를 재검증했다.
+
+### 남은 일·다음 작업 하나·Git 전달
+
+- **실제 API·DB·원자적 마감/계약·알림·파일 저장·외부 제공자는 미연결/미검증.** 제목 사본은 실제 미디어 snapshot/열람 권한 검증이 아니다. CHAT-01 첨부·CHAT-04 계약 후 전환·CAMP-04 공개 후 수정/삭제 등이 남아 **2단계 전체 완료가 아니다**. 이번 범위의 클라이언트/텍스트 Mock 통합과 구분한다.
+- 다음 작업 하나: **2-D 협의/선정 분리·철회/무선정·채팅/읽음 API 계약 조율**. 자동 착수하지 않는다. PR 병합·자동 병합 설정·배포/재배포 명령은 실행하지 않는다.
+- 기존 2-D 브랜치/PR 없음과 깨끗한 작업 트리, 선행 #42의 로컬/원격 일치 `5e6fa5e`를 확인하고 `feat/frontend-2d-proposals-chat`을 만들었다. 모델/단위/근거 커밋 [1c1b072](https://github.com/Jubileekim/KEMI/commit/1c1b072)은 푸시 완료했다. 화면·통신·통합검사·Git/PR/원격 CI 최종 상태는 아래에 추가한다.

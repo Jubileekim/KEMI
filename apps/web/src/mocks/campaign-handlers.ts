@@ -22,10 +22,26 @@ const fail = (status: number, message: string) =>
 let scenario = "success";
 let discoveryScenario = "success";
 const fixtures = discoveryFixtures();
-const allCampaigns = () => [
+export const allCampaigns = () => [
   ...fixtures,
   ...Array.from(states.values()).flatMap((state) => state.items),
 ];
+export function endMockCampaign(id: string, userId: string) {
+  const state = states.get(userId);
+  if (!state) throw new Error("본인 공고를 찾을 수 없어요.");
+  states.set(userId, {
+    revision: state.revision + 1,
+    items: state.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "CLOSED",
+            closedAt: item.closedAt ?? new Date().toISOString(),
+          }
+        : item,
+    ),
+  });
+}
 async function discoveryFailure() {
   const selected = discoveryScenario;
   await delay(selected === "delay" ? 1500 : 80);

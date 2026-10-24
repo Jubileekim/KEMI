@@ -217,3 +217,12 @@ const authHandlers = [
 ];
 export default authHandlers;
 export { readUser as readMockUser };
+export function readMockDisplayName(id: string) {
+  return (
+    [
+      ...Object.values(users),
+      googleUser,
+      ...Array.from(registrations.values(), (entry) => entry.user),
+    ].find((user) => user.id === id)?.name ?? "공고 의뢰인"
+  );
+}

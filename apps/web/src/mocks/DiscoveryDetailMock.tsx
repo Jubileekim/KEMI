@@ -92,11 +92,22 @@ export default function DiscoveryDetailMock({ id }: { id: string }) {
           </dl>
           <p>
             모집 마감은 기존 후보와의 협의·서명·계약을 자동 취소하지 않아요.
-            실제 제안 제출·기존 거래 연결은 후속 범위예요.
+            제안·협의는 개발용 Mock이며 실제 거래는 미연결이에요.
           </p>
-          <Button disabled>
-            {closed ? "신규 제안 종료" : "제안 제출 연결 준비 중"}
-          </Button>
+          {closed ? (
+            <Button disabled>신규 제안 종료</Button>
+          ) : (
+            !own && (
+              <Button asChild>
+                <Link to={`/campaigns/${id}/apply`}>제안 제출하기</Link>
+              </Button>
+            )
+          )}
+          {own && (
+            <Button asChild variant="outline">
+              <Link to={`/campaigns/${id}/proposals`}>제안 후보 확인</Link>
+            </Button>
+          )}
           {own && !closed && (
             <Dialog
               open={confirm}

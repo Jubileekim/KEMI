@@ -10,6 +10,7 @@ import {
 } from "./studio-model";
 
 const states = new Map<string, StudioState>();
+export const readMockStudio = (id: string) => states.get(id) ?? emptyStudio();
 let scenario = "success";
 const fail = (status: number, message: string) =>
   HttpResponse.json({ message }, { status });

@@ -16,6 +16,14 @@ const CampaignEditor = lazy(
 const CampaignBrowsePage = lazy(
   () => import("../features/campaigns/CampaignBrowsePage"),
 );
+const ProposalPage = lazy(() => import("../features/campaigns/ProposalPage"));
+const proposalPaths = [
+  "/campaigns/:campaignId/apply",
+  "/campaigns/:campaignId/proposals",
+  "/requests",
+  "/requests/:requestId",
+  "/workspace/:requestId",
+];
 const GoogleProvider = import.meta.env.DEV
   ? lazy(() => import("../mocks/GoogleProvider"))
   : null;
@@ -58,6 +66,7 @@ export default function App() {
                       {screen.path === "/me/profile" && <ProfilePage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
+                      {proposalPaths.includes(screen.path) && <ProposalPage />}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -67,6 +76,7 @@ export default function App() {
                         <CampaignBrowsePage />
                       )}
                       {![
+                        ...proposalPaths,
                         "/login",
                         "/signup",
                         "/auth/social/callback",

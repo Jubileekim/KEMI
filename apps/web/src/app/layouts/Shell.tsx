@@ -39,6 +39,9 @@ export default function Shell() {
             {(role === "client" || role === "creator") && (
               <NavLink to="/me/profile">내 프로필</NavLink>
             )}
+            {(role === "client" || role === "creator") && (
+              <NavLink to="/requests">내 제안·협의</NavLink>
+            )}
             {role === "creator" && (
               <>
                 <NavLink to="/studio/packages">패키지·서비스</NavLink>
