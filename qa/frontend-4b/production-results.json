@@ -1,0 +1,10 @@
+{
+  "source": "production bundle with independent HTTP fixtures; NOT live API/PG",
+  "results": [
+    "Delivery/Production/Payment/Signature/Terms Mock code, endpoints and worker excluded from production",
+    "GUEST /contracts/10000000-0000-4000-8000-000000000001/deliveries: delivery boundary verified",
+    "CLIENT /contracts/10000000-0000-4000-8000-000000000001/deliveries: delivery boundary verified",
+    "CREATOR /contracts/10000000-0000-4000-8000-000000000001/deliveries: delivery boundary verified"
+  ],
+  "pageErrors": []
+}
