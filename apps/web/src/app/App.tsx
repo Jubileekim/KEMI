@@ -21,6 +21,9 @@ const PaymentPage = lazy(() => import("../features/payments/PaymentPage"));
 const ReadinessPanel = lazy(
   () => import("../features/production/ReadinessPanel"),
 );
+const DeliveryVersions = lazy(
+  () => import("../features/production/DeliveryVersions"),
+);
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -83,6 +86,9 @@ export default function App() {
                       {screen.path === "/contracts/:contractId/production" && (
                         <ReadinessPanel />
                       )}
+                      {screen.path === "/contracts/:contractId/deliveries" && (
+                        <DeliveryVersions />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -96,6 +102,7 @@ export default function App() {
                         "/contracts/:contractId/payment",
                         "/payments/result",
                         "/contracts/:contractId/production",
+                        "/contracts/:contractId/deliveries",
                         "/login",
                         "/signup",
                         "/auth/social/callback",

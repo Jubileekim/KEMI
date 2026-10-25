@@ -98,6 +98,12 @@ export const screens: Screen[] = [
     roles: members,
   },
   {
+    path: "/contracts/:contractId/deliveries",
+    title: "영상 제출·버전",
+    layout: "workspace",
+    roles: members,
+  },
+  {
     path: "/payments/result",
     title: "결제 결과 확인",
     layout: "member",

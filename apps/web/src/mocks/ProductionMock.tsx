@@ -390,7 +390,10 @@ export default function ProductionMock({ contractId }: { contractId: string }) {
           <Link to={`/workspace/${data.requestId}`}>
             같은 작업 공간으로 돌아가기
           </Link>
-          <p>영상 납품·검토·수령·정산은 후속 범위예요.</p>
+          <Link to={`/contracts/${contractId}/deliveries`}>
+            초안·완성 검토본과 영상 버전 (Mock)
+          </Link>
+          <p>수정 요청·승인·최종 수령·정산은 후속 범위예요.</p>
         </>
       )}
       {notice && <p role="status">{notice}</p>}

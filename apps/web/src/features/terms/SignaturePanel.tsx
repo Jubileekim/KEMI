@@ -326,6 +326,9 @@ export default function SignaturePanel({
                 <Link to={`/contracts/${round.contractId}/production`}>
                   제품·자료 준비와 납기 (Mock)
                 </Link>
+                <Link to={`/contracts/${round.contractId}/deliveries`}>
+                  초안·완성 검토본과 영상 버전 (Mock)
+                </Link>
                 {user?.role === "CLIENT" && (
                   <Link to={`/contracts/${round.contractId}/payment`}>
                     전액 테스트 결제 확인 (Mock)

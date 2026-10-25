@@ -13,6 +13,8 @@ import {
 } from "./production-model";
 
 const records = new Map<string, ProductionState>();
+export const readMockProduction = (id: string) =>
+  records.get(id) ?? emptyProduction();
 let scenario = "success";
 const fail = (status: number) =>
   HttpResponse.json({ message: "모의 준비 요청 실패" }, { status });

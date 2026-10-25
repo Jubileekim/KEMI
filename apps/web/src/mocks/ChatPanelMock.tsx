@@ -3,6 +3,7 @@ import type { AuthUser } from "@kemi/shared";
 import Button from "../components/ui/button";
 import Textarea from "../components/ui/textarea";
 import Label from "../components/ui/label";
+import DeliveryNoticesMock from "./DeliveryNoticesMock";
 import { campaignTime } from "./campaign-model";
 import {
   proposalLabels,
@@ -55,6 +56,7 @@ export default function ChatPanelMock({
         ))}
       </ol>
       {!messages.length && <p>아직 대화가 없어요.</p>}
+      {item.contracted && <DeliveryNoticesMock roomId={item.id} />}
       {last && (
         <Button
           variant="outline"
