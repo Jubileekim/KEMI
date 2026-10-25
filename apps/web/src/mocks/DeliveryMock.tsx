@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -60,6 +60,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
   const { user } = useSession();
   const [params, setParams] = useSearchParams();
   const [file, setFile] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [asset, setAsset] = useState<DeliveryAsset | null>(null);
   const [kind, setKind] = useState<"DRAFT" | "REVIEW">("DRAFT");
   const [description, setDescription] = useState("");
@@ -99,6 +100,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
       setPending(null);
       setAsset(null);
       setFile(null);
+      if (fileInput.current) fileInput.current.value = "";
       setDescription("");
       setWatermark(false);
       submit.reset();
@@ -121,6 +123,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
           setPending(null);
           setAsset(null);
           setFile(null);
+          if (fileInput.current) fileInput.current.value = "";
           setDescription("");
           setWatermark(false);
           setNotice("영상 제출이 모의 기록에 반영됐어요.");
@@ -221,6 +224,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               </p>
               <Label htmlFor="delivery-file">검토 영상 파일</Label>
               <Input
+                ref={fileInput}
                 id="delivery-file"
                 type="file"
                 accept="video/mp4,video/webm"

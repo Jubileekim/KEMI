@@ -34,6 +34,9 @@ test("4-B 공개 제안 통합: 제작 시작→초안→완성 검토본→이�
     .getByRole("button", { name: "초안 정식 공유", exact: true })
     .click();
   await expect(page.getByLabel("선택한 영상 버전")).toContainText("v1 · 초안");
+  await expect(page.getByLabel("검토 영상 파일", { exact: true })).toHaveValue(
+    "",
+  );
   const first = (await deliveryView(page, contractId)).state.versions[0];
   if (!first) throw new Error("missing first version");
   await prepareVideo(page, "kemi-review.webm");
@@ -103,6 +106,22 @@ test("4-B 공개 제안 통합: 제작 시작→초안→완성 검토본→이�
     ).toBe(true);
   }, Promise.resolve());
   if (process.env.KEMI_CAPTURE_DIR) {
+    const selectedVideo = page.getByLabel("검토 영상 kemi-review.webm", {
+      exact: true,
+    });
+    await expect
+      .poll(() =>
+        selectedVideo.evaluate(
+          (node) => node instanceof HTMLVideoElement && node.readyState >= 2,
+        ),
+      )
+      .toBe(true);
+    await selectedVideo.evaluate(async (node) => {
+      if (node instanceof HTMLVideoElement) {
+        await node.play();
+        node.pause();
+      }
+    });
     const width = info.project.name === "chromium" ? 1280 : 390;
     await page.setViewportSize({ width, height: 1000 });
     await page.getByLabel("영상 제출과 버전").screenshot({

@@ -15,7 +15,13 @@ npm exec -w @kemi/web -- playwright test --config ../../qa/frontend-4b/playwrigh
 
 설치된 Edge, 전용5190 포트, 기존 workers2/retry0/timeout을 사용한다. CI는 기존 Chromium 설정/명령을 유지한다. 결과/HTML은 시스템 tmp의 `kemi-4b-results`, `kemi-4b-report`다. 실제 재생 검사는 자체 제작 고정 WebM(`apps/web/e2e/fixtures/kemi-review.webm`, 11,810 bytes)을 사용한다. SHA256은 `309a284b5806e63a4cb10dba5e6a0b1a87341f7535ed81d5af7820847ff524c2`다. 생성은 `node qa/frontend-4b/create-video-fixture.cjs`로 재현할 수 있으며 Canvas/VP8 MediaRecorder의 실제 인코딩 사건을 기다린다. 외부 영상은 사용하지 않았다. 재생 가능한 바이트를 확인한 뒤 저장했으며 인코더 시각/출력 해시의 동일 재생성을 보장하지 않는다.
 
-추가 연관 회귀는 `production.spec.ts payments.spec.ts signatures.spec.ts proposals.spec.ts` 등 실제 파일명을 지정하거나 전체 명령에서 파일 인자를 생략한다. shared 재빌드와 브라우저 실행을 겹치지 않는다.
+추가 연관 회귀56개 재현:
+
+```powershell
+npm exec -w @kemi/web -- playwright test --config ../../qa/frontend-4b/playwright.edge.config.ts app.spec.ts production.spec.ts signatures.spec.ts proposals.spec.ts payments.spec.ts
+```
+
+shared 재빌드와 브라우저 실행을 겹치지 않는다. 기능/검사 SHA37e45f9에서56/56을 확인했고, 이후 DEV 파일 입력 선택 해제와 캡처 검사를 추가한 최종4-B12/12를 별도로 확인했다. 전체 회귀·실제 API·4단계 최종 수령/정산 검증이 아니다.
 
 운영 경계는 위 두 flag 빌드 후 별도 셸에서 확인한다:
 
