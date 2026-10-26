@@ -168,9 +168,25 @@ test("4-C 통합: 공개 제안→검토본→2항목 요청→수정본→1회 
   await expect(page.getByLabel("수정 요청 이력")).toContainText(
     "항목 1 자막·항목 2 색상 수정 완료",
   );
-  await expect(
-    page.getByRole("button", { name: /승인|수령|정산/ }),
-  ).toHaveCount(0);
+  // 4-D adds explicit approval; completing a revision must not perform it.
+  const review = page.getByLabel("검토본 승인", { exact: true });
+  const approval = review.getByRole("button", {
+    name: "이 검토 버전 승인 (Mock)",
+    exact: true,
+  });
+  await expect(approval).toBeVisible();
+  await expect(approval).toBeDisabled();
+  await review.getByLabel("선택한 검토 버전의 내용을 확인했어요").check();
+  await expect(approval).toBeEnabled();
+  const reviewed = (await deliveryView(page, contractId)).state;
+  expect(reviewed.final).toEqual({
+    approval: null,
+    delivery: null,
+    receipt: null,
+    problem: null,
+  });
+  expect(reviewed).not.toHaveProperty("settled");
+  await expect(page.getByRole("button", { name: /수령|정산/ })).toHaveCount(0);
   await [320, 390, 600, 768, 1024, 1280].reduce(async (previous, width) => {
     await previous;
     await page.setViewportSize({ width, height: 1000 });
