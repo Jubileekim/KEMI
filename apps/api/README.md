@@ -332,6 +332,8 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 | Health Check Path | `/health`                                                                                                                                |
 | Environment       | `NODE_ENV=production`, `DATABASE_URL` 등                                                                                                 |
 
+무료 Render Web Service는 pre-deploy command를 지원하지 않으므로 `npm start`의 `prestart` 단계에서 `prisma migrate deploy`를 먼저 실행한다. 마이그레이션이 실패하면 새 인스턴스가 시작되지 않아 기존 live 인스턴스가 유지된다.
+
 헬스 체크는 DB를 보지 않는 `/health`를 쓴다. DB 장애 때문에 Render가 서버를 계속 재시작하지 않게 하기 위해서다. DB까지 확인하려면 `/health/ready`를 사용한다.
 
 무료 플랜은 15분 동안 요청이 없으면 잠들고, 다음 첫 요청에서 약 1분 동안 깨어난다. 시연 전에는 `/health`를 미리 호출해 깨워둔다.

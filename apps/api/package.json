@@ -10,6 +10,7 @@
     "prelint": "npm run build -w @kemi/shared && prisma generate",
     "lint": "eslint . --max-warnings 0",
     "build": "npm run lint && tsc -p tsconfig.build.json",
+    "prestart": "prisma migrate deploy",
     "start": "node dist/server.js",
     "test": "vitest run --project unit",
     "pretest:db": "npm run build -w @kemi/shared && prisma generate",
