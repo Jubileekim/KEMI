@@ -895,6 +895,147 @@ PRD v2.0 페이즈 2의 "지원 관리"와 "알림"이다. 프로젝트 CRUD·�
   - 자동 거절 제거, 마감 시각 검사 제거, 마감 알림 유형 변경, 재읽음 시 시각 덮어쓰기, 알림 읽음의 수신자 확인 제거
 - [미검증] 팀 공용 Supabase 적용: 프로젝트 PR 다음 순서로 병합한 뒤, 기존 절차(이슈 공유 → 읽기 전용 점검 → 적용 → 확인)로 함께 진행한다.
 
+## 13. 최종 조건서·서명·계약 (TERMS-01~03, CONTRACT-01) [설계 초안]
+
+2026-10-26 작성. **아직 구현하지 않았다.** 팀 리뷰 뒤 구현 PR로 진행한다. 기준은 다음과 같다.
+
+- 2장 "공고당 계약 최대 한 개"의 [확정] 정책과 [제안] 제약·두 번째 서명 트랜잭션
+- 기능명세서 TERMS-01~03·CONTRACT-01 (P07·P09·D08), PRD v2.0 12.3장 "계약 및 결제 원칙"
+- 프론트엔드 Mock 3-A·3-B (#44·#45, `docs/frontend-terms-3a.md`·`docs/frontend-signatures-3b.md`)의 동작과 필드 이름
+
+**선정 모델(지금 accept vs 기능명세서)과 무관하게 설계했다** ([차이 목록](../handoff/2026-10-26-frontend-api-gaps.md) 2장).
+
+- 조건서는 프로젝트가 아니라 **협의 중인 요청(`work_requests.status = DISCUSSING`) 하나**에 붙는다.
+- 지금 API(B안)에서는 선정된 한 명만 `DISCUSSING`이다. 기능명세서(A안)에서는 여러 후보가 동시에 `DISCUSSING`일 수 있다. 조건서 API는 두 경우 모두 같게 동작한다.
+- 두 번째 서명 때 "같은 프로젝트의 다른 활성 요청 미선정"을 실행한다. B안에서는 이미 다른 후보가 `NOT_SELECTED`라 바뀌는 행이 없다. A안에서는 이 단계가 실제 선정이 된다.
+- 경로를 `work-requests`로 둬서, 나중에 직접 의뢰(`project_id = NULL`)도 같은 API를 쓸 수 있게 한다.
+
+### 13-1. 상태
+
+**조건서 버전 (`terms_versions.status`)**
+
+| 상태         | 의미                                                      | 다음 상태                                 |
+| ------------ | --------------------------------------------------------- | ----------------------------------------- |
+| `DRAFT`      | 저장된 작성본. 필수 항목이 비어 있어도 저장할 수 있다     | `SIGNING`, `SUPERSEDED`, `VOID`           |
+| `SIGNING`    | 서명 요청됨. 요청 시각부터 48시간 안에 양측 서명을 받는다 | `SIGNED`, `SUPERSEDED`, `EXPIRED`, `VOID` |
+| `SIGNED`     | 양측 서명 완료. 계약의 근거 버전                          | (끝)                                      |
+| `SUPERSEDED` | 새 버전이 저장되어 대체됨. 값·서명 기록은 그대로 보존     | (끝)                                      |
+| `EXPIRED`    | 48시간 안에 양측 서명이 모이지 않음                       | (끝)                                      |
+| `VOID`       | 협의 종료(다른 후보 계약, 거절·철회·무선정 종료)로 무효   | (끝)                                      |
+
+- 어떤 상태든 행을 지우지 않는다. 값은 처음 저장한 뒤 바꾸지 않는다(새 값은 새 버전).
+- 만료는 스케줄러 없이 처리한다(12장과 같은 원칙). `SIGNING`이고 `signing_expires_at <= now()`이면 만료로 본다. 다음 변경 요청 때 `EXPIRED`로 저장하고, 조회 응답에도 만료로 표시한다.
+- 새 버전을 저장하면 이전 `DRAFT`·`SIGNING` 버전은 `SUPERSEDED`가 된다. 서명은 새 버전에 복사하지 않는다(PRD "서명 도중 조건 변경 → 기존 서명 대상 무효 처리 및 재확인").
+- 만료 뒤 다시 서명받으려면 같은 값으로 새 버전을 저장한다(프론트엔드 "새 확인 버전 만들기"). 같은 버전을 다시 요청하는 것은 `409`다.
+
+**계약 (`contracts.status`)**: 이번에는 `SIGNED`(체결)만 만든다. 취소·진행·완료 상태는 결제·제작·취소 기능에서 추가한다.
+
+### 13-2. 테이블 [제안]
+
+**`terms_versions`**
+
+| 컬럼                                                                             | 내용                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id` BIGSERIAL PK                                                                |                                                                                                                                                                                                               |
+| `work_request_id` FK → `work_requests.id`                                        | `ON DELETE RESTRICT`                                                                                                                                                                                          |
+| `version_no` INT                                                                 | 요청마다 1부터. `(work_request_id, version_no)` UNIQUE                                                                                                                                                        |
+| `status` TEXT                                                                    | 13-1 값, CHECK                                                                                                                                                                                                |
+| `amount_krw` BIGINT NULL                                                         | 최종 금액(원, 정수). 저장할 때는 비울 수 있고 서명 요청할 때 필수. CHECK 1~1,000,000,000 (프로젝트 `budget`과 같음)                                                                                           |
+| 조건 7개 TEXT NULL                                                               | `specification`(규격·수량), `scope`(포함·제외 범위), `materials`(필요 자료), `deadline`(납기 기준), `revisions`(수정 횟수·범위), `usage_rights`(사용권·원본 제공), `cancellation`(취소 조건). 각 4,000자 이하 |
+| `reference_snapshot` JSONB                                                       | 첫 저장 때 고정한 참조 사본: 프로젝트 공개 필드(제목·목적·스타일·예산·설명)와 지원 금액·기간·메시지. 다음 버전에 그대로 복사                                                                                  |
+| `terms_hash` TEXT                                                                | 위 값들을 정규화한 JSON의 SHA-256. 서명이 어떤 내용에 대한 것인지 묶는다                                                                                                                                      |
+| `author_id` FK → `users.id`                                                      | 저장한 당사자                                                                                                                                                                                                 |
+| `command_id` UUID                                                                | 클라이언트가 만든 요청 식별자. `(work_request_id, command_id)` UNIQUE로 같은 저장의 재전송을 막는다                                                                                                           |
+| `signing_requested_by` FK NULL, `signing_requested_at`·`signing_expires_at` NULL | 서명 요청 정보. `SIGNING`·`SIGNED`·`EXPIRED`이면 모두 NOT NULL이고 만료 = 요청 + 48시간 (CHECK)                                                                                                               |
+| `created_at`, `updated_at`                                                       |                                                                                                                                                                                                               |
+
+- 요청당 `SIGNING` 버전은 최대 1개: `(work_request_id) WHERE status = 'SIGNING'` 부분 UNIQUE (2장)
+- `reference_snapshot`에는 비공개 정보를 넣지 않는다. 프로젝트 공개 필드와 그 요청의 지원 내용만 넣는다. 패키지 참조는 패키지 재설계 뒤 추가한다.
+
+**`signatures`**
+
+| 컬럼                                        | 내용                                                        |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| `id` BIGSERIAL PK                           |                                                             |
+| `terms_version_id` FK → `terms_versions.id` | `(terms_version_id, user_id)` UNIQUE (2장)                  |
+| `user_id` FK → `users.id`                   | 그 요청의 의뢰인 또는 크리에이터                            |
+| `signer_name` TEXT                          | 서명 입력 이름(1~100자). 법적 전자서명 증거는 아님(D08)     |
+| `terms_hash` TEXT                           | 서명할 때 클라이언트가 보낸 해시. 버전의 해시와 같아야 한다 |
+| `signed_at`                                 |                                                             |
+
+**`contracts`**
+
+| 컬럼                                      | 내용                                                         |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| `id` BIGSERIAL PK                         |                                                              |
+| `work_request_id` FK UNIQUE               | 요청당 계약 1개                                              |
+| `project_id` FK NULL UNIQUE               | **공고당 계약 1개**(2장). 취소된 계약도 남아 재계약을 막는다 |
+| `terms_version_id` FK UNIQUE              | 근거 버전 (`SIGNED`)                                         |
+| `client_id`, `creator_id` FK → `users.id` | 당사자                                                       |
+| `amount_krw` BIGINT                       | 근거 버전 금액 복사. 결제 금액 검증에 쓴다(PRD 12.3)         |
+| `terms_hash` TEXT                         | 근거 버전 해시 복사                                          |
+| `status` TEXT                             | `SIGNED` (CHECK, 이후 확장)                                  |
+| `signed_at`, `created_at`, `updated_at`   |                                                              |
+
+- 세 테이블 모두 RLS를 켜고 정책은 두지 않는다. `data-api-lockdown` 목록과 `status-check`에 추가한다.
+
+### 13-3. API [제안]
+
+모두 `Authorization: Bearer`가 필요하다. 그 요청의 의뢰인·크리에이터만 접근할 수 있고, 다른 사람에게는 `404`다(존재를 드러내지 않음). `ACTIVE`가 아닌 회원은 `403`이다.
+
+| 메서드·경로                                                                     | 하는 일                                                                                                    |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `GET /api/work-requests/{workRequestId}/terms`                                  | 참조 사본, 버전 목록(값·작성자·시각·상태·서명), 현재 서명 진행 상태, 계약(있으면)                          |
+| `POST /api/work-requests/{workRequestId}/terms/versions`                        | 새 버전 저장. 본문 `{ commandId, baseVersionNo, values }`                                                  |
+| `POST /api/work-requests/{workRequestId}/terms/versions/{versionNo}/signing`    | 서명 요청(48시간 시작). 같은 버전이 이미 `SIGNING`이면 그대로 `200`(기한 연장 안 함)                       |
+| `POST /api/work-requests/{workRequestId}/terms/versions/{versionNo}/signatures` | 본인 서명. 본문 `{ signerName, consent: true, termsHash }`. 두 번째 서명이면 계약까지 만들어 함께 돌려준다 |
+| `GET /api/work-requests/{workRequestId}/contract`                               | 계약서 조회(SIGN-01). 없으면 `404`                                                                         |
+
+**저장 규칙**
+
+- 요청이 `DISCUSSING`이어야 한다. 프로젝트가 `CONTRACTED`이거나 삭제됐거나 `CLOSED`+`NO_SELECTION`이면 `409`다.
+  - 모집 마감(`CLOSED`+`MANUAL`·`EXPIRED`)은 진행 중인 협의를 막지 않는다(CAMP-05 "마감이 기존 협의 자동 취소 안 함").
+- `baseVersionNo`가 지금 마지막 버전 번호(없으면 0)와 다르면 `409`다. 다른 당사자가 먼저 저장한 경우라, 화면은 최신 버전을 다시 받아 비교한다.
+- 같은 `commandId`·같은 내용의 재전송이면 새 버전을 만들지 않고 이전 결과를 돌려준다. 같은 `commandId`에 내용이 다르면 `409`다.
+- 첫 저장 때 `reference_snapshot`을 만든다. 그 뒤 프로젝트·지원 내용이 바뀌어도 사본은 그대로다.
+
+**서명 요청 규칙**: 마지막 버전이어야 하고, `DRAFT`여야 하며, 필수 8개 항목(금액 포함)이 모두 채워져 있어야 한다. 아니면 `409`(구버전·만료·대체됨) 또는 `400`(누락)이다.
+
+**서명 규칙**
+
+- 버전이 `SIGNING`이고 만료 전이어야 한다. `termsHash`가 버전 해시와 같아야 한다. 화면이 본 내용과 서버 내용이 다르면 `409`다.
+- 이미 서명한 사람이 같은 내용으로 다시 보내면 그대로 `200`이다(응답 유실 뒤 재전송).
+- **두 번째 서명 트랜잭션**: 2장 순서를 따른다.
+  1. 프로젝트 행 잠금(`project-lock.ts`, 12장과 같은 잠금)
+  2. 서명 INSERT, 버전 `SIGNED`
+  3. `contracts` INSERT. `project_id` UNIQUE 위반이면 롤백하고 `409`("이미 다른 후보와 계약이 확정됨")
+  4. 요청 `CONTRACTED`, 프로젝트 `CONTRACTED`(종료 사유 지움)
+  5. 같은 프로젝트의 다른 활성 요청(`PENDING`·`DISCUSSING`)은 `NOT_SELECTED`(`OTHER_SELECTED`), 그 요청들의 `DRAFT`·`SIGNING` 버전은 `VOID`
+  6. 알림 저장 (`(recipient_user_id, event_key)` UNIQUE)
+- 동시 요청: 같은 프로젝트의 두 협의에서 거의 동시에 두 번째 서명이 들어와도 잠금으로 순서대로 처리되고, 뒤의 것은 `409`다. UNIQUE는 마지막 방어선이다.
+
+**알림 [제안]**: `TERMS_SIGNING_REQUESTED`(상대방에게), `CONTRACT_SIGNED`(양측에게). 미선정은 기존 `APPLICATION_AUTO_REJECTED`를 쓴다.
+
+### 13-4. 정해야 할 것 (구현 전 팀 확인)
+
+| 번호 | 항목                      | 초안                                                                     |
+| ---- | ------------------------- | ------------------------------------------------------------------------ |
+| 1    | 작성 권한                 | 양측 모두 새 버전을 저장할 수 있다 (프론트엔드 Mock과 같음, D08)         |
+| 2    | 서명 방식                 | 이름 입력(1~100자) + 동의 체크. 외부 전자서명 서비스는 쓰지 않는다 (D08) |
+| 3    | 만료 경계                 | 요청 + 48시간, `현재 시각 >= 만료 시각`이면 만료. 서버 시각 기준 (D08)   |
+| 4    | 필수 항목                 | 8개 모두. 금액은 1원~10억 원 정수                                        |
+| 5    | 서명 요청자               | 어느 당사자든 요청할 수 있다. 요청자도 서명은 따로 한다(요청 ≠ 서명)     |
+| 6    | 알림 종류                 | 13-3                                                                     |
+| 7    | 선정 모델 (차이 목록 2장) | 조건서 API는 영향 없음. A안이면 두 번째 서명이 실제 선정이 된다          |
+
+### 13-5. 이번 범위에서 빼는 것
+
+- 결제(PAY-01·02): `contracts.amount_krw`로 금액을 검증할 수 있게만 둔다.
+- 계약 취소·환불(CANCEL·REFUND), 제작 시작(WORK-01)
+- 직접 의뢰(DIRECT): 경로는 `work-requests`로 맞춰 두지만, 직접 의뢰 요청 생성은 패키지 재설계 뒤
+- 패키지 참조 사본: 패키지 재설계 뒤
+- 채팅(CHAT): 조건서 화면과 같은 협의방을 쓰지만 별도 기능
+
 ## 다음 작업
 
 | 작업                                                           | 처리                                                                                                                                                                                                                                        |
@@ -915,6 +1056,7 @@ PRD v2.0 페이즈 2의 "지원 관리"와 "알림"이다. 프로젝트 CRUD·�
 | 공개 프로젝트 지원·선정·자동 거절·마감 알림 (APPLY·STATE·NOTI) | 완료 — PR #22 병합 (12장)                                                                                                                                                                                                                   |
 | 프로젝트 북마크·추천 (BOOK-01)                                 | 완료 — PR #20 병합                                                                                                                                                                                                                          |
 | AI 단가 분석 (AI-01·02)                                        | 완료 — PR #30 병합. 사용자별 1시간 10회 제한. **실제 AI 호출 미검증** (키 미설정)                                                                                                                                                           |
+| 최종 조건서·서명·계약 (TERMS-01~03, CONTRACT-01)               | 설계 초안 (13장). 팀 확인 뒤 구현                                                                                                                                                                                                           |
 | 팀 개발 DB에 페이즈 2 마이그레이션 3개 적용                    | 진행 중 — [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24). 기존 공유 DB가 다른 작업 스키마로 바뀌어 KEMI 전용 `KEMI-dev`를 새로 만들어 마이그레이션 7개를 적용하기로 함(PM 결정)                                                   |
 | shared 상태값 enum과 CHECK 일치 테스트                         | 완료 — PR #4 (`status-check.db.test.ts`)                                                                                                                                                                                                    |
 | Supabase Realtime 자체 JWT 연동 검증                           | 채팅 작업 전 별도 검증                                                                                                                                                                                                                      |
