@@ -37,18 +37,21 @@ model User {
   clientProfile    ClientProfile?
   creatorProfile   CreatorProfile?
   projects         Project[]
-  clientRequests   WorkRequest[]     @relation("WorkRequestClient")
-  creatorRequests  WorkRequest[]     @relation("WorkRequestCreator")
+  clientRequests   WorkRequest[]        @relation("WorkRequestClient")
+  creatorRequests  WorkRequest[]        @relation("WorkRequestCreator")
   notifications    Notification[]
   projectBookmarks ProjectBookmark[]
-  termsAuthored    TermsVersion[]    @relation("TermsVersionAuthor")
-  termsRequested   TermsVersion[]    @relation("TermsVersionSigningRequester")
+  termsAuthored    TermsVersion[]       @relation("TermsVersionAuthor")
+  termsRequested   TermsVersion[]       @relation("TermsVersionSigningRequester")
   signatures       Signature[]
-  clientContracts  Contract[]        @relation("ContractClient")
-  creatorContracts Contract[]        @relation("ContractCreator")
+  clientContracts  Contract[]           @relation("ContractClient")
+  creatorContracts Contract[]           @relation("ContractCreator")
   payments         Payment[]
   chatMessages     ChatMessage[]
   files            File[]
+  materials        ProductionMaterial[]
+  deadlineChanges  DeadlineChange[]     @relation("DeadlineChangeRequester")
+  deadlineAnswers  DeadlineChange[]     @relation("DeadlineChangeResponder")
   chatReads        ChatRead[]
 
   @@map("users")
@@ -322,6 +325,7 @@ model Contract {
   client       User         @relation("ContractClient", fields: [clientId], references: [id], onDelete: Restrict)
   creator      User         @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   payments     Payment[]
+  production   Production?
 
   @@map("contracts")
 }
@@ -418,9 +422,10 @@ model File {
   completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  owner           User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  workRequest     WorkRequest?     @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  owner           User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workRequest     WorkRequest?         @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
   chatAttachments ChatAttachment[]
+  materials       ProductionMaterial[]
 
   @@index([ownerId, createdAt])
   @@index([workRequestId])
@@ -436,4 +441,69 @@ model ChatAttachment {
 
   @@id([messageId, fileId])
   @@map("chat_attachments")
+}
+
+// ─── 제작 준비·시작·납기 (READY-01·02, WORK-01·02) ─────────────
+// 계약 하나에 제작 하나. 계약 체결 때 PREPARING으로 만들고, 조건이 갖춰지면 크리에이터가 시작한다.
+model Production {
+  contractId  BigInt    @id @map("contract_id")
+  status      String    @default("PREPARING")
+  workingDays Int       @map("working_days")
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(3)
+  // 실제 마감일(KST 날짜). 시작할 때 한 번 계산하고, 승인된 납기 변경으로만 바뀐다.
+  dueDate     DateTime? @map("due_date") @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  contract        Contract             @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  materials       ProductionMaterial[]
+  deadlineChanges DeadlineChange[]
+
+  @@map("productions")
+}
+
+model ProductionMaterial {
+  id                 BigInt    @id @default(autoincrement())
+  contractId         BigInt    @map("contract_id")
+  kind               String
+  status             String    @default("SUBMITTED")
+  fileId             BigInt?   @map("file_id")
+  carrier            String?
+  trackingNumber     String?   @map("tracking_number")
+  note               String?
+  issueNote          String?   @map("issue_note")
+  replacesMaterialId BigInt?   @unique @map("replaces_material_id")
+  submittedBy        BigInt    @map("submitted_by")
+  confirmedAt        DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  production  Production          @relation(fields: [contractId], references: [contractId], onDelete: Restrict)
+  file        File?               @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  submitter   User                @relation(fields: [submittedBy], references: [id], onDelete: Restrict)
+  replaces    ProductionMaterial? @relation("MaterialReplacement", fields: [replacesMaterialId], references: [id], onDelete: Restrict)
+  replacement ProductionMaterial? @relation("MaterialReplacement")
+
+  @@index([contractId, createdAt])
+  @@map("production_materials")
+}
+
+model DeadlineChange {
+  id              BigInt    @id @default(autoincrement())
+  contractId      BigInt    @map("contract_id")
+  requestedBy     BigInt    @map("requested_by")
+  previousDueDate DateTime  @map("previous_due_date") @db.Date
+  newDueDate      DateTime  @map("new_due_date") @db.Date
+  reason          String
+  status          String    @default("PENDING")
+  respondedBy     BigInt?   @map("responded_by")
+  respondedAt     DateTime? @map("responded_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  production Production @relation(fields: [contractId], references: [contractId], onDelete: Restrict)
+  requester  User       @relation("DeadlineChangeRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  responder  User?      @relation("DeadlineChangeResponder", fields: [respondedBy], references: [id], onDelete: Restrict)
+
+  @@index([contractId, createdAt])
+  @@map("deadline_changes")
 }

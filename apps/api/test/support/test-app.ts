@@ -33,6 +33,10 @@ import {
   createFileService,
   type FileService,
 } from "../../src/files/file.service.js";
+import {
+  createProductionService,
+  type ProductionService,
+} from "../../src/production/production.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -54,6 +58,8 @@ interface TestAppOptions {
   paymentService?: PaymentService;
   // 파일 테스트는 가짜 저장소를 넣은 파일 서비스를 넘긴다.
   fileService?: FileService;
+  // 제작 마감일 테스트는 시계를 바꾼 제작 서비스를 넘긴다.
+  productionService?: ProductionService;
 }
 
 const EMPTY_PROJECT = {
@@ -134,6 +140,7 @@ export function createTestApp({
   termsService,
   paymentService,
   fileService,
+  productionService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -168,6 +175,8 @@ export function createTestApp({
     paymentService: paymentService ?? createPaymentService({ prisma: client }),
     chatService: createChatService({ prisma: client }),
     fileService: fileService ?? createFileService({ prisma: client }),
+    productionService:
+      productionService ?? createProductionService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

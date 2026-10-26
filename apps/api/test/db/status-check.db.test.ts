@@ -1,6 +1,10 @@
 import {
   CHAT_MESSAGE_KINDS,
   CONTRACT_STATUSES,
+  DEADLINE_CHANGE_STATUSES,
+  MATERIAL_KINDS,
+  MATERIAL_STATUSES,
+  PRODUCTION_STATUSES,
   FILE_MIME_TYPES,
   FILE_PURPOSES,
   FILE_STATUSES,
@@ -68,6 +72,10 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["files_purpose_check", FILE_PURPOSES],
     ["files_mime_type_check", FILE_MIME_TYPES],
     ["files_status_check", FILE_STATUSES],
+    ["productions_status_check", PRODUCTION_STATUSES],
+    ["production_materials_kind_check", MATERIAL_KINDS],
+    ["production_materials_status_check", MATERIAL_STATUSES],
+    ["deadline_changes_status_check", DEADLINE_CHANGE_STATUSES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

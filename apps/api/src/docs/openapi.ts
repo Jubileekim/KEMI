@@ -37,6 +37,13 @@ import {
   USER_ROLES,
   USER_STATUSES,
   CONTRACT_STATUSES,
+  DEADLINE_CHANGE_STATUSES,
+  deadlineChangeCreateSchema,
+  MATERIAL_KINDS,
+  MATERIAL_STATUSES,
+  materialCreateSchema,
+  materialIssueSchema,
+  PRODUCTION_STATUSES,
   WORK_REQUEST_CLOSED_REASONS,
   WORK_REQUEST_STATUSES,
   VIDEO_PURPOSES,
@@ -242,6 +249,11 @@ const openApiDocument = {
       name: "chat",
       description:
         "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
+    },
+    {
+      name: "production",
+      description:
+        "제작 준비 자료·제작 시작·납기 변경 (계약 단위, READY-01·02, WORK-01·02)",
     },
     {
       name: "payments",
@@ -1114,6 +1126,167 @@ const openApiDocument = {
         },
       },
     },
+    "/api/contracts/{contractId}/production": {
+      get: {
+        tags: ["production"],
+        summary: "제작 정보 (READY·WORK)",
+        description:
+          "계약 당사자가 본다. 결제 완료 여부, 자료 목록·상태, 시작 가능 여부(`readyToStart`), 시작 시각, 작업 일수·마감일(KST), 납기 변경 이력.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("제작 정보", "Production"),
+          ...bearerErrors,
+          404: errorResponse("계약이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/materials": {
+      post: {
+        tags: ["production"],
+        summary: "제작 자료 내기 (READY-01)",
+        description:
+          "의뢰인. 파일(확인이 끝난 본인 MATERIAL 파일)·실물 발송(택배사·송장번호)·메모. 문제가 신고된 자료는 `replacesMaterialId`로 대체한다(원래 자료는 REPLACED). 제작 준비 단계에서만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(materialCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse("제작 정보", "Production"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/materials/{materialId}/confirm": {
+      post: {
+        tags: ["production"],
+        summary: "자료 정상 확인 (READY-02)",
+        description:
+          "크리에이터. 제출된 자료로 작업할 수 있음을 확인한다. 발송 등록과 정상 수령은 다르다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("materialId")],
+        responses: {
+          200: jsonResponse("제작 정보", "Production"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/materials/{materialId}/issue": {
+      post: {
+        tags: ["production"],
+        summary: "자료 누락·문제 신고 (READY-02)",
+        description:
+          "크리에이터. 제출·확인된 자료의 문제를 알린다. 의뢰인이 대체 자료를 낼 때까지 제작을 시작할 수 없다. 대화방에 시스템 안내가 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("materialId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(materialIssueSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("제작 정보", "Production"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/start": {
+      post: {
+        tags: ["production"],
+        summary: "제작 시작 (WORK-01)",
+        description:
+          "크리에이터. 결제 완료, 확인된 자료 1개 이상, 미확인·문제 자료 없음일 때만. 마감일은 이때 한 번 계산한다: 시작일(KST) + 작업 일수(지원 때 제안한 기간, 달력일) [제안, D09].",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("제작 정보", "Production"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/deadline-changes": {
+      post: {
+        tags: ["production"],
+        summary: "납기 변경 요청 (WORK-02)",
+        description:
+          "제작 중에 어느 당사자든 요청한다. 대기 중인 요청은 하나뿐이다. 상대방이 승인해야 마감일이 바뀐다(대화 속 동의로 바뀌지 않음). 이전 마감일·사유가 이력으로 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(deadlineChangeCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("제작 정보", "Production"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/production/deadline-changes/{changeId}/approve":
+      {
+        post: {
+          tags: ["production"],
+          summary: "납기 변경 승인 (WORK-02)",
+          description: "요청하지 않은 당사자만. 승인하면 마감일이 바뀐다.",
+          security: [{ bearerAuth: [] }],
+          parameters: [idParam("contractId"), idParam("changeId")],
+          responses: {
+            200: jsonResponse("제작 정보", "Production"),
+            ...bearerErrors,
+            403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+            404: errorResponse(
+              "계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)",
+            ),
+            409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+          },
+        },
+      },
+    "/api/contracts/{contractId}/production/deadline-changes/{changeId}/reject":
+      {
+        post: {
+          tags: ["production"],
+          summary: "납기 변경 거절 (WORK-02)",
+          description: "요청하지 않은 당사자만. 기존 마감일을 유지한다.",
+          security: [{ bearerAuth: [] }],
+          parameters: [idParam("contractId"), idParam("changeId")],
+          responses: {
+            200: jsonResponse("제작 정보", "Production"),
+            ...bearerErrors,
+            403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+            404: errorResponse(
+              "계약·대상이 없거나 당사자가 아님 (`NOT_FOUND`)",
+            ),
+            409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+          },
+        },
+      },
     "/api/contracts/{contractId}/payments": {
       get: {
         tags: ["payments"],
@@ -1831,6 +2004,91 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/ChatMessage" },
           },
           hasMore: { type: "boolean" },
+        },
+      },
+      Production: {
+        type: "object",
+        required: [
+          "contractId",
+          "workRequestId",
+          "status",
+          "paid",
+          "materials",
+          "readyToStart",
+          "startedAt",
+          "workingDays",
+          "dueDate",
+          "deadlineChanges",
+        ],
+        properties: {
+          contractId: { type: "string" },
+          workRequestId: { type: "string" },
+          status: { type: "string", enum: [...PRODUCTION_STATUSES] },
+          paid: { type: "boolean" },
+          materials: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "id",
+                "kind",
+                "status",
+                "fileId",
+                "carrier",
+                "trackingNumber",
+                "note",
+                "issueNote",
+                "replacesMaterialId",
+                "createdAt",
+                "confirmedAt",
+              ],
+              properties: {
+                id: { type: "string" },
+                kind: { type: "string", enum: [...MATERIAL_KINDS] },
+                status: { type: "string", enum: [...MATERIAL_STATUSES] },
+                fileId: { type: ["string", "null"] },
+                carrier: { type: ["string", "null"] },
+                trackingNumber: { type: ["string", "null"] },
+                note: { type: ["string", "null"] },
+                issueNote: { type: ["string", "null"] },
+                replacesMaterialId: { type: ["string", "null"] },
+                createdAt: { type: "string", format: "date-time" },
+                confirmedAt: { type: ["string", "null"], format: "date-time" },
+              },
+            },
+          },
+          readyToStart: { type: "boolean" },
+          startedAt: { type: ["string", "null"], format: "date-time" },
+          workingDays: { type: "integer" },
+          dueDate: { type: ["string", "null"], format: "date" },
+          deadlineChanges: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "id",
+                "requestedBy",
+                "previousDueDate",
+                "newDueDate",
+                "reason",
+                "status",
+                "respondedBy",
+                "respondedAt",
+                "createdAt",
+              ],
+              properties: {
+                id: { type: "string" },
+                requestedBy: { type: "string" },
+                previousDueDate: { type: "string", format: "date" },
+                newDueDate: { type: "string", format: "date" },
+                reason: { type: "string" },
+                status: { type: "string", enum: [...DEADLINE_CHANGE_STATUSES] },
+                respondedBy: { type: ["string", "null"] },
+                respondedAt: { type: ["string", "null"], format: "date-time" },
+                createdAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
         },
       },
       PaymentOrder: {
