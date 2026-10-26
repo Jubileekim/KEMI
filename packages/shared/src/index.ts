@@ -3,6 +3,7 @@ export * from "./auth.js";
 export * from "./catalog.js";
 export * from "./chat.js";
 export * from "./delivery.js";
+export * from "./direct.js";
 export * from "./errors.js";
 export * from "./file.js";
 export * from "./health.js";

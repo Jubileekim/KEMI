@@ -24,6 +24,8 @@ import { createProductionService } from "./production/production.service.js";
 import { createDeliveryService } from "./delivery/delivery.service.js";
 import { createCatalogService } from "./catalog/catalog.service.js";
 import { createProjectDraftService } from "./projects/project-draft.service.js";
+import { createDirectRequestService } from "./direct/direct.service.js";
+import { createFeedService } from "./direct/feed.service.js";
 import { createSupabaseStorage } from "./files/storage.js";
 
 // 환경 변수가 있는 제공자만 켠다.
@@ -73,6 +75,7 @@ function start(env: Env) {
     pricingService: createPricingService({
       apiKey: env.AI_PRICING_API_KEY,
       model: env.AI_PRICING_MODEL,
+      prisma,
     }),
     termsService: createTermsService({ prisma }),
     chatService: createChatService({ prisma }),
@@ -80,6 +83,8 @@ function start(env: Env) {
     deliveryService: createDeliveryService({ prisma }),
     catalogService: createCatalogService({ prisma, storage }),
     projectDraftService: createProjectDraftService({ prisma }),
+    directRequestService: createDirectRequestService({ prisma }),
+    feedService: createFeedService({ prisma }),
     fileService: createFileService({
       prisma,
       storage,

@@ -5,6 +5,9 @@ import createFileRouter from "./files/file.router.js";
 import createProductionRouter from "./production/production.router.js";
 import createDeliveryRouter from "./delivery/delivery.router.js";
 import createCatalogRouter from "./catalog/catalog.router.js";
+import createDirectRouter from "./direct/direct.router.js";
+import type { DirectRequestService } from "./direct/direct.service.js";
+import type { FeedService } from "./direct/feed.service.js";
 import type { CatalogService } from "./catalog/catalog.service.js";
 import type { ProjectDraftService } from "./projects/project-draft.service.js";
 import type { DeliveryService } from "./delivery/delivery.service.js";
@@ -48,6 +51,8 @@ export interface AppDependencies {
   deliveryService: DeliveryService;
   catalogService: CatalogService;
   projectDraftService: ProjectDraftService;
+  directRequestService: DirectRequestService;
+  feedService: FeedService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -73,6 +78,8 @@ export function createApp({
   deliveryService,
   catalogService,
   projectDraftService,
+  directRequestService,
+  feedService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -120,6 +127,11 @@ export function createApp({
   app.use(
     "/api",
     createCatalogRouter(authService, catalogService, projectDraftService),
+  );
+  // 직접 의뢰·작업물 피드·운영 지표 (DIRECT·FEED·METRIC)
+  app.use(
+    "/api",
+    createDirectRouter(authService, directRequestService, feedService),
   );
   if (apiDocs) {
     app.use("/api", createDocsRouter());

@@ -36,7 +36,9 @@ import {
   termsVersionCreateSchema,
   USER_ROLES,
   USER_STATUSES,
+  aiReportApplySchema,
   CATALOG_STATUSES,
+  directRequestCreateSchema,
   CONTRACT_STATUSES,
   packageCreateSchema,
   packageUpdateSchema,
@@ -266,6 +268,11 @@ const openApiDocument = {
         "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
     },
     {
+      name: "direct",
+      description:
+        "직접 의뢰(DIRECT-01~03)·작업물 피드(FEED-01~03)·운영 지표(METRIC-01)",
+    },
+    {
       name: "catalog",
       description:
         "제작 패키지·작업물·제작 서비스 공개 (PACK-01~03, PORT-01~02). 공개 조회는 서비스가 공개된 크리에이터만",
@@ -342,7 +349,7 @@ const openApiDocument = {
         tags: ["pricing"],
         summary: "AI 제작 단가 분석 (AI-01)",
         description:
-          "활성 의뢰인만 요청할 수 있다. 입력 설명을 바탕으로 작업 단위·단가를 AI로 추정한다. 서버가 합계를 정수로 다시 계산하며, 실측 시장 단가나 확정 견적이 아니다. 사용자가 검토한 후 신규 프로젝트 생성 또는 본인 모집 중 프로젝트의 PATCH budget에 반영한다(AI-02). 저장/예산 수정은 자동으로 하지 않는다. 로그인 사용자당 1시간 10회(인증 실패는 차감되지 않음).",
+          "활성 의뢰인만 요청할 수 있다. 입력 설명을 바탕으로 작업 단위·단가를 AI로 추정한다. 서버가 합계를 정수로 다시 계산하며, 실측 시장 단가나 확정 견적이 아니다. 분석마다 보고서를 저장하고 `reportId`를 준다. 예산은 자동으로 바뀌지 않으며, 의뢰인이 `POST /api/pricing/reports/{reportId}/apply`로 직접 반영한다(AI-02). 로그인 사용자당 1시간 10회(인증 실패는 차감되지 않음).",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1153,6 +1160,188 @@ const openApiDocument = {
           400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
           ...bearerErrors,
           404: errorResponse("방·메시지가 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/packages/{packageId}/direct-requests": {
+      post: {
+        tags: ["direct"],
+        summary: "직접 의뢰 보내기 (DIRECT-01, ORDER-01~03)",
+        description:
+          "활성 의뢰인. 공개 서비스의 공개 패키지만. 금액·기간·수정 횟수는 패키지 조건 사본으로 시작한다. 크리에이터는 48시간 안에 답해야 하며, 지나면 만료(EXPIRED)된다. 같은 패키지로 진행 중인 의뢰는 하나뿐이다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(directRequestCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("직접 의뢰", "DirectRequest"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/direct-requests": {
+      get: {
+        tags: ["direct"],
+        summary: "내 직접 의뢰 목록",
+        description:
+          "의뢰인은 보낸 의뢰, 크리에이터는 받은 의뢰. 응답 기한이 지난 대기 의뢰는 이때 만료로 바뀐다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("목록", "DirectRequestList"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/direct-requests/{requestId}": {
+      get: {
+        tags: ["direct"],
+        summary: "직접 의뢰 상세",
+        description: "당사자만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("requestId")],
+        responses: {
+          200: jsonResponse("직접 의뢰", "DirectRequest"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/direct-requests/{requestId}/accept": {
+      post: {
+        tags: ["direct"],
+        summary: "협의 수락 (DIRECT-02)",
+        description:
+          "크리에이터. 대기(PENDING) 의뢰만. DISCUSSING이 되고 대화방이 열린다. **계약 확정이 아니다.** 이후 조건서·양측 서명으로 계약한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("requestId")],
+        responses: {
+          200: jsonResponse("직접 의뢰", "DirectRequest"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/direct-requests/{requestId}/decline": {
+      post: {
+        tags: ["direct"],
+        summary: "거절 (DIRECT-03)",
+        description:
+          "크리에이터. 대기·협의 중 의뢰만. 미확정 조건서는 무효가 된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("requestId")],
+        responses: {
+          200: jsonResponse("직접 의뢰", "DirectRequest"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/direct-requests/{requestId}/withdraw": {
+      post: {
+        tags: ["direct"],
+        summary: "의뢰 거두기",
+        description: "의뢰인. 계약 전(대기·협의 중) 의뢰만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("requestId")],
+        responses: {
+          200: jsonResponse("직접 의뢰", "DirectRequest"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/feed": {
+      get: {
+        tags: ["direct"],
+        summary: "작업물 피드 (FEED-01~03)",
+        description:
+          "공개 서비스의 공개 작업물. 최근 공개순 [제안, D21]. 목적·스타일·작업 유형(본인 역할)으로 거른다(쉼표 구분). 고객 납품물은 자동으로 올라오지 않는다. 재생은 `GET /api/portfolios/{id}/media`.",
+        parameters: [
+          { name: "purpose", in: "query", schema: { type: "string" } },
+          {
+            name: "styles",
+            in: "query",
+            schema: { type: "string" },
+            description: "예: EMOTIONAL,FUN",
+          },
+          {
+            name: "roles",
+            in: "query",
+            schema: { type: "string" },
+            description: "예: FILMING,EDITING",
+          },
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1 },
+          },
+          {
+            name: "pageSize",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 50 },
+          },
+        ],
+        responses: {
+          200: jsonResponse("피드", "FeedResponse"),
+          400: errorResponse("검색 조건 오류 (`VALIDATION_FAILED`)"),
+        },
+      },
+    },
+    "/api/admin/metrics": {
+      get: {
+        tags: ["direct"],
+        summary: "운영 지표 (METRIC-01)",
+        description:
+          "운영자(ADMIN)만. 거래 테이블에서 계산한다(중복 없음, 개인정보 없음) [제안, D22]. 시연 계정(이메일 도메인 kemi.test)은 뺀다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("지표", "MetricsSummary"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/pricing/reports/{reportId}/apply": {
+      post: {
+        tags: ["pricing"],
+        summary: "AI 분석 결과를 예산에 반영 (AI-02)",
+        description:
+          "분석한 본인만. 대상은 본인 공고 초안(`draftId`) 또는 본인의 모집 중 공고(`projectId`) 하나. 보고서당 한 번.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("reportId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(aiReportApplySchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("반영 결과", "AiReportApplyResponse"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
         },
       },
     },
@@ -2138,8 +2327,13 @@ const openApiDocument = {
           "estimatedBudgetKrw",
           "assumptions",
           "notice",
+          "reportId",
         ],
         properties: {
+          reportId: {
+            type: ["string", "null"],
+            description: "저장한 분석 보고서. 예산 반영(AI-02)에 쓴다.",
+          },
           source: { type: "string", const: "AI_ESTIMATE" },
           currency: { type: "string", const: "KRW" },
           summary: { type: "string" },
@@ -2611,6 +2805,141 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/ChatMessage" },
           },
           hasMore: { type: "boolean" },
+        },
+      },
+      DirectRequest: {
+        type: "object",
+        required: [
+          "id",
+          "clientId",
+          "clientName",
+          "creatorId",
+          "creatorName",
+          "package",
+          "message",
+          "purpose",
+          "eventDate",
+          "status",
+          "respondDueAt",
+          "respondedAt",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          clientId: { type: "string" },
+          clientName: { type: "string" },
+          creatorId: { type: "string" },
+          creatorName: { type: "string" },
+          package: {
+            type: "object",
+            required: [
+              "packageId",
+              "title",
+              "priceKrw",
+              "deliveryDays",
+              "revisionCount",
+              "includes",
+            ],
+            properties: {
+              packageId: { type: "string" },
+              title: { type: "string" },
+              priceKrw: { type: "integer" },
+              deliveryDays: { type: "integer" },
+              revisionCount: { type: "integer" },
+              includes: { type: "array", items: { type: "string" } },
+            },
+          },
+          message: { type: "string" },
+          purpose: { type: ["string", "null"] },
+          eventDate: { type: ["string", "null"], format: "date" },
+          status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
+          respondDueAt: { type: "string", format: "date-time" },
+          respondedAt: { type: ["string", "null"], format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      DirectRequestList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/DirectRequest" },
+          },
+        },
+      },
+      FeedResponse: {
+        type: "object",
+        required: ["items", "page", "pageSize", "total"],
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["portfolio", "creator", "startingPriceKrw"],
+              properties: {
+                portfolio: { $ref: "#/components/schemas/Portfolio" },
+                creator: {
+                  type: "object",
+                  required: ["userId", "name"],
+                  properties: {
+                    userId: { type: "string" },
+                    name: { type: "string" },
+                  },
+                },
+                startingPriceKrw: { type: ["integer", "null"] },
+              },
+            },
+          },
+          page: { type: "integer" },
+          pageSize: { type: "integer" },
+          total: { type: "integer" },
+        },
+      },
+      MetricsSummary: {
+        type: "object",
+        required: [
+          "generatedAt",
+          "projectsPublished",
+          "applications",
+          "directRequests",
+          "contracts",
+          "paymentsSucceeded",
+          "completedDeals",
+          "revisionRequestRate",
+          "averageProductionDays",
+          "aiAnalyses",
+          "aiBudgetsApplied",
+        ],
+        properties: {
+          generatedAt: { type: "string", format: "date-time" },
+          projectsPublished: { type: "integer" },
+          applications: { type: "integer" },
+          directRequests: { type: "integer" },
+          contracts: { type: "integer" },
+          paymentsSucceeded: { type: "integer" },
+          completedDeals: { type: "integer" },
+          revisionRequestRate: { type: ["number", "null"] },
+          averageProductionDays: { type: ["number", "null"] },
+          aiAnalyses: { type: "integer" },
+          aiBudgetsApplied: { type: "integer" },
+        },
+      },
+      AiReportApplyResponse: {
+        type: "object",
+        required: [
+          "reportId",
+          "appliedBudgetKrw",
+          "draftId",
+          "projectId",
+          "appliedAt",
+        ],
+        properties: {
+          reportId: { type: "string" },
+          appliedBudgetKrw: { type: "integer" },
+          draftId: { type: ["string", "null"] },
+          projectId: { type: ["string", "null"] },
+          appliedAt: { type: "string", format: "date-time" },
         },
       },
       ServicePackage: {
