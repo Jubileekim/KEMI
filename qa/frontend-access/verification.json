@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "4574df1f75e31dda959921ab82c705364ab51c3c",
+  "scope": "KEMI frontend navigation; no live API verification",
+  "focused": {
+    "startTime": "2026-10-26T12:04:47.033Z",
+    "duration": 185317.87999999998,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "production": {
+    "pageErrors": 0,
+    "widths": [320, 390, 600, 768, 1024, 1280],
+    "independentHttpFixtureRoles": 4,
+    "serviceWorkers": 0,
+    "authDisabledRoles": 1,
+    "mockRequests": 0
+  },
+  "checks": {
+    "tokens": "PASS",
+    "webTypecheckLintBuild": "exit 0, default and both flags",
+    "changedFileFormat": "PASS",
+    "repositoryFormat": "failed only in 6 pre-existing untracked outputs/tools files",
+    "webUnit": "193/193; exit 0"
+  },
+  "earlierRuns": {
+    "interruptedFull": {
+      "passed": 30,
+      "reason": "shared build ran during Vite E2E; module timestamp changed; session token fixture failures; interrupted, not a completed suite",
+      "failed": 6
+    },
+    "initialFocused": "6 passed / 2 failed: wrong test locator; corrected without changing product or timeout"
+  },
+  "apiUnit": {
+    "cause": "unresolved; no API fix in navigation scope",
+    "initial": "74 passed, 13 failed",
+    "errors": ["5000ms timeout", "ECONNRESET"],
+    "outsideSandbox": "75 passed, 12 failed",
+    "changedApiSharedFiles": 0
+  }
+}
