@@ -1,0 +1,35 @@
+name: PDF Frontend Demo CI
+
+on:
+  pull_request:
+    paths:
+      - "examples/pdf-frontend/**"
+      - ".github/workflows/pdf-frontend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/pdf-frontend/**"
+      - ".github/workflows/pdf-frontend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pdf-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: examples/pdf-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: examples/pdf-frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: examples/pdf-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test:pdf
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run build

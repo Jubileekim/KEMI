@@ -1,0 +1,24 @@
+{
+  "name": "kemi-pdf-frontend-demo",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
+  "packageManager": "npm@11.17.0",
+  "scripts": {
+    "dev": "npm run dev -w @kemi/web",
+    "preview": "npm run preview -w @kemi/web",
+    "typecheck": "npm run typecheck -w @kemi/web",
+    "lint": "npm run lint -w @kemi/web",
+    "format": "npm run format -w @kemi/web",
+    "format:check": "npm run format:check -w @kemi/web",
+    "build": "npm run build -w @kemi/web",
+    "test:pdf": "node --experimental-strip-types --test apps/web/tests/pdf-flow.test.mjs"
+  }
+}

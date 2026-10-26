@@ -11,3 +11,7 @@ apps/web/src/design-tokens/tokens.*
 apps/web/public/brand/
 apps/web/public/mockServiceWorker.js
 qa/frontend-0c/
+
+# Standalone demo uses its own formatter and lockfile.
+examples/pdf-frontend/
+
