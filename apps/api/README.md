@@ -332,7 +332,7 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 | Health Check Path | `/health`                                                                                                                                |
 | Environment       | `NODE_ENV=production`, `DATABASE_URL` 등                                                                                                 |
 
-무료 Render Web Service는 pre-deploy command를 지원하지 않으므로 `npm start`의 `prestart` 단계에서 `prisma migrate deploy`를 먼저 실행한다. 마이그레이션이 실패하면 새 인스턴스가 시작되지 않아 기존 live 인스턴스가 유지된다.
+**운영 DB 마이그레이션은 배포·서버 시작에 자동으로 묶지 않는다.** `npm start -w @kemi/api`는 앱만 시작한다. `main`에 DB 변경이 들어오기 전에 백업 및 기존 데이터 보존 여부를 확인하고, 별도 개발용 DB에서 해당 커밋의 마이그레이션과 API/DB 테스트를 검증한 다음 담당자 승인 후 `npm run db:deploy -w @kemi/api`로 명시적으로 적용한다. Render 무료 플랜은 pre-deploy command를 제공하지 않으므로 새 코드 배포 전에 이 절차를 별도 수행한다. `prisma migrate status`와 `/health/ready`를 확인하고, 병합·자동 배포 뒤에는 실제 `/api/projects` 조회와 Render 오류 로그를 점검한다. 앱 롤백이 DB 마이그레이션을 되돌리지는 않으므로, 문제가 생겨도 `migrate reset`이나 레거시 테이블 삭제를 운영 DB에 실행하지 않는다. 이미 적용된 7개 이력과 기존 테이블 보존 상태는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)에 기록되어 있다.
 
 헬스 체크는 DB를 보지 않는 `/health`를 쓴다. DB 장애 때문에 Render가 서버를 계속 재시작하지 않게 하기 위해서다. DB까지 확인하려면 `/health/ready`를 사용한다.
 
