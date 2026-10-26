@@ -4,9 +4,13 @@ import Button from "../../components/ui/button";
 export default function ReviewPlayer({
   blob,
   name,
+  initialSeconds = 0,
+  onPosition,
 }: {
   blob: Blob;
   name: string;
+  initialSeconds?: number;
+  onPosition?: (position: { seconds: number; duration: number }) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
@@ -26,6 +30,12 @@ export default function ReviewPlayer({
   return (
     <section className="grid min-w-0 gap-3" aria-label="검토 영상 플레이어">
       <p>{name} · 검토 전용 · 다운로드 버튼 없음</p>
+      {onPosition && (
+        <p className="type-body-sm text-muted-foreground">
+          길이를 확인하지 못한 영상은 끝까지 재생한 뒤 시간 위치를 지정해
+          주세요.
+        </p>
+      )}
       <video
         ref={video}
         className="aspect-video w-full rounded-xl bg-muted"
@@ -35,6 +45,42 @@ export default function ReviewPlayer({
         preload="metadata"
         aria-label={`검토 영상 ${name}`}
         onError={() => setFailed(true)}
+        onLoadedMetadata={(e) => {
+          const element = e.currentTarget;
+          if (!Number.isFinite(element.duration) && initialSeconds > 0)
+            element.currentTime = initialSeconds;
+          if (Number.isFinite(element.duration)) {
+            element.currentTime = Math.min(initialSeconds, element.duration);
+            onPosition?.({
+              seconds: element.currentTime,
+              duration: element.duration,
+            });
+          }
+        }}
+        onTimeUpdate={(e) => {
+          const element = e.currentTarget;
+          if (Number.isFinite(element.duration))
+            onPosition?.({
+              seconds: element.currentTime,
+              duration: element.duration,
+            });
+        }}
+        onDurationChange={(e) => {
+          const element = e.currentTarget;
+          if (Number.isFinite(element.duration))
+            onPosition?.({
+              seconds: element.currentTime,
+              duration: element.duration,
+            });
+        }}
+        onEnded={(e) => {
+          const element = e.currentTarget;
+          if (element.currentTime > 0)
+            onPosition?.({
+              seconds: element.currentTime,
+              duration: element.currentTime,
+            });
+        }}
       >
         <track kind="captions" />
       </video>
