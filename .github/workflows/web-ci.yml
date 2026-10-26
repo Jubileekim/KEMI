@@ -19,6 +19,7 @@ on:
         feat/frontend-3b-signatures,
         feat/frontend-3c-payments,
         feat/frontend-4a-production,
+        feat/frontend-4c-revisions,
       ]
   push:
     branches: [main]
