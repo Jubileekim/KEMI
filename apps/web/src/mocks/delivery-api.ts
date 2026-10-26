@@ -2,6 +2,12 @@ import axios from "axios";
 import { z } from "zod";
 import { api } from "../shared/api/client";
 import { session } from "../app/session";
+import {
+  finalAssetSchema,
+  finalStateSchema,
+  type FinalCommand,
+  type FinalAsset,
+} from "./final-model";
 import { revisionRequestSchema, type RevisionCommand } from "./revision-model";
 import {
   assetSchema,
@@ -14,7 +20,7 @@ import {
 async function request(
   path: string,
   signal?: AbortSignal,
-  data?: DeliveryCommand | RevisionCommand | FormData,
+  data?: DeliveryCommand | RevisionCommand | FinalCommand | FormData,
   media = false,
 ) {
   const epoch = session.epoch();
@@ -55,6 +61,47 @@ export async function saveRevision(id: string, command: RevisionCommand) {
   return z
     .strictObject({ ok: z.literal(true) })
     .parse(await request(`${path(id)}/requests`, undefined, command));
+}
+export async function saveFinal(id: string, command: FinalCommand) {
+  return z
+    .strictObject({ ok: z.literal(true) })
+    .parse(await request(`${path(id)}/final`, undefined, command));
+}
+export async function uploadFinal(id: string, file: File) {
+  const form = new FormData();
+  form.set("id", crypto.randomUUID());
+  form.set("file", file);
+  return finalAssetSchema.parse(
+    await request(`${path(id)}/final-assets`, undefined, form),
+  );
+}
+export async function downloadFinal(id: string, asset: FinalAsset) {
+  return z
+    .instanceof(Blob)
+    .refine((value) => value.size === asset.size && value.type === asset.mime)
+    .parse(
+      await request(
+        `${path(id)}/final-files/${encodeURIComponent(asset.id)}`,
+        undefined,
+        undefined,
+        true,
+      ),
+    );
+}
+export async function loadFinalEvents(roomId: string, signal?: AbortSignal) {
+  return z
+    .array(
+      z.strictObject({
+        contractId: z.string().uuid(),
+        final: finalStateSchema,
+      }),
+    )
+    .parse(
+      await request(
+        `/__mock__/final-events/${encodeURIComponent(roomId)}`,
+        signal,
+      ),
+    );
 }
 export async function loadRevisionEvents(roomId: string, signal?: AbortSignal) {
   return z

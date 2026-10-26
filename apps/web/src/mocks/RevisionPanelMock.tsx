@@ -225,6 +225,7 @@ export default function RevisionPanelMock({
       </ol>
       {state.requests.length === 0 && <p>등록된 수정 요청이 없어요.</p>}
       {!creator &&
+        !state.final.approval &&
         version &&
         version.id === state.versions.at(-1)?.id &&
         !open && (

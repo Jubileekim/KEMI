@@ -5,6 +5,7 @@ import Textarea from "../components/ui/textarea";
 import Label from "../components/ui/label";
 import DeliveryNoticesMock from "./DeliveryNoticesMock";
 import RevisionNoticesMock from "./RevisionNoticesMock";
+import FinalNoticesMock from "./FinalNoticesMock";
 import { campaignTime } from "./campaign-model";
 import {
   proposalLabels,
@@ -59,6 +60,7 @@ export default function ChatPanelMock({
       {!messages.length && <p>아직 대화가 없어요.</p>}
       {item.contracted && <DeliveryNoticesMock roomId={item.id} />}
       {item.contracted && <RevisionNoticesMock requestId={item.id} />}
+      {item.contracted && <FinalNoticesMock roomId={item.id} />}
       {last && (
         <Button
           variant="outline"
