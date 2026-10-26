@@ -384,33 +384,178 @@ describe("결제 취소·실패 기록", () => {
       .set(auth(token))
       .send({ code, message: "사용자가 결제를 취소했습니다." });
 
-  it("승인 전 주문을 취소·실패로 닫고, 결과 불명확·완료 주문은 닫을 수 없다", async () => {
+  const notFound: TossOutcome = {
+    kind: "rejected",
+    httpStatus: 404,
+    code: "NOT_FOUND_PAYMENT",
+    message: "존재하지 않는 결제 정보 입니다.",
+  };
+  const inProgress = (orderId: string) =>
+    done(orderId, { status: "IN_PROGRESS", approvedAt: null });
+
+  it("Toss에 결제 기록이 없음을 확인해야 취소·실패로 닫고, 그 뒤에만 새 주문을 만든다", async () => {
     const { client, creator, contractId } = await signedContract();
     const first = (await createOrder(client.token, contractId)).body.orderId;
     expect(
       (await fail(creator.token, first, "PAY_PROCESS_CANCELED")).status,
     ).toBe(403);
+    expect(getByOrderId).not.toHaveBeenCalled();
+
+    getByOrderId.mockResolvedValueOnce(notFound);
     expect(
-      (await fail(client.token, first, "PAY_PROCESS_CANCELED")).body.status,
-    ).toBe("CANCELED");
+      (await fail(client.token, first, "PAY_PROCESS_CANCELED")).body,
+    ).toMatchObject({
+      status: "CANCELED",
+      failureCode: "PAY_PROCESS_CANCELED",
+    });
+    expect(getByOrderId).toHaveBeenCalledWith(first);
 
     const second = (await createOrder(client.token, contractId)).body.orderId;
+    getByOrderId.mockResolvedValueOnce(notFound);
     expect(
       (await fail(client.token, second, "PAY_PROCESS_ABORTED")).body.status,
     ).toBe("FAILED");
 
+    // 결제창에서 끝난 미승인 결제(ABORTED)도 주문과 맞으면 닫는다.
     const third = (await createOrder(client.token, contractId)).body.orderId;
-    confirm.mockResolvedValueOnce({ kind: "unavailable" });
-    await confirmOrder(client.token, third);
+    getByOrderId.mockResolvedValueOnce(done(third, { status: "ABORTED" }));
     expect(
-      (await fail(client.token, third, "PAY_PROCESS_CANCELED")).status,
-    ).toBe(409);
+      (await fail(client.token, third, "REJECT_CARD_COMPANY")).body,
+    ).toMatchObject({
+      status: "FAILED",
+      failureCode: "ABORTED",
+    });
 
     const history = await request(app)
       .get(`/api/contracts/${contractId}/payments`)
       .set(auth(client.token));
     expect(history.body.items.map((o: { status: string }) => o.status)).toEqual(
-      ["UNKNOWN", "FAILED", "CANCELED"],
+      ["FAILED", "FAILED", "CANCELED"],
     );
+  });
+
+  it("조회가 안 되거나 아직 진행 중이면 UNKNOWN으로 묶어 새 주문을 막고, 늦은 승인은 조회로 반영한다", async () => {
+    const { client, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+
+    getByOrderId.mockResolvedValueOnce({ kind: "unavailable" });
+    expect(
+      (await fail(client.token, orderId, "PAY_PROCESS_CANCELED")).body,
+    ).toMatchObject({
+      status: "UNKNOWN",
+      failureCode: "PAY_PROCESS_CANCELED",
+    });
+    // fail 직후 새 주문(이중 결제 위험)은 막힌다.
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+
+    // 다시 fail이 와도 Toss가 진행 중이면 그대로 UNKNOWN이다.
+    getByOrderId.mockResolvedValueOnce(inProgress(orderId));
+    expect(
+      (await fail(client.token, orderId, "PAY_PROCESS_CANCELED")).body.status,
+    ).toBe("UNKNOWN");
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+
+    // 늦게 승인된 결제는 조회로 SUCCEEDED가 되고, 새 주문은 계속 막힌다.
+    getByOrderId.mockResolvedValueOnce(done(orderId));
+    expect((await sync(client.token, orderId)).body).toMatchObject({
+      status: "SUCCEEDED",
+      failureCode: null,
+    });
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+
+    // 끝난 주문에 늦게 온 fail 콜백은 결과를 바꾸지 않는다(Toss도 다시 부르지 않는다).
+    const calls = getByOrderId.mock.calls.length;
+    expect(
+      (await fail(client.token, orderId, "PAY_PROCESS_CANCELED")).body.status,
+    ).toBe("SUCCEEDED");
+    expect(getByOrderId).toHaveBeenCalledTimes(calls);
+    expect(await prisma.payment.count()).toBe(1);
+  });
+
+  it("fail 조회 시점에 이미 승인됐으면 SUCCEEDED로 맞춘다", async () => {
+    const { client, creator, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+    getByOrderId.mockResolvedValueOnce(done(orderId));
+    expect(
+      (await fail(client.token, orderId, "PAY_PROCESS_CANCELED")).body.status,
+    ).toBe("SUCCEEDED");
+    expect(
+      await prisma.notification.count({
+        where: {
+          recipientUserId: creator.userId,
+          eventType: "PAYMENT_SUCCEEDED",
+        },
+      }),
+    ).toBe(1);
+  });
+
+  it("fail과 승인이 동시에 들어와도 결제는 하나로 끝나고 새 주문은 막힌다", async () => {
+    const { client, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+    confirm.mockImplementation(async () => {
+      await sleep(100);
+      return done(orderId);
+    });
+    getByOrderId.mockResolvedValue(inProgress(orderId));
+    await Promise.all([
+      confirmOrder(client.token, orderId),
+      fail(client.token, orderId, "PAY_PROCESS_CANCELED"),
+    ]);
+    expect((await orderOf(orderId)).status).toBe("SUCCEEDED");
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+  });
+
+  it("Toss 키가 없으면 조회할 수 없어 UNKNOWN으로 둔다", async () => {
+    const { client, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+    app = createTestApp({
+      prisma,
+      paymentService: createPaymentService({ prisma }),
+    });
+    expect(
+      (await fail(client.token, orderId, "PAY_PROCESS_CANCELED")).body.status,
+    ).toBe("UNKNOWN");
+  });
+});
+
+describe("결제사 조회 결과 검증", () => {
+  it("부분 취소(PARTIAL_CANCELED)는 재결제를 열지 않고 UNKNOWN으로 보류한다", async () => {
+    const { client, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+    confirm.mockResolvedValueOnce({ kind: "unavailable" });
+    await confirmOrder(client.token, orderId);
+    getByOrderId.mockResolvedValueOnce(
+      done(orderId, { status: "PARTIAL_CANCELED" }),
+    );
+    expect((await sync(client.token, orderId)).body).toMatchObject({
+      status: "UNKNOWN",
+      failureCode: "PARTIAL_CANCELED",
+    });
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+  });
+
+  it("ABORTED·CANCELED여도 주문 번호·금액이 다르면 닫지 않는다", async () => {
+    const { client, contractId } = await signedContract();
+    const { orderId } = (await createOrder(client.token, contractId)).body;
+    confirm.mockResolvedValueOnce({ kind: "unavailable" });
+    await confirmOrder(client.token, orderId);
+
+    getByOrderId.mockResolvedValueOnce(
+      done(orderId, { status: "ABORTED", totalAmount: 100 }),
+    );
+    expect((await sync(client.token, orderId)).body).toMatchObject({
+      status: "UNKNOWN",
+      failureCode: "PG_ORDER_MISMATCH",
+    });
+    getByOrderId.mockResolvedValueOnce(
+      done(randomUUID(), { status: "CANCELED" }),
+    );
+    expect((await sync(client.token, orderId)).body.status).toBe("UNKNOWN");
+    expect((await createOrder(client.token, contractId)).status).toBe(409);
+
+    // 같은 주문의 CANCELED만 닫는다.
+    getByOrderId.mockResolvedValueOnce(done(orderId, { status: "CANCELED" }));
+    expect((await sync(client.token, orderId)).body.status).toBe("CANCELED");
   });
 });
