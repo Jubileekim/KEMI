@@ -52,7 +52,7 @@ export default function ReviewActions({
               협의 전 보류하는 Mock 예시예요.
             </p>
           )}
-          {!creator && (
+          {!creator && version && !isDraftVersion(state, version) && (
             <>
               <Label>
                 <input
