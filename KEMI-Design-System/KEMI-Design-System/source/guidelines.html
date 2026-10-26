@@ -1,0 +1,100 @@
+<section class="doc-section ds-update" id="revision">
+  <p class="ds-eyebrow">2026.10.23 · 합의 반영 · 통합 전달본</p>
+  <h2>Leaf Green으로 연결되는 KEMI</h2>
+  <p class="doc-lead">기준: KEMI Design System 1.1. 브랜드 대표색·타이포그래피·공통 UI 규칙을 보완했습니다. KEMI 브랜드·토큰·가이드와 React UI를 한 폴더로 통합했습니다. 실제 서비스 개발은 별도 단계입니다.</p>
+  <div class="ds-note"><strong>읽는 순서</strong><p>아래의 수정 규칙 → 타이포그래피 → 기존 브랜드 보드와 컴포넌트 순서로 확인하세요. 이전 예시와 충돌하면 이 수정 규칙을 우선합니다. 로고·팔레트 10색·기존 라운드는 유지합니다.</p></div>
+  <table class="doc-table"><thead><tr><th>상태</th><th>이번 문서의 기준</th></tr></thead><tbody>
+    <tr><td>확정 방향</td><td>Primary Color는 Leaf Green #539863. Pretendard 유지. 타이포그래피와 Q4~Q6 추천 보완안 채택.</td></tr>
+    <tr><td>구현 보완값</td><td>Leaf 파생색·줄높이·반응형 수치·컴포넌트 상태. 이 수정본에서 문서·토큰으로 구체화한 시작값이며 실제 제품에서 확인합니다.</td></tr>
+    <tr><td>확장안</td><td>다크 모드. 라이트 모드와 같은 수준으로 검증·확정된 브랜드 규정은 아닙니다.</td></tr>
+    <tr><td>제품 참고</td><td>대표 패턴은 작품 탐색·저장·문의·상담입니다. 뒤의 구매·라이선스·계약·결제·납품 예시는 이전 서비스 참고입니다.</td></tr>
+  </tbody></table>
+</section>
+<section class="doc-section ds-update" id="primary-system">
+  <h2>Primary Color · 색의 역할</h2>
+  <p class="doc-lead">대표색은 브랜드를 기억하게 하고, 행동색은 무엇을 누를지 알려줍니다. text-primary는 기본 본문색이라는 뜻입니다.</p>
+  <div class="ds-color-grid">
+    <article class="ds-color"><div style="background:#539863"></div><h3>Primary · Leaf Green</h3><p>#539863 · 브랜드 대표색</p><p>브랜드 포인트·넓은 강조 면·선택 마크. 작은 글자나 흰 글자 배경에 그대로 사용하지 않습니다.</p></article>
+    <article class="ds-color"><div style="background:#367345"></div><h3>Action · Leaf 700</h3><p>#367345 · 주요 행동</p><p>일반 주요 버튼·선택 컨트롤·링크. 흰 글자와 5.68:1. hover #2C623A, pressed #245331.</p></article>
+    <article class="ds-color"><div style="background:linear-gradient(110deg,#71B48C,#AFD368,#F7DB56)"></div><h3>Marketing · Soft Energy</h3><p>홈·홍보 CTA</p><p>진녹색 #0F3D2E 글자와 조합. 문의·상담 등 작업 화면의 일반 버튼에는 단색을 사용합니다.</p></article>
+  </div>
+  <table class="doc-table"><thead><tr><th>역할</th><th>토큰·값</th><th>사용 규칙</th></tr></thead><tbody>
+    <tr><td>보조·장식</td><td>Mint Teal / Soft Lime / Sun Yellow / Ocean Blue</td><td>카테고리와 브랜드 장식. 오류·완료·경고의 의미를 대신하지 않음.</td></tr>
+    <tr><td>배경·글자</td><td>surface-base #F4F4F6 / text-primary #1F2937</td><td>페이지·긴 본문. 보조 글자는 #526179, 카드 배경은 흰색.</td></tr>
+    <tr><td>상태</td><td>성공 #28683D / 경고 #805300 / 오류 #B52F42</td><td>상태 문구·아이콘을 함께 사용. 브랜드 녹색과 성공 의미를 문맥으로 구분.</td></tr>
+    <tr><td>컨트롤 경계</td><td>border-strong #7D8AA0 / focus-ring #367345</td><td>선택·입력 경계와 키보드 포커스. 연한 border-default는 장식용 구분선.</td></tr>
+    <tr><td>대비 제한</td><td>Leaf Green + 흰색 3.48:1 / + #0F3D2E 3.50:1</td><td>일반 크기 글자 조합으로 사용하지 않음. 로고 자체는 재색칠하지 않음.</td></tr>
+  </tbody></table>
+  <p class="ds-note">허용 조합: 흰색 / Leaf 700, 본문색 / 기본 배경, 진녹색 / 홍보 그라데이션. 텍스트는 일반 크기 4.5:1, 큰 글자 3:1, 필요한 컨트롤 경계·포커스는 3:1을 확인합니다. 투명도·영상·그라데이션은 실제 겹친 배경도 확인해야 합니다.</p>
+</section>
+<section class="doc-section ds-update" id="component-rules">
+  <h2>버튼 · 입력 · 선택 상태</h2>
+  <p class="doc-lead">일반 작업 화면에는 단색 주요 버튼을 사용합니다. 같은 행동 묶음의 Primary는 1개를 기본으로 하고, 나머지는 Secondary·Ghost로 구분합니다.</p>
+  <div class="ds-samples" aria-label="버튼 시각 상태 예시">
+    <button type="button" class="btn btn--primary" data-ds-action>문의 보내기</button>
+    <span class="btn btn--primary ds-hover">Hover 예시</span>
+    <span class="btn btn--primary ds-pressed">Pressed 예시</span>
+    <span class="btn btn--primary ds-focus">Focus 예시</span>
+    <button type="button" class="btn btn--primary" disabled>비활성</button>
+    <button type="button" class="btn btn--primary" disabled aria-busy="true">보내는 중</button>
+    <button type="button" class="btn btn--secondary" data-ds-action>돌아가기</button>
+    <button type="button" class="btn ds-danger" data-ds-action>초안 삭제</button>
+  </div>
+  <p id="ds-action-feedback" role="status">버튼은 문서 시연용입니다. 문의 전송·삭제는 실행되지 않습니다. Hover·Pressed·Focus 표본은 비교용입니다.</p>
+  <table class="doc-table"><thead><tr><th>요소</th><th>상태</th><th>표현·동작</th></tr></thead><tbody>
+    <tr><td>버튼</td><td>기본 / hover / pressed / focus / disabled / loading</td><td>동작을 설명하는 라벨. 처리 중 중복 조작 방지·폭 유지·상태 안내. 비활성 이유는 주변 설명으로 제공.</td></tr>
+    <tr><td>입력</td><td>기본 / focus / error / disabled / readonly</td><td>항상 라벨 제공. placeholder로 대체하지 않음. 오류 문구를 입력과 연결하고 작성값 유지.</td></tr>
+    <tr><td>체크·라디오·칩</td><td>미선택 / 선택 / focus / disabled</td><td>체크 마크·문구·테두리로 선택 표시. 단일 선택과 복수 선택을 구분.</td></tr>
+    <tr><td>아이콘 버튼</td><td>기본 / 선택 / focus / disabled</td><td>접근 가능한 이름 제공. 눌러서 바뀌는 상태는 aria-pressed. 이동은 링크, 동작은 버튼.</td></tr>
+  </tbody></table>
+  <h3>입력 예시 · 필수와 오류</h3>
+  <form id="ds-form" class="ds-form" novalidate>
+    <label for="ds-purpose">사용 목적 <span>(필수)</span></label>
+    <input id="ds-purpose" class="input" aria-required="true" aria-describedby="ds-purpose-hint ds-purpose-error" maxlength="100" placeholder="예: 신제품을 소개하는 SNS 콘텐츠" />
+    <p id="ds-purpose-hint">문서 시연용입니다. 실제 문의 양식과 입력 제한은 제품 명세에서 정합니다.</p>
+    <p id="ds-purpose-error" class="ds-error" role="alert" hidden>사용 목적을 입력해 주세요.</p>
+    <label for="ds-extra">추가 설명 (선택)</label><textarea id="ds-extra" class="input" rows="3" placeholder="원하는 분위기를 자유롭게 적어주세요."></textarea>
+    <div><button type="submit" class="btn btn--primary">입력 확인</button></div><p id="ds-form-result" role="status"></p>
+  </form>
+  <p class="ds-note">오류는 해당 필드 아래에 구체적으로 표시하고 첫 오류로 이동합니다. 서버 오류가 나도 입력·선택을 지우지 않습니다. 긴 입력창과 textarea는 가독성을 위해 캡슐형 대신 16px 라운드를 적용합니다. 버튼·카드·모달의 기존 라운드는 유지합니다.</p>
+</section>
+<section class="doc-section ds-update" id="responsive-rules">
+  <h2>반응형 · 레이아웃</h2>
+  <table class="doc-table"><thead><tr><th>구간</th><th>페이지 여백·그리드</th><th>필터·모달</th></tr></thead><tbody>
+    <tr><td>모바일 · 0–599px</td><td>좌우 16px, 간격 16px, 읽기 순서대로 1열. 짧은 작품 카드만 2열 허용.</td><td>필터는 열기 버튼 + 별도 패널, 모달은 바텀시트·전체 화면. 화면 아래 행동 영역이 내용을 가리지 않도록 여백.</td></tr>
+    <tr><td>태블릿 · 600–1023px</td><td>좌우 24px, 카드 2–3열, 긴 본문은 한 열 유지.</td><td>필터는 접을 수 있는 패널. 모달은 화면 너비보다 48px 이상 작게.</td></tr>
+    <tr><td>데스크톱 · 1024px 이상</td><td>좌우 32px, 콘텐츠 최대 1280px, 카드 3–4열. 문의 본문은 최대 70ch.</td><td>필터는 좌측 240px, 모달 기본 최대 560px. 내용이 길면 내부 스크롤.</td></tr>
+  </tbody></table>
+  <p>이 수치는 제품 화면의 시작 기준입니다. 문서 탐색 메뉴는 콘텐츠 확보를 위해 1024px 미만에서 상단으로 이동합니다. 표는 지역 스크롤을 허용하되 페이지 전체 가로 스크롤은 피합니다. 200% 확대 시에도 내용·주요 행동에 접근할 수 있어야 합니다.</p>
+</section>
+<section class="doc-section ds-update" id="current-patterns">
+  <h2>현재 서비스 패턴 · 탐색부터 상담까지</h2>
+  <div class="ds-pattern-grid">
+    <article class="ds-card"><h3>1. 작품 탐색</h3><p>검색·목적·비율 필터, 작품 상세, 이런 느낌 더 보기.</p><p>유사 탐색에서는 기준 작품과 이전 탐색 복귀를 표시합니다.</p></article>
+    <article class="ds-card"><h3>2. 저장과 문의 선택</h3><p>북마크 저장과 문의용 체크는 별도 행동입니다.</p><p>제작자별 묶음·작품 개수·선택 한도를 함께 보여줍니다.</p></article>
+    <article class="ds-card"><h3>3. 문의 검토·전송</h3><p>공통 요청과 제작자별 참고 작품을 확인합니다.</p><p>일부 실패하면 성공은 유지하고 실패한 대상만 재시도합니다.</p></article>
+    <article class="ds-card"><h3>4. 답변·상담·종료</h3><p>답변 전에는 고객 파일 첨부 잠금 이유를, 답변 후에는 자료 공유를 표시합니다.</p><p>종료·차단·공유 해제 상태와 가능한 다음 행동을 안내합니다.</p></article>
+  </div>
+  <h3>목록과 전송의 상태 예시</h3>
+  <label for="ds-list-mode">비교할 상태</label><select class="select" id="ds-list-mode"><option value="loading">로딩</option><option value="result">결과 있음</option><option value="empty">빈 결과</option><option value="error">오류</option><option value="partial">부분 성공</option></select>
+  <div class="ds-card ds-list-example" id="ds-list-example" role="status" aria-live="polite"></div>
+  <p class="ds-note">문서 시연이며 실제 검색·전송·재시도가 아닙니다. 성공은 실제 서버 응답 이후에 표시합니다. 결과 확인이 필요한 전송 오류는 무조건 재전송시키지 않고 먼저 상태를 확인합니다.</p>
+</section>
+<section class="doc-section ds-update" id="content-accessibility">
+  <h2>아이콘 · 미디어 · 접근성 · 문구</h2>
+  <table class="doc-table"><thead><tr><th>영역</th><th>규칙</th><th>예시·확인</th></tr></thead><tbody>
+    <tr><td>아이콘</td><td>16 / 20 / 24px, 선형 1.75–2px 중 한 계열로 통일. 글자와 8px 간격. 단독 버튼 터치 영역 44×44px 권장.</td><td>저장 전·후는 윤곽/채움 + 접근 가능한 이름·선택 상태. 작은 아이콘 자체와 터치 영역을 구분.</td></tr>
+    <tr><td>썸네일</td><td>16:9 / 9:16 / 1:1 중 콘텐츠에 맞게 명시. 표지는 cover, 작품 상세는 contain을 기본.</td><td>얼굴·중요 글자 잘림 확인. 이미지 실패 시 ‘미리보기를 불러오지 못했어요’와 대체 표면.</td></tr>
+    <tr><td>영상</td><td>재생·시간·음소거 컨트롤 위치 고정. 저장은 우상단, 시간은 하단. 조작 영역 겹침 방지.</td><td>자동 소리 재생 금지. reduced-motion에서 자동 미리보기 제한. 영상 위 글자는 대비 표면 제공.</td></tr>
+    <tr><td>키보드·모달</td><td>Tab 순서와 포커스 표시. 모달은 이름·설명 제공, 내부 포커스 유지, 닫힌 후 원래 조작으로 복귀.</td><td>Escape 닫기 지원. 중요 삭제·전송은 행동의 결과를 설명하고 확인 기회 제공.</td></tr>
+    <tr><td>알림·오류</td><td>색·아이콘·문구를 함께 사용. 처리 상태는 보조 기술에도 전달. hover에만 필수 정보 배치 금지.</td><td>‘실패’ 대신 ‘문의가 전송되지 않았어요. 작성 내용은 유지했어요.’</td></tr>
+    <tr><td>문구</td><td>행동과 대상을 명확히 표시. 완료·가능·확정은 실제 상태와 일치.</td><td>‘확인’보다 ‘문의 보내기’, ‘저장 삭제’보다 ‘저장함에서 제거’. 상담은 계약·최종 선정이 아님.</td></tr>
+  </tbody></table>
+  <p class="ds-note">본문·입력·필터·문의·상담은 읽기 쉬운 불투명 표면을 사용합니다. Liquid Glass는 재생·저장 등 작은 포인트에 제한하고 장식으로 이해를 방해하지 않게 합니다.</p>
+</section>
+<section class="doc-section ds-update" id="change-log">
+  <h2>변경 기록 · 확인 범위</h2>
+  <p><strong>2026.10.23 / 1.1 수정본</strong> — Leaf Green 대표색, 단색 액션 파생색, 11개 타이포그래피 역할, 상태·폼·반응형·콘텐츠·접근성 규칙과 현재 서비스 패턴을 보완했습니다.</p>
+  <p>변경 전 문서는 source/design-system-1.1.base.html에 보존합니다. tokens/tokens.json과 source의 수정 원본을 편집한 뒤 scripts/build-design-system.cjs로 이 HTML과 토큰 CSS를 재생성합니다. GUIDE.md는 다른 프로젝트 적용 방법을 읽는 참고 문서입니다.</p>
+  <p>디자인 규칙과 시연을 제공하는 문서입니다. 실제 제품의 서버 동작·전체 접근성 적합성·운영 성능 검증을 뜻하지 않습니다. 다크 모드는 확장안입니다.</p>
+</section>

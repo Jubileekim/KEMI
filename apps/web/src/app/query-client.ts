@@ -1,0 +1,11 @@
+import { QueryClient } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    // Feature contracts will define safe retries. Never replay writes implicitly.
+    queries: { retry: false, staleTime: 0, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+});
+
+export default queryClient;

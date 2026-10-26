@@ -1,0 +1,13 @@
+[
+  { "token": "display-lg", "weight": 700, "tracking": "display", "mobile": 32, "mobileLine": 40, "use": "홈·홍보 히어로", "sample": "좋아하는 작품에서 시작하는 새로운 연결" },
+  { "token": "display-sm", "weight": 700, "tracking": "display", "mobile": 28, "mobileLine": 36, "use": "홈 주요 소개", "sample": "이런 느낌의 작품을 찾아보세요" },
+  { "token": "heading-lg", "weight": 700, "tracking": "heading", "mobile": 24, "mobileLine": 32, "use": "앱 페이지 제목", "sample": "저장한 작품" },
+  { "token": "heading-md", "weight": 700, "tracking": "heading", "mobile": 20, "mobileLine": 28, "use": "주요 섹션 제목", "sample": "제작자별 참고 작품" },
+  { "token": "title", "weight": 600, "tracking": "heading", "use": "카드·패널·모달 제목", "sample": "문의 내용을 확인해 주세요" },
+  { "token": "body-lg", "weight": 400, "tracking": "body", "use": "짧은 소개·리드 문장", "sample": "마음에 드는 작품을 저장하고, 원하는 제작자에게 문의해 보세요." },
+  { "token": "body-md", "weight": 400, "tracking": "body", "use": "기본 설명·상담 본문", "sample": "원하는 분위기와 사용 목적을 알려주세요. 제작 가능 여부와 일정은 제작자의 답변을 통해 협의할 수 있어요." },
+  { "token": "body-sm", "weight": 400, "tracking": "body", "use": "보조 설명·목록 정보", "sample": "저장한 작품은 문의 대상으로 자동 선택되지 않아요." },
+  { "token": "label-md", "weight": 600, "tracking": "label", "use": "버튼·입력 라벨·탭", "sample": "문의 보내기" },
+  { "token": "label-sm", "weight": 600, "tracking": "label", "use": "짧은 배지·선택 정보", "sample": "답변 대기 · 참고 작품 3개" },
+  { "token": "caption", "weight": 400, "tracking": "body", "use": "날짜·파일 정보. 중요 안내에는 사용하지 않음", "sample": "2026.10.23 · 00:15 · 9:16 · 12.4 MB" }
+]

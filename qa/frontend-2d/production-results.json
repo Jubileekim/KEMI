@@ -1,0 +1,22 @@
+{
+  "source": "production bundle with independent HTTP fixtures; NOT live API",
+  "results": [
+    "Proposal Mock code/endpoints/worker excluded from production",
+    "GUEST /requests: production boundary verified",
+    "GUEST /requests/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "GUEST /workspace/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "GUEST /campaigns/00000000-0000-4000-8000-000000000001/apply: production boundary verified",
+    "GUEST /campaigns/00000000-0000-4000-8000-000000000001/proposals: production boundary verified",
+    "CLIENT /requests: production boundary verified",
+    "CLIENT /requests/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "CLIENT /workspace/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "CLIENT /campaigns/00000000-0000-4000-8000-000000000001/apply: production boundary verified",
+    "CLIENT /campaigns/00000000-0000-4000-8000-000000000001/proposals: production boundary verified",
+    "CREATOR /requests: production boundary verified",
+    "CREATOR /requests/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "CREATOR /workspace/10000000-0000-4000-8000-000000000001: production boundary verified",
+    "CREATOR /campaigns/00000000-0000-4000-8000-000000000001/apply: production boundary verified",
+    "CREATOR /campaigns/00000000-0000-4000-8000-000000000001/proposals: production boundary verified"
+  ],
+  "pageErrors": []
+}

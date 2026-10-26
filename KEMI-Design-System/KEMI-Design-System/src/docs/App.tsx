@@ -1,0 +1,13 @@
+import { useState } from "react";
+import { Button, ToastProvider } from "../components";
+import { CoreUI } from "./sections/CoreUI";
+import { MediaKit } from "./sections/MediaKit";
+import { DealKit } from "./sections/DealKit";
+import { tokens } from "../tokens";
+import roles from "../../source/typography.json";
+export function App() {
+ const [dark,setDark] = useState(false);
+ const toggle = () => { document.documentElement.dataset.theme=dark ? "light":"dark";setDark(!dark); };
+ const brand=import.meta.env.BASE_URL+"brand/svg/logo-primary.svg";
+ return <ToastProvider><div className="doc"><nav className="doc-nav" aria-label="문서 목차"><a href="#top"><img src={brand} alt="KEMI" /></a><p>KEMI Design System 1.1</p><ul><li><a href="#foundation">색상</a></li><li><a href="#typography">타이포그래피</a></li><li><a href="#core">공통 UI</a></li><li><a href="#asset-card">영상 UI 예시</a></li><li><a href="#license">거래 UI 참고</a></li><li><a href={import.meta.env.BASE_URL+"KEMI_Design_System.html"}>전체 디자인 가이드</a></li></ul><Button variant="secondary" onClick={toggle} aria-pressed={dark}>{dark ? "라이트 모드":"다크 모드 (확장안)"}</Button></nav><main className="doc-main" id="top"><header className="doc-hero"><h1>KEMI Design System</h1><p>Leaf Green 브랜드·11개 타이포그래피 역할·재사용 React 컴포넌트 통합본.</p><a href={import.meta.env.BASE_URL+"KEMI_Design_System.html"}>브랜드·반응형·접근성·현재 서비스 패턴 전체 가이드 보기</a></header><section className="doc-section" id="foundation"><h2>Primary Color</h2><div className="unified-swatches">{[["Leaf Green · 대표색","#539863"],["Leaf 700 · 일반 주요 행동","#367345"],["Soft Energy · 홍보 CTA","linear-gradient(110deg,#71B48C,#AFD368,#F7DB56)"]].map(([name,color])=><div key={name}><div className="unified-swatch" style={{background:color}}/><strong>{name}</strong><p>{color}</p></div>)}</div><p>로고는 원래 색상을 유지합니다. 작은 글자·버튼에는 대비를 확보한 의미 토큰을 사용합니다.</p></section><section className="doc-section" id="typography"><h2>Typography · Pretendard</h2><p>글꼴이 없으면 시스템 글꼴로 표시합니다. 크기·줄높이·굵기·자간과 모바일 규격은 전체 가이드를 따릅니다.</p><div className="doc-table-wrap"><table className="doc-table"><thead><tr><th>역할</th><th>크기</th><th>사용 위치</th><th>예시</th></tr></thead><tbody>{roles.map(r=><tr key={r.token}><td>{r.token}</td><td>{tokens["01-primitives"].font.size[r.token as keyof typeof tokens["01-primitives"]["font"]["size"]]}px</td><td>{r.use}</td><td><div className={"type-preview type-"+r.token}>{r.sample}</div></td></tr>)}</tbody></table></div></section><p className="doc-note">아래는 재사용 UI 동작 예시입니다. 금액·거래·구매·라이선스·계약·납품 예시는 이전 서비스 참고이며 현재 KEMI 기능 확정을 뜻하지 않습니다. 문의·저장 등은 실제 서버 요청을 수행하지 않는 시연입니다. 샘플 영상은 인터넷 연결이 필요합니다.</p><CoreUI/><MediaKit/><DealKit/></main></div></ToastProvider>;
+}

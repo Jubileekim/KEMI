@@ -1,0 +1,25 @@
+{
+  "results": [
+    "MSW ready before first Axios/Query read",
+    "mock-empty",
+    "mock-401",
+    "mock-403",
+    "mock-409",
+    "mock-500",
+    "mock-network",
+    "delay, disabled duplicate, explicit retry",
+    "guest redirect and safe return",
+    "external return rejected",
+    "32 planned route entries, direct navigation and ranked static matching",
+    "role change clears prior private cache",
+    "ops denied to both member roles",
+    "creator restriction, logout and back navigation",
+    "404 fallback",
+    "8 responsive widths without overflow",
+    "reload and main focus",
+    "zero page errors and zero product API requests",
+    "production no tools, no dev route, no worker, protected routes closed"
+  ],
+  "errors": [],
+  "productRequests": []
+}

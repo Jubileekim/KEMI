@@ -1,3 +1,4 @@
+// Adapted from shadcn/ui new-york-v4 registry (MIT); see README.md.
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import cn from "@/lib/utils";
@@ -42,6 +43,7 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  type = "button",
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -52,12 +54,14 @@ function Button({
   return (
     <Comp
       data-slot="button"
+      data-kemi-button=""
       data-variant={variant}
       data-size={size}
+      type={asChild ? undefined : type}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
 }
 
-export { Button, buttonVariants };
+export default Button;

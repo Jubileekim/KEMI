@@ -1,0 +1,15 @@
+{
+  "mode": "production bundle + simulated HTTP, no real API/Google",
+  "checks": [
+    "navigation to Google start",
+    "refresh/me before login",
+    "creator-only return preserved",
+    "new signup role/name without credentials",
+    "single signup POST",
+    "unsupported signup provider rejected",
+    "no production Mock/worker/Kakao UI"
+  ],
+  "pageErrors": [],
+  "navigations": 2,
+  "signupPosts": 1
+}

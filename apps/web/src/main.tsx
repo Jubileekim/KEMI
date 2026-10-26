@@ -1,23 +1,24 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router";
-import App from "./App";
-import "./styles.css";
+import App from "./app/App";
+import "./styles/index.css";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) throw new Error("앱을 표시할 root 요소가 없습니다.");
+const root = document.getElementById("root");
+if (!root) throw new Error("KEMI root element is missing");
+const rootElement = root;
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+async function start() {
+  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === "true") {
+    const { default: worker } = await import("./mocks/browser");
+    await worker.start();
+  }
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
+start().catch(() => {
+  root.textContent =
+    "개발 Mock 시작에 실패했어요. 설정을 확인하고 새로고침해 주세요.";
 });
-
-createRoot(rootElement).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
-);

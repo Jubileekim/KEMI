@@ -1,1 +1,7 @@
 * text=auto eol=lf
+
+# Keep supplied design assets and canonical generated snapshots byte-for-byte.
+KEMI-Design-System/** -text -whitespace
+apps/web/src/design-tokens/tokens.* -text
+apps/web/public/brand/** -text
+apps/web/public/mockServiceWorker.js -text
