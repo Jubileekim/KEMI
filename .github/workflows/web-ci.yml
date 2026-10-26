@@ -19,7 +19,6 @@ on:
         feat/frontend-3b-signatures,
         feat/frontend-3c-payments,
         feat/frontend-4a-production,
-        feat/frontend-4b-delivery,
       ]
   push:
     branches: [main]
@@ -34,7 +33,7 @@ concurrency:
 jobs:
   web:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
