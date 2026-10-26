@@ -227,23 +227,95 @@ WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data
 
 ## 2. Render 백엔드 배포 설정
 
-| 항목              | 값                                          |
-| ----------------- | ------------------------------------------- |
-| Build Command     | `npm ci --include=dev && npm run build:api` |
-| Start Command     | `npm start -w @kemi/api`                    |
-| Health Check Path | `/health`                                   |
+**현재 서비스는 수동으로 만든 `kemi-api`이고 Blueprint와 연결돼 있지 않다**(2-1). 그래서 지금은 기존 서비스의 설정을 점검·변경한다(2-2). 저장소 루트의 [`render.yaml`](../../render.yaml)(Blueprint)은 **새 환경을 처음 만들 때만** 쓴다(2-3). 기존 서비스가 있는 상태에서 Blueprint를 적용하면 같은 이름의 서비스가 또 생기거나 설정이 섞일 수 있다.
 
-| 환경 변수           | 값                                                           |
-| ------------------- | ------------------------------------------------------------ |
-| `NODE_ENV`          | `production`                                                 |
-| `DATABASE_URL`      | 1-2와 같은 Session pooler 주소                               |
-| `DATABASE_POOL_MAX` | `5`                                                          |
-| `JWT_ACCESS_SECRET` | 로컬과 **다른** 새 값                                        |
-| `APP_ORIGIN`        | Vercel 프론트엔드 주소 (예: `https://<프로젝트>.vercel.app`) |
-| `TRUST_PROXY_HOPS`  | `0`으로 시작한다. 4단계에서 확인한 값으로 바꾼다             |
+### 2-0. 관리 방식 (2026-10-23 결정, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27))
 
+- **Render 계정 관리자: 희년님.** 무료(Hobby) 워크스페이스에는 팀원을 초대할 수 없어서 한 명이 관리한다. 저장소 주인이 희년님이라 Render GitHub 연결도 그 계정으로 한다.
+- 팀원은 Render 대시보드에 들어가지 않는다. 변경은 모두 GitHub에서 한다.
+  - 서비스 설정(빌드·시작 명령, 헬스 체크, 리전, 고정 환경 변수): `render.yaml`을 고치는 PR
+  - 코드: 기능 PR을 `main`에 병합하면, CI를 통과한 커밋이 자동으로 배포된다(`checksPass`)
+- **관리자만 하는 일:** 기존 서비스 설정 변경(2-2)·새 환경 생성(2-3), 비밀 환경 변수 입력·변경(`DATABASE_URL`, `APP_ORIGIN`, 소셜 로그인·AI 키), 로그 확인, 수동 재배포·되돌리기, 4단계의 임시 브랜치 수동 배포
+  - 비밀값은 관리자에게 GitHub이 아닌 비공개 채널로 전달한다.
+- **결과 공유:** 배포 URL, 배포된 커밋, `/health`·`/health/ready` 결과, 오류 로그 요약(비밀값·개인정보 제외)을 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)에 남긴다. 배포 상태는 GitHub 커밋의 체크와 CI로도 볼 수 있다.
+
+### 2-1. 현재 상태 (2026-10-26, 희년님 확인, #28 리뷰)
+
+| 항목              | 현재 서비스(수동 생성, live)                                               | 목표                                                                                 |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 서비스            | `kemi-api` (서비스 ID `srv-dbdj8ha9lscs73bv4hc0`), **Blueprint 연결 없음** | 그대로 유지                                                                          |
+| 자동 배포         | `commit` (main에 커밋되면 바로)                                            | `checksPass` (main 커밋 중 GitHub CI 통과한 것만)                                    |
+| Health Check Path | 비어 있음                                                                  | `/health`                                                                            |
+| `DATABASE_URL`    | 기존 공유 Supabase(**구형 스키마**) → `/api/projects`가 Prisma `P2021`     | `KEMI-dev` Session pooler ([이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)) |
+| 빌드·시작 명령    | 확인 필요                                                                  | `npm ci --include=dev && npm run build:api` / `npm start -w @kemi/api`               |
+
+- **빌드가 통과해도 API·DB 기능 검증이 끝난 것이 아니다.** DB가 우리 스키마가 아니면 대부분의 API가 500이다.
+- **Blueprint로 DB를 만들거나, 기존 공유 DB에 바로 마이그레이션하지 않는다.** DB는 #24 절차(새 `KEMI-dev` → 읽기 전용 점검 → `npm run db:deploy` → 확인)로만 준비한다.
+
+### 2-2. 기존 서비스 설정 점검·변경 (관리자: 희년님)
+
+실제 서비스 변경은 자동으로 하지 않는다. 아래 순서로 한 항목씩 바꾸고, 바꿀 때마다 기록한다.
+
+**변경 전 체크리스트**
+
+- [ ] `KEMI-dev`가 만들어졌고, `main`의 마이그레이션이 모두 적용·확인됐다(#24 기록)
+- [ ] 현재 설정을 기록했다(위 표의 "현재" 열, 환경 변수 **이름** 목록. 값은 적지 않는다)
+- [ ] 최근 배포 로그에서 시작 오류가 없는지 확인했다(`KEMI API listening on port …`)
+- [ ] 현재 `/health` 응답 코드를 기록했다
+
+**변경 순서** (서비스 → Settings·Environment)
+
+1. Environment
+   - `DATABASE_URL`: `KEMI-dev` Session pooler 주소
+   - `APP_ORIGIN`: Vercel 운영 주소(끝에 `/` 없음)
+   - `JWT_ACCESS_SECRET`: 32자 이상 임의 값(로컬과 다르게)
+   - `NODE_ENV=production`, `DATABASE_POOL_MAX=5`, `TRUST_PROXY_HOPS=0`
+   - 소셜 로그인·AI·결제·파일 키는 발급된 것만 넣는다(없어도 서버는 시작하고 해당 기능만 503).
+2. Health Check Path → `/health`
+3. Auto-Deploy → "After CI checks pass"(`checksPass`)
+4. Build·Start 명령이 목표와 다르면 맞춘다.
+5. **Manual Deploy → Deploy latest commit**
+
+**변경 후 체크리스트** (2-4의 명령)
+
+- [ ] 배포 로그: 빌드 성공, 시작 로그, 환경 변수 오류 없음
+- [ ] `/health` → `200`, `/health/ready` → `200`
+- [ ] `/api/projects` → `200`(빈 목록이어도 됨). `500`이면 `DATABASE_URL`과 마이그레이션 상태를 확인한다
+- [ ] Vercel의 `/api/*` rewrite(`https://kemi-api.onrender.com`)로 같은 응답이 오는지
+- [ ] 결과를 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)에 기록(주소, 배포 커밋, 응답 코드, 바꾼 설정 이름)
+
+문제가 생기면 Render의 **Rollback**으로 직전 배포로 되돌리고, 바꾼 환경 변수를 기록한 값으로 되돌린다.
+
+### 2-3. 새 환경을 처음 만들 때만: Blueprint
+
+기존 `kemi-api`가 있는 지금은 **하지 않는다.** 서비스를 지우고 새로 만들거나, 다른 환경(예: 시연용)을 따로 만들 때만 쓴다.
+
+1. Render 대시보드 → **New → Blueprint** → 저장소 `Jubileekim/KEMI`, 브랜치 `main`
+2. `render.yaml`이 `kemi-api` 웹 서비스 1개만 만든다고 나오는지 확인한다(DB는 만들지 않는다).
+3. `sync: false` 항목(`DATABASE_URL`, `APP_ORIGIN`)을 입력하고 **Apply**
+   - 나머지 값(플랜 `free`, 리전 `singapore`, 빌드·시작 명령, `/health`, `checksPass`, `NODE_ENV`, `DATABASE_POOL_MAX`, Render가 만드는 `JWT_ACCESS_SECRET`, `TRUST_PROXY_HOPS=0`)은 `render.yaml`에 있다.
+   - 같은 이름의 서비스가 이미 있으면 주소가 달라질 수 있다. 만든 뒤 주소를 Vercel rewrite와 맞춘다.
+
+**공통 주의**
+
+- 마이그레이션은 배포 때 자동으로 돌리지 않는다(`preDeployCommand` 없음). 스키마 변경은 1단계 절차로 따로 적용하고, **적용한 뒤에** 그 스키마를 쓰는 코드를 배포한다.
 - 4단계 전까지는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다. 실제 사용자에게 공개하기 전에 4단계를 끝낸다.
-- 배포 후 `https://<render 서비스>.onrender.com/health` → `200`
+
+### 2-4. 배포 후 확인
+
+```bash
+curl -s -o /dev/null -w "%{http_code}
+" https://<render 서비스>.onrender.com/health
+```
+
+```bash
+curl -s https://<render 서비스>.onrender.com/health/ready
+```
+
+- `/health` → `200`, `/health/ready` → `200`이면 Render에서 DB까지 연결된 것이다. `503`이면 `DATABASE_URL`(Session pooler 주소인지, 비밀번호)을 확인한다.
+- 운영 환경에서는 Swagger UI가 꺼진다. `/api/docs` → `404`가 정상이다.
+- 무료 플랜은 15분 동안 요청이 없으면 잠들고, 다음 요청에서 약 1분 걸려 깨어난다. 첫 확인이 느려도 기다린다.
+- 결과(서비스 주소, 배포 커밋, 응답 코드)를 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)과 아래 "결과 기록"에 남긴다. 비밀값은 적지 않는다.
 
 ## 3. Vercel 프론트엔드 rewrite 설정 (프론트엔드 담당)
 
