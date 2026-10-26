@@ -16,6 +16,8 @@ import { createApplicationService } from "./applications/application.service.js"
 import { createNotificationService } from "./notifications/notification.service.js";
 import { createProjectService } from "./projects/project.service.js";
 import { createTermsService } from "./terms/terms.service.js";
+import { createPaymentService } from "./payments/payment.service.js";
+import { createTossClient } from "./payments/toss.js";
 
 // 환경 변수가 있는 제공자만 켠다.
 function socialProvidersOf(env: Env): SocialProviders {
@@ -57,6 +59,13 @@ function start(env: Env) {
       model: env.AI_PRICING_MODEL,
     }),
     termsService: createTermsService({ prisma }),
+    // 테스트 시크릿 키가 있을 때만 결제를 켠다(env.ts가 live 키를 거부한다).
+    paymentService: createPaymentService({
+      prisma,
+      toss: env.TOSS_SECRET_KEY
+        ? createTossClient({ secretKey: env.TOSS_SECRET_KEY })
+        : undefined,
+    }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

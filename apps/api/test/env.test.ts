@@ -32,6 +32,27 @@ describe("parseEnv", () => {
     expect(env.DATABASE_POOL_MAX).toBe(8);
   });
 
+  it("Toss 시크릿 키는 테스트 키만 받고, live 키는 값을 드러내지 않고 거부한다", () => {
+    expect(
+      parseEnv({ ...REQUIRED, TOSS_SECRET_KEY: "test_sk_abc" }).TOSS_SECRET_KEY,
+    ).toBe("test_sk_abc");
+    expect(
+      parseEnv({ ...REQUIRED, TOSS_SECRET_KEY: "test_gsk_abc" })
+        .TOSS_SECRET_KEY,
+    ).toBe("test_gsk_abc");
+    expect(
+      parseEnv({ ...REQUIRED, TOSS_SECRET_KEY: "" }).TOSS_SECRET_KEY,
+    ).toBeUndefined();
+    const live = "live_sk_real-secret-value";
+    expect(() => parseEnv({ ...REQUIRED, TOSS_SECRET_KEY: live })).toThrow(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^(?![\s\S]*real-secret-value)[\s\S]*TOSS_SECRET_KEY/,
+        ),
+      }),
+    );
+  });
+
   it("DATABASE_URL이 없으면 실패한다", () => {
     expect(() => parseEnv({})).toThrow(EnvValidationError);
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);

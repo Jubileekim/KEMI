@@ -38,6 +38,12 @@ const envSchema = z
     // 서버 측 AI 단가 분석 (선택). API 키를 브라우저에 전달하지 않는다.
     AI_PRICING_API_KEY: optionalSecret,
     AI_PRICING_MODEL: z.string().trim().min(1).max(80).default("gpt-4o-mini"),
+    // Toss Payments 시크릿 키 (선택). 실제 결제를 막기 위해 테스트 키(test_)만 받는다.
+    // 없으면 테스트 결제 경로는 503이고 다른 기능은 그대로 동작한다.
+    TOSS_SECRET_KEY: optionalSecret.refine(
+      (value) => value === undefined || /^test_g?sk_/.test(value),
+      "TOSS_SECRET_KEY는 테스트 시크릿 키(test_sk_ 또는 test_gsk_)만 쓸 수 있습니다.",
+    ),
   })
   .refine((env) => !env.GOOGLE_CLIENT_ID === !env.GOOGLE_CLIENT_SECRET, {
     path: ["GOOGLE_CLIENT_SECRET"],

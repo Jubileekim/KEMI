@@ -10,6 +10,8 @@ import createProjectDiscoveryRouter from "./project-discovery/project-discovery.
 import type { ProjectDiscoveryService } from "./project-discovery/project-discovery.service.js";
 import createProfileRouter from "./profiles/profile.router.js";
 import type { ProfileService } from "./profiles/profile.service.js";
+import createPaymentRouter from "./payments/payment.router.js";
+import type { PaymentService } from "./payments/payment.service.js";
 import createPricingRouter from "./pricing/pricing.router.js";
 import type { PricingService } from "./pricing/pricing.service.js";
 import createProjectRouter from "./projects/project.router.js";
@@ -28,6 +30,7 @@ export interface AppDependencies {
   projectDiscoveryService: ProjectDiscoveryService;
   pricingService: PricingService;
   termsService: TermsService;
+  paymentService: PaymentService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -46,6 +49,7 @@ export function createApp({
   projectDiscoveryService,
   pricingService,
   termsService,
+  paymentService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -79,6 +83,8 @@ export function createApp({
   app.use("/api/pricing", createPricingRouter(authService, pricingService));
   // 최종 조건서·서명·계약 (결정 기록 13장)
   app.use("/api", createTermsRouter(authService, termsService));
+  // 테스트 결제 (PAY-01·02, Toss Sandbox)
+  app.use("/api", createPaymentRouter(authService, paymentService));
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }
