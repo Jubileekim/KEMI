@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession, session } from "../../app/session";
 import { mockEnabled } from "../auth/config";
@@ -61,6 +62,16 @@ export default function ProfilePage() {
           소개해요.
         </p>
       </div>
+      {role === "CREATOR" && (
+        <nav aria-label="제작 관리" className="flex flex-wrap gap-4">
+          <Button asChild variant="outline">
+            <Link to="/studio/packages">패키지·제작 서비스 관리</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/studio/portfolio">내 작업물 관리하기</Link>
+          </Button>
+        </nav>
+      )}
       {mockEnabled && (
         <p role="status" className="rounded-lg bg-muted p-4">
           개발용 Mock 프로필 · 실제 서버에 저장되지 않아요. 기본 정보는 이

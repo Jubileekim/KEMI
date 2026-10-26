@@ -10,6 +10,7 @@ import Button from "@/components/ui/button";
 import { mockEnabled, useSession, session } from "./session";
 import { authEnabled } from "../features/auth/config";
 import { screens, type Screen } from "./routes";
+import ScreenLinks from "./ScreenLinks";
 
 export function Guard({
   screen,
@@ -62,6 +63,14 @@ export function Placeholder({
 }) {
   const [params] = useSearchParams();
   const { role } = useSession();
+  const entry = screen?.path === "/" || screen?.path === "/me/activity";
+  let description = "주소를 확인하거나 홈으로 이동해 주세요.";
+  if (screen)
+    description =
+      "화면 경로와 레이아웃을 준비했어요. 제품 기능과 데이터는 아직 연결하지 않았어요.";
+  if (entry)
+    description =
+      "이 화면의 피드·활동 내역은 아직 연결 준비 중이에요. 아래에서 이용할 화면으로 이동해 주세요.";
   const candidate = params.get("returnTo") ?? "/me/activity";
   const returnTo =
     candidate.startsWith("/") &&
@@ -73,11 +82,8 @@ export function Placeholder({
   return (
     <section className="showcase-card grid gap-6">
       <h1 className="type-heading-lg">{screen?.title ?? title}</h1>
-      <p className="text-muted-foreground">
-        {screen
-          ? "화면 경로와 레이아웃을 준비했어요. 제품 기능과 데이터는 아직 연결하지 않았어요."
-          : "주소를 확인하거나 홈으로 이동해 주세요."}
-      </p>
+      <p className="text-muted-foreground">{description}</p>
+      {entry && <ScreenLinks />}
       {mockEnabled && screen?.roles && (
         <p>개발용 Mock 접근 · 소유자·거래 당사자 검증 미연결</p>
       )}
