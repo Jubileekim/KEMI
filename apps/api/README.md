@@ -289,7 +289,7 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `POST /api/contracts/{id}/payments` | 의뢰인      | 계약 전액 주문 `{ commandId }` → `orderId`·금액을 결제창에 넘긴다 |
 | `POST /api/payments/confirm`        | 의뢰인      | successUrl 값 `{ paymentKey, orderId, amount }`로 승인            |
 | `POST /api/payments/{orderId}/sync` | 계약 당사자 | 결과가 불명확한 주문을 Toss 조회로 다시 맞춤                      |
-| `POST /api/payments/{orderId}/fail` | 의뢰인      | failUrl 값 `{ code, message }`로 승인 전 주문을 닫음              |
+| `POST /api/payments/{orderId}/fail` | 의뢰인      | failUrl 값 `{ code, message }` 기록 + Toss 조회로 확인 뒤 닫음    |
 
 - 금액은 서명된 계약 금액만 쓴다. 승인 요청의 `amount`가 주문 금액과 다르면 Toss를 부르지 않고 `400`이다.
 - 주문 상태: `READY` → `SUCCEEDED`·`FAILED`·`CANCELED`, 응답을 받지 못하면 `UNKNOWN`(sync로 맞춤). 계약당 진행 중·완료 주문은 하나뿐이다.
