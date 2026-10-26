@@ -1,4 +1,6 @@
-# Render Blueprint: KEMI 백엔드(apps/api)
+# Render Blueprint: KEMI 백엔드(apps/api)의 목표 설정
+# 현재 kemi-api 서비스는 수동으로 만들었고 이 파일과 연결돼 있지 않다(2026-10-26).
+# 이 파일은 새 환경을 처음 만들 때만 적용한다. 기존 서비스는 절차서 2-2대로 대시보드에서 맞춘다.
 # 절차: docs/runbooks/auth-deploy-verification.md 2단계
 # 비밀값은 이 파일에 적지 않는다. sync: false 항목은 Blueprint를 처음 만들 때 Render 화면에서 입력한다.
 services:

@@ -309,7 +309,7 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 
 ## Render 배포 설정
 
-저장소 루트의 [`render.yaml`](../../render.yaml)(Render Blueprint)이 기준이다. 서비스 생성·확인 순서는 [배포 절차서](../../docs/runbooks/auth-deploy-verification.md) 2단계에 있다.
+아래는 **목표 설정**이다. 현재 `kemi-api`는 수동으로 만든 서비스라 [`render.yaml`](../../render.yaml)(Blueprint)과 연결돼 있지 않고, 기존 서비스는 대시보드에서 이 값에 맞춘다. 현재 상태와 변경 체크리스트는 [배포 절차서](../../docs/runbooks/auth-deploy-verification.md) 2단계에 있다. Blueprint는 새 환경을 처음 만들 때만 쓴다.
 
 | 항목              | 값                                                                                                                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |

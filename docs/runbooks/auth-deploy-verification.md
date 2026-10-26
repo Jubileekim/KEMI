@@ -227,7 +227,7 @@ WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data
 
 ## 2. Render 백엔드 배포 설정
 
-저장소 루트의 [`render.yaml`](../../render.yaml)(Render Blueprint)로 서비스를 만든다. 대시보드에서 값을 하나씩 입력하지 않는다.
+**현재 서비스는 수동으로 만든 `kemi-api`이고 Blueprint와 연결돼 있지 않다**(2-1). 그래서 지금은 기존 서비스의 설정을 점검·변경한다(2-2). 저장소 루트의 [`render.yaml`](../../render.yaml)(Blueprint)은 **새 환경을 처음 만들 때만** 쓴다(2-3). 기존 서비스가 있는 상태에서 Blueprint를 적용하면 같은 이름의 서비스가 또 생기거나 설정이 섞일 수 있다.
 
 ### 2-0. 관리 방식 (2026-10-23 결정, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27))
 
@@ -235,49 +235,73 @@ WHERE migration_name IN ('20261019051147_auth_tables', '20261019070424_auth_data
 - 팀원은 Render 대시보드에 들어가지 않는다. 변경은 모두 GitHub에서 한다.
   - 서비스 설정(빌드·시작 명령, 헬스 체크, 리전, 고정 환경 변수): `render.yaml`을 고치는 PR
   - 코드: 기능 PR을 `main`에 병합하면, CI를 통과한 커밋이 자동으로 배포된다(`checksPass`)
-- **관리자만 하는 일:** 서비스 생성(2-2), 비밀 환경 변수 입력·변경(`DATABASE_URL`, `APP_ORIGIN`, 소셜 로그인·AI 키), 로그 확인, 수동 재배포·되돌리기, 4단계의 임시 브랜치 수동 배포
+- **관리자만 하는 일:** 기존 서비스 설정 변경(2-2)·새 환경 생성(2-3), 비밀 환경 변수 입력·변경(`DATABASE_URL`, `APP_ORIGIN`, 소셜 로그인·AI 키), 로그 확인, 수동 재배포·되돌리기, 4단계의 임시 브랜치 수동 배포
   - 비밀값은 관리자에게 GitHub이 아닌 비공개 채널로 전달한다.
 - **결과 공유:** 배포 URL, 배포된 커밋, `/health`·`/health/ready` 결과, 오류 로그 요약(비밀값·개인정보 제외)을 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)에 남긴다. 배포 상태는 GitHub 커밋의 체크와 CI로도 볼 수 있다.
 
-### 2-1. 선행 조건
+### 2-1. 현재 상태 (2026-10-26, 희년님 확인, #28 리뷰)
 
-- 개발용 DB에 `main`의 마이그레이션이 모두 적용돼 있다(1단계, 2026-10-23부터는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)의 `KEMI-dev`).
-- `main`의 API CI·Web CI가 통과한 상태다.
-- 관리자(희년님)의 Render 계정에 GitHub 저장소 `Jubileekim/KEMI`가 연결돼 있다(Render GitHub 앱 설치 시 이 저장소만 선택).
-- 기존에 만든 KEMI Render 서비스가 없는지 확인한다(중복 배포 방지, [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)).
+| 항목              | 현재 서비스(수동 생성, live)                                               | 목표                                                                                 |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 서비스            | `kemi-api` (서비스 ID `srv-dbdj8ha9lscs73bv4hc0`), **Blueprint 연결 없음** | 그대로 유지                                                                          |
+| 자동 배포         | `commit` (main에 커밋되면 바로)                                            | `checksPass` (main 커밋 중 GitHub CI 통과한 것만)                                    |
+| Health Check Path | 비어 있음                                                                  | `/health`                                                                            |
+| `DATABASE_URL`    | 기존 공유 Supabase(**구형 스키마**) → `/api/projects`가 Prisma `P2021`     | `KEMI-dev` Session pooler ([이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)) |
+| 빌드·시작 명령    | 확인 필요                                                                  | `npm ci --include=dev && npm run build:api` / `npm start -w @kemi/api`               |
 
-### 2-2. Blueprint로 서비스 만들기
+- **빌드가 통과해도 API·DB 기능 검증이 끝난 것이 아니다.** DB가 우리 스키마가 아니면 대부분의 API가 500이다.
+- **Blueprint로 DB를 만들거나, 기존 공유 DB에 바로 마이그레이션하지 않는다.** DB는 #24 절차(새 `KEMI-dev` → 읽기 전용 점검 → `npm run db:deploy` → 확인)로만 준비한다.
 
-1. Render 대시보드 → **New → Blueprint** → 저장소 `Jubileekim/KEMI`, 브랜치 `main`을 고른다.
-2. `render.yaml`을 읽어 `kemi-api` 웹 서비스 1개를 만든다고 나오는지 확인한다.
-3. `sync: false` 항목을 입력한다. 이 화면은 처음 만들 때만 나온다.
+### 2-2. 기존 서비스 설정 점검·변경 (관리자: 희년님)
 
-   | 환경 변수      | 값                                                                          |
-   | -------------- | --------------------------------------------------------------------------- |
-   | `DATABASE_URL` | 개발용 Supabase **Session pooler** 주소 (README "DB 연결 주소 고르기")      |
-   | `APP_ORIGIN`   | Vercel 프론트엔드 주소 (예: `https://<프로젝트>.vercel.app`, 끝에 `/` 없음) |
-   - Vercel 주소가 아직 없으면 임시 값(예: `https://example.invalid`)을 넣고, 3단계 후 실제 주소로 바꾼다. 그 전에는 refresh·logout·소셜 가입이 `Origin` 검사에서 막힌다.
+실제 서비스 변경은 자동으로 하지 않는다. 아래 순서로 한 항목씩 바꾸고, 바꿀 때마다 기록한다.
 
-4. **Apply**로 만든다. 나머지 값은 `render.yaml`에 정해져 있다.
+**변경 전 체크리스트**
 
-   | 항목                | 값                                                                          |
-   | ------------------- | --------------------------------------------------------------------------- |
-   | 플랜·리전           | `free`, `singapore` (개발용 Supabase 도쿄와 가장 가까움. 만든 뒤 변경 불가) |
-   | Build Command       | `npm ci --include=dev && npm run build:api`                                 |
-   | Start Command       | `npm start -w @kemi/api`                                                    |
-   | Health Check Path   | `/health`                                                                   |
-   | 자동 배포           | `checksPass`: `main`에 병합된 커밋 중 GitHub CI를 통과한 것만 배포          |
-   | `NODE_ENV`          | `production`                                                                |
-   | `DATABASE_POOL_MAX` | `5`                                                                         |
-   | `JWT_ACCESS_SECRET` | Render가 생성한 256비트 임의 값 (로컬과 다름. 복사해 두지 않는다)           |
-   | `TRUST_PROXY_HOPS`  | `0`으로 시작. 4단계에서 확인한 값으로 바꾼다                                |
-   | Node 버전           | 루트 `.nvmrc`(`24`)                                                         |
+- [ ] `KEMI-dev`가 만들어졌고, `main`의 마이그레이션이 모두 적용·확인됐다(#24 기록)
+- [ ] 현재 설정을 기록했다(위 표의 "현재" 열, 환경 변수 **이름** 목록. 값은 적지 않는다)
+- [ ] 최근 배포 로그에서 시작 오류가 없는지 확인했다(`KEMI API listening on port …`)
+- [ ] 현재 `/health` 응답 코드를 기록했다
 
-- 마이그레이션은 배포 때 자동으로 돌리지 않는다(`preDeployCommand` 없음). 스키마 변경은 1단계 절차(이슈 공유 → 읽기 전용 점검 → `npm run db:deploy` → 확인)로 따로 적용하고, **적용한 뒤에** 그 스키마를 쓰는 코드를 배포한다.
-- 소셜 로그인 키(`GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`·`KAKAO_REST_API_KEY`·`KAKAO_CLIENT_SECRET`)는 발급되면 서비스의 **Environment**에서 직접 추가한다. `render.yaml`에 없는 변수는 Blueprint를 다시 동기화해도 지워지지 않는다.
+**변경 순서** (서비스 → Settings·Environment)
+
+1. Environment
+   - `DATABASE_URL`: `KEMI-dev` Session pooler 주소
+   - `APP_ORIGIN`: Vercel 운영 주소(끝에 `/` 없음)
+   - `JWT_ACCESS_SECRET`: 32자 이상 임의 값(로컬과 다르게)
+   - `NODE_ENV=production`, `DATABASE_POOL_MAX=5`, `TRUST_PROXY_HOPS=0`
+   - 소셜 로그인·AI·결제·파일 키는 발급된 것만 넣는다(없어도 서버는 시작하고 해당 기능만 503).
+2. Health Check Path → `/health`
+3. Auto-Deploy → "After CI checks pass"(`checksPass`)
+4. Build·Start 명령이 목표와 다르면 맞춘다.
+5. **Manual Deploy → Deploy latest commit**
+
+**변경 후 체크리스트** (2-4의 명령)
+
+- [ ] 배포 로그: 빌드 성공, 시작 로그, 환경 변수 오류 없음
+- [ ] `/health` → `200`, `/health/ready` → `200`
+- [ ] `/api/projects` → `200`(빈 목록이어도 됨). `500`이면 `DATABASE_URL`과 마이그레이션 상태를 확인한다
+- [ ] Vercel의 `/api/*` rewrite(`https://kemi-api.onrender.com`)로 같은 응답이 오는지
+- [ ] 결과를 [이슈 #27](https://github.com/Jubileekim/KEMI/issues/27)에 기록(주소, 배포 커밋, 응답 코드, 바꾼 설정 이름)
+
+문제가 생기면 Render의 **Rollback**으로 직전 배포로 되돌리고, 바꾼 환경 변수를 기록한 값으로 되돌린다.
+
+### 2-3. 새 환경을 처음 만들 때만: Blueprint
+
+기존 `kemi-api`가 있는 지금은 **하지 않는다.** 서비스를 지우고 새로 만들거나, 다른 환경(예: 시연용)을 따로 만들 때만 쓴다.
+
+1. Render 대시보드 → **New → Blueprint** → 저장소 `Jubileekim/KEMI`, 브랜치 `main`
+2. `render.yaml`이 `kemi-api` 웹 서비스 1개만 만든다고 나오는지 확인한다(DB는 만들지 않는다).
+3. `sync: false` 항목(`DATABASE_URL`, `APP_ORIGIN`)을 입력하고 **Apply**
+   - 나머지 값(플랜 `free`, 리전 `singapore`, 빌드·시작 명령, `/health`, `checksPass`, `NODE_ENV`, `DATABASE_POOL_MAX`, Render가 만드는 `JWT_ACCESS_SECRET`, `TRUST_PROXY_HOPS=0`)은 `render.yaml`에 있다.
+   - 같은 이름의 서비스가 이미 있으면 주소가 달라질 수 있다. 만든 뒤 주소를 Vercel rewrite와 맞춘다.
+
+**공통 주의**
+
+- 마이그레이션은 배포 때 자동으로 돌리지 않는다(`preDeployCommand` 없음). 스키마 변경은 1단계 절차로 따로 적용하고, **적용한 뒤에** 그 스키마를 쓰는 코드를 배포한다.
 - 4단계 전까지는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다. 실제 사용자에게 공개하기 전에 4단계를 끝낸다.
 
-### 2-3. 배포 후 확인
+### 2-4. 배포 후 확인
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}
