@@ -114,7 +114,7 @@
 | [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint               | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님 | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                                |
 | [#49](https://github.com/Jubileekim/KEMI/pull/49) API 차이 목록·조건서 설계 초안 | 선우님 | 리뷰 요청: 희년님                     | **선정 모델 결정**(지금 accept vs 기능명세서), 결정 기록 13장 7가지 확인                                |
 | [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정                    | 희년님 | Web CI 통과. 리뷰 요청 없음           | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가      |
-| 조건서·서명·계약 구현 (Draft)                                                    | 선우님 | 리뷰 요청: 희년님                     | #49 결정에 맞춰 조정 후 병합. 마이그레이션 `20261026090000_terms_contracts`는 병합 뒤 `KEMI-dev`에 적용 |
+| [#51](https://github.com/Jubileekim/KEMI/pull/51) 조건서·서명·계약 구현 (Draft)  | 선우님 | 리뷰 요청: 희년님                     | #49 결정에 맞춰 조정 후 병합. 마이그레이션 `20261026090000_terms_contracts`는 병합 뒤 `KEMI-dev`에 적용 |
 
 **리뷰 기록** (2026-10-23 확인)
 
@@ -402,7 +402,7 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
 ## 11. 링크
 
 - **PR**
-  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32), [#49 차이 목록·설계](https://github.com/Jubileekim/KEMI/pull/49), 조건서·서명·계약 구현(Draft), 프론트엔드 #34~#48(Draft)
+  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32), [#49 차이 목록·설계](https://github.com/Jubileekim/KEMI/pull/49), [#51 조건서·서명·계약 구현](https://github.com/Jubileekim/KEMI/pull/51)(Draft), 프론트엔드 #34~#48(Draft)
   - 병합: #1, #3, #4, #6, #8, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #22, [#30 AI 단가](https://github.com/Jubileekim/KEMI/pull/30), [#31 OpenAPI 쌍방향](https://github.com/Jubileekim/KEMI/pull/31), [#33 인수인계서](https://github.com/Jubileekim/KEMI/pull/33)
   - 닫음: [#16 패키지](https://github.com/Jubileekim/KEMI/pull/16)(재설계), #23(취소)
 - **이슈**
