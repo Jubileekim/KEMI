@@ -9,6 +9,7 @@ export const FILE_PURPOSES = [
   "MATERIAL",
   "DELIVERABLE",
   "REVISION",
+  "EVIDENCE",
 ] as const;
 export const filePurposeSchema = z.enum(FILE_PURPOSES);
 export type FilePurpose = z.infer<typeof filePurposeSchema>;
@@ -19,6 +20,7 @@ export const REQUEST_SCOPED_FILE_PURPOSES = [
   "MATERIAL",
   "DELIVERABLE",
   "REVISION",
+  "EVIDENCE",
 ] as const satisfies readonly FilePurpose[];
 
 export const FILE_KINDS = ["VIDEO", "IMAGE", "ZIP"] as const;

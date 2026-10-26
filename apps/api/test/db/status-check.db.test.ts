@@ -1,5 +1,8 @@
 import {
+  CANCELLATION_STATUSES,
   CATALOG_STATUSES,
+  DISPUTE_STATUSES,
+  REFUND_STATUSES,
   PORTFOLIO_SOURCES,
   CHAT_MESSAGE_KINDS,
   CONTRACT_STATUSES,
@@ -88,6 +91,9 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["revision_requests_type_check", REVISION_TYPES],
     ["revision_requests_status_check", REVISION_STATUSES],
     ["settlements_status_check", SETTLEMENT_STATUSES],
+    ["cancellations_status_check", CANCELLATION_STATUSES],
+    ["refunds_status_check", REFUND_STATUSES],
+    ["disputes_status_check", DISPUTE_STATUSES],
     ["service_packages_status_check", CATALOG_STATUSES],
     ["portfolios_status_check", CATALOG_STATUSES],
     ["portfolios_source_check", PORTFOLIO_SOURCES],

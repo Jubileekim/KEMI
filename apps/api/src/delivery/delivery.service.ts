@@ -15,7 +15,6 @@ import {
   revisionStatusSchema,
   revisionTypeSchema,
   reviewCreateSchema,
-  settlementAmounts,
   settlementStatusSchema,
 } from "@kemi/shared";
 import { z } from "zod";
@@ -24,6 +23,7 @@ import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { postSystemMessage } from "../chat/chat.service.js";
 import { requireReadyFiles } from "../files/file.service.js";
 import notify from "../notifications/notify.js";
+import { settleIfReady } from "./settlement.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -286,13 +286,6 @@ export function createDeliveryService({
   const inTransaction = <T>(work: (tx: Tx) => Promise<T>) =>
     prisma.$transaction(work, TRANSACTION_OPTIONS);
 
-  // 정산을 막는 사유. 분쟁·취소 보류는 단계 7에서 더한다.
-  function settlementBlocker(production: ProductionRow): string | null {
-    if (production.contract.payments.length === 0) return "결제 미완료";
-    if (production.contract.settlement) return "이미 정산됨";
-    return null;
-  }
-
   return {
     async get(user, contractId) {
       return inTransaction(async (tx) => {
@@ -526,26 +519,12 @@ export function createDeliveryService({
           where: { id: deliverableId },
           data: { status: "RECEIVED", receivedAt: now() },
         });
-        const blocker = settlementBlocker(production);
-        const amounts = settlementAmounts(
-          Number(production.contract.amountKrw),
-          production.contract.feeRateBps,
-        );
-        if (!blocker) {
-          await tx.settlement.create({
-            data: {
-              contractId,
-              grossKrw: BigInt(amounts.grossKrw),
-              feeRateBps: amounts.feeRateBps,
-              feeKrw: BigInt(amounts.feeKrw),
-              payoutKrw: BigInt(amounts.payoutKrw),
-            },
-          });
-        }
         await tx.production.update({
           where: { contractId },
-          data: { status: blocker ? "DELIVERED" : "COMPLETED" },
+          data: { status: "DELIVERED" },
         });
+        // 결제 완료·분쟁 없음이면 바로 정산하고 거래를 완료한다. 아니면 DELIVERED로 보류한다.
+        const { hold: blocker, amounts } = await settleIfReady(tx, contractId);
         const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
         await notify(tx, [
           {
@@ -553,9 +532,9 @@ export function createDeliveryService({
             type: "DELIVERY_RECEIVED",
             eventKey: `delivery:${contractId}:received`,
             title: "의뢰인이 최종본 수령을 확인했습니다",
-            body: blocker
-              ? `정산이 보류되었습니다(${blocker}).`
-              : `모의 정산: 거래 금액 ${won(amounts.grossKrw)}, 수수료 ${won(amounts.feeKrw)}, 지급 예정 ${won(amounts.payoutKrw)}`,
+            body: amounts
+              ? `모의 정산: 거래 금액 ${won(amounts.grossKrw)}, 수수료 ${won(amounts.feeKrw)}, 지급 예정 ${won(amounts.payoutKrw)}`
+              : `정산이 보류되었습니다(${blocker}).`,
             workRequestId: production.contract.workRequestId,
           },
         ]);

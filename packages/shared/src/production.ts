@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 // 제작 준비·시작·납기 (READY-01·02, WORK-01·02). 계약 하나에 제작 하나.
-// PREPARING(자료 준비) → IN_PROGRESS(제작 중) → DELIVERED(최종 납품 수령, 단계 5) → COMPLETED(정산·리뷰 가능)
+// PREPARING(자료 준비) → IN_PROGRESS(제작 중) → DELIVERED(최종 수령, 정산 보류) → COMPLETED(정산·리뷰 가능)
+// CANCELED: 취소 합의 승인(단계 7). 이후 제작·납품 동작을 받지 않는다.
 export const PRODUCTION_STATUSES = [
   "PREPARING",
   "IN_PROGRESS",
   "DELIVERED",
   "COMPLETED",
+  "CANCELED",
 ] as const;
 export const productionStatusSchema = z.enum(PRODUCTION_STATUSES);
 export type ProductionStatus = z.infer<typeof productionStatusSchema>;

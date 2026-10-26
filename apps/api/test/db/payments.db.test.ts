@@ -20,7 +20,7 @@ const AMOUNT = 45_000;
 // 가짜 Toss. 테스트마다 승인·조회 응답을 정한다.
 const confirm = vi.fn<TossClient["confirm"]>();
 const getByOrderId = vi.fn<TossClient["getByOrderId"]>();
-const fakeToss: TossClient = { confirm, getByOrderId };
+const fakeToss: TossClient = { confirm, getByOrderId, cancel: vi.fn() };
 
 let app = createTestApp({ prisma });
 

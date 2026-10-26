@@ -17,7 +17,8 @@ export const termsVersionStatusSchema = z.enum(TERMS_VERSION_STATUSES);
 export type TermsVersionStatus = z.infer<typeof termsVersionStatusSchema>;
 
 // 계약 상태. 이번에는 체결(SIGNED)만 만든다. 취소·진행·완료는 결제·제작 기능에서 추가한다.
-export const CONTRACT_STATUSES = ["SIGNED"] as const;
+// SIGNED(체결) → CANCELED(양측 취소 합의 승인, 단계 7)
+export const CONTRACT_STATUSES = ["SIGNED", "CANCELED"] as const;
 export const contractStatusSchema = z.enum(CONTRACT_STATUSES);
 export type ContractStatus = z.infer<typeof contractStatusSchema>;
 
