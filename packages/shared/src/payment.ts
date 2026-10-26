@@ -34,7 +34,7 @@ export const paymentConfirmSchema = z.strictObject({
 });
 export type PaymentConfirmRequest = z.input<typeof paymentConfirmSchema>;
 
-// Toss failUrl로 돌아온 값(사용자 취소·인증 실패). 승인 전(READY) 주문만 닫는다.
+// Toss failUrl로 돌아온 값(사용자 취소·인증 실패). 서버가 Toss 조회로 확인한 뒤에만 주문을 닫는다.
 export const paymentFailSchema = z.strictObject({
   code: z.string().trim().min(1).max(100),
   message: z.string().trim().max(500).optional(),
