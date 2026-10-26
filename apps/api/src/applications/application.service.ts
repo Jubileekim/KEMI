@@ -14,6 +14,7 @@ import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
 import { voidOpenTerms } from "../terms/terms.service.js";
+import { ensureChatRoom } from "../chat/chat.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -281,6 +282,8 @@ export function createApplicationService({
           data: { status: "DISCUSSING", respondedAt: now() },
           include: includeCreator,
         });
+        // 요청별 대화방을 연다(CHAT-02). 계약 뒤에도 같은 방을 쓴다.
+        await ensureChatRoom(tx, discussing.id);
         await notify(tx, [
           {
             recipientUserId: discussing.creatorId,

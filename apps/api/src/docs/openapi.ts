@@ -1,5 +1,8 @@
 import {
   applicationCreateSchema,
+  CHAT_MESSAGE_KINDS,
+  chatMessageCreateSchema,
+  chatReadSchema,
   clientProfileUpdateSchema,
   CONTENT_STYLES,
   CREATOR_SERVICE_STATUSES,
@@ -226,6 +229,11 @@ const openApiDocument = {
     { name: "notifications", description: "인앱 알림" },
     { name: "discovery", description: "프로젝트 북마크·기본 추천" },
     { name: "pricing", description: "AI 제작 단가 분석·예산 입력 보조" },
+    {
+      name: "chat",
+      description:
+        "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
+    },
     {
       name: "payments",
       description:
@@ -929,6 +937,91 @@ const openApiDocument = {
         },
       },
     },
+    "/api/chat/rooms": {
+      get: {
+        tags: ["chat"],
+        summary: "내 대화방 목록 (CHAT-03)",
+        description:
+          "내가 의뢰인·크리에이터인 요청의 방. 최근 메시지가 있는 방부터. 협의가 끝난(거절·철회·미선정) 방은 `readOnly`다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("대화방 목록", "ChatRoomListResponse"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/work-requests/{workRequestId}/chat/messages": {
+      get: {
+        tags: ["chat"],
+        summary: "메시지 조회 (CHAT-01·04)",
+        description:
+          "기본은 최신 50개를 오래된 순서로 준다. `before`로 이전 페이지, `after`로 새로 온 메시지만 받는다. 시스템 메시지(`SYSTEM`)는 서명 요청·계약 체결·결제 완료 같은 작업 사건 안내다(WORK-04).",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          idParam("workRequestId"),
+          { name: "before", in: "query", schema: { type: "string" } },
+          { name: "after", in: "query", schema: { type: "string" } },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 100 },
+          },
+        ],
+        responses: {
+          200: jsonResponse("메시지", "ChatMessagesResponse"),
+          ...bearerErrors,
+          404: errorResponse("방이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+      post: {
+        tags: ["chat"],
+        summary: "메시지 보내기 (CHAT-01)",
+        description:
+          "텍스트 메시지(4,000자까지). 같은 `clientMessageId`의 재전송은 200으로 이전 메시지를 준다. 협의가 끝난 방은 409다. 첨부·대화만으로 납품·수정 회차·계약 상태가 바뀌지 않는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(chatMessageCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("보낸 메시지", "ChatMessage"),
+          200: jsonResponse("같은 메시지의 재전송", "ChatMessage"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          404: errorResponse("방이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "협의가 끝난 방, 같은 식별자로 다른 내용 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/work-requests/{workRequestId}/chat/read": {
+      post: {
+        tags: ["chat"],
+        summary: "읽음 처리 (CHAT-03)",
+        description:
+          "화면에 보인 마지막 메시지까지 읽음으로 한다. 읽음 위치는 뒤로 가지 않는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(chatReadSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("갱신된 방 요약", "ChatRoomSummary"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          404: errorResponse("방·메시지가 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
     "/api/contracts/{contractId}/payments": {
       get: {
         tags: ["payments"],
@@ -1512,6 +1605,69 @@ const openApiDocument = {
         type: "object",
         required: ["unreadCount"],
         properties: { unreadCount: { type: "integer" } },
+      },
+      ChatMessage: {
+        type: "object",
+        required: ["id", "kind", "senderId", "body", "createdAt"],
+        properties: {
+          id: { type: "string" },
+          kind: { type: "string", enum: [...CHAT_MESSAGE_KINDS] },
+          senderId: { type: ["string", "null"] },
+          body: { type: "string" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      ChatRoomSummary: {
+        type: "object",
+        required: [
+          "workRequestId",
+          "projectId",
+          "projectTitle",
+          "clientId",
+          "creatorId",
+          "counterpartName",
+          "readOnly",
+          "lastMessage",
+          "unreadCount",
+        ],
+        properties: {
+          workRequestId: { type: "string" },
+          projectId: { type: ["string", "null"] },
+          projectTitle: { type: ["string", "null"] },
+          clientId: { type: "string" },
+          creatorId: { type: "string" },
+          counterpartName: { type: "string" },
+          readOnly: { type: "boolean" },
+          lastMessage: {
+            oneOf: [
+              { $ref: "#/components/schemas/ChatMessage" },
+              { type: "null" },
+            ],
+          },
+          unreadCount: { type: "integer" },
+        },
+      },
+      ChatRoomListResponse: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ChatRoomSummary" },
+          },
+        },
+      },
+      ChatMessagesResponse: {
+        type: "object",
+        required: ["room", "items", "hasMore"],
+        properties: {
+          room: { $ref: "#/components/schemas/ChatRoomSummary" },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ChatMessage" },
+          },
+          hasMore: { type: "boolean" },
+        },
       },
       PaymentOrder: {
         type: "object",

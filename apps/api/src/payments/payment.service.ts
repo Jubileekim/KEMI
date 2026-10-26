@@ -12,6 +12,7 @@ import {
 import AppError from "../http/app-error.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
+import { postSystemMessage } from "../chat/chat.service.js";
 import type { TossClient, TossOutcome, TossPayment } from "./toss.js";
 
 type Tx = Prisma.TransactionClient;
@@ -169,7 +170,9 @@ export function createPaymentService({
       where: { orderId },
       select: {
         contractId: true,
-        contract: { select: { clientId: true, creatorId: true } },
+        contract: {
+          select: { clientId: true, creatorId: true, workRequestId: true },
+        },
       },
     });
     if (!found) throw notFound("결제 주문");
@@ -187,7 +190,7 @@ export function createPaymentService({
     tx: Tx,
     order: PaymentRow,
     resolution: Resolution | null,
-    creatorId: bigint,
+    contract: { creatorId: bigint; workRequestId: bigint },
   ): Promise<PaymentRow> {
     if (!resolution || resolution.status === order.status) {
       return order;
@@ -199,13 +202,19 @@ export function createPaymentService({
     if (updated.status === "SUCCEEDED") {
       await notify(tx, [
         {
-          recipientUserId: creatorId,
+          recipientUserId: contract.creatorId,
           type: "PAYMENT_SUCCEEDED",
           eventKey: `payment:${updated.orderId}:succeeded`,
           title: "의뢰인이 결제를 완료했습니다",
           body: `${updated.orderName} 계약의 테스트 결제(${Number(updated.amountKrw).toLocaleString("ko-KR")}원)가 완료되었습니다.`,
         },
       ]);
+      await postSystemMessage(
+        tx,
+        contract.workRequestId,
+        `payment:${updated.orderId}:succeeded`,
+        `계약 금액 ${Number(updated.amountKrw).toLocaleString("ko-KR")}원의 테스트 결제가 완료되었습니다.`,
+      );
     }
     return updated;
   }
@@ -370,7 +379,7 @@ export function createPaymentService({
             failureMessage: outcome.message.slice(0, 500),
           };
         }
-        return toOrder(await apply(tx, order, resolution, contract.creatorId));
+        return toOrder(await apply(tx, order, resolution, contract));
       });
     },
 
@@ -383,7 +392,7 @@ export function createPaymentService({
           return toOrder(order);
         }
         const resolution = fromQuery(order, await client.getByOrderId(orderId));
-        return toOrder(await apply(tx, order, resolution, contract.creatorId));
+        return toOrder(await apply(tx, order, resolution, contract));
       });
     },
 
