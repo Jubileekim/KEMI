@@ -17,10 +17,15 @@ import {
   projectCreateSchema,
   projectUpdateSchema,
   pricingAnalysisRequestSchema,
+  signatureCreateSchema,
   signupRequestSchema,
   socialSignupRequestSchema,
+  TERMS_SIGNING_HOURS,
+  TERMS_VERSION_STATUSES,
+  termsVersionCreateSchema,
   USER_ROLES,
   USER_STATUSES,
+  CONTRACT_STATUSES,
   WORK_REQUEST_CLOSED_REASONS,
   WORK_REQUEST_STATUSES,
   VIDEO_PURPOSES,
@@ -177,6 +182,21 @@ const nullableEnum = (values: readonly string[]) => ({
   enum: [...values, null],
 });
 
+const versionNoParam = {
+  name: "versionNo",
+  in: "path",
+  required: true,
+  schema: { type: "string", pattern: "^[1-9]\\d{0,8}$" },
+};
+
+const termsPartyErrors = {
+  ...bearerErrors,
+  403: errorResponse("이용 제한·탈퇴 회원 (`FORBIDDEN`)"),
+  404: errorResponse(
+    "요청이 없거나 그 요청의 의뢰인·크리에이터가 아님 (`NOT_FOUND`)",
+  ),
+};
+
 const openApiDocument = {
   openapi: "3.1.0",
   info: {
@@ -195,6 +215,11 @@ const openApiDocument = {
     { name: "notifications", description: "인앱 알림" },
     { name: "discovery", description: "프로젝트 북마크·기본 추천" },
     { name: "pricing", description: "AI 제작 단가 분석·예산 입력 보조" },
+    {
+      name: "terms",
+      description:
+        "최종 조건서·양측 서명·계약 (협의 중인 요청 단위, 결정 기록 13장)",
+    },
   ],
   paths: {
     "/health": {
@@ -854,6 +879,116 @@ const openApiDocument = {
         },
       },
     },
+    "/api/work-requests/{workRequestId}/terms": {
+      get: {
+        tags: ["terms"],
+        summary: "최종 조건서 조회 (TERMS-01)",
+        description:
+          "그 요청의 의뢰인·크리에이터만 볼 수 있다. 참조 사본(첫 저장 때 고정), 모든 버전(값·작성자·상태·서명), 계약(있으면)을 준다. 협의가 끝난 뒤에도 기록을 볼 수 있다. 기한이 지난 `SIGNING` 버전은 `EXPIRED`로 보인다. 공개 지원의 요청 ID는 지원 ID와 같다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId")],
+        responses: {
+          200: jsonResponse("조건서", "TermsDocument"),
+          ...termsPartyErrors,
+        },
+      },
+    },
+    "/api/work-requests/{workRequestId}/terms/versions": {
+      post: {
+        tags: ["terms"],
+        summary: "조건서 새 버전 저장 (TERMS-01·03)",
+        description:
+          "협의 중(`DISCUSSING`)인 요청에서 양측 누구나 저장할 수 있다. 항목이 비어 있어도 저장된다. 이전 `DRAFT`·`SIGNING` 버전은 `SUPERSEDED`가 되고 서명은 새 버전에 복사되지 않는다. `baseVersionNo`는 화면이 보고 있던 마지막 버전 번호(없으면 0)이며, 다르면 409다. 같은 `commandId`로 같은 내용을 다시 보내면 새 버전 없이 200으로 이전 결과를 준다. 모집 마감은 진행 중인 협의를 막지 않는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(termsVersionCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("저장된 새 버전", "TermsVersion"),
+          200: jsonResponse("같은 요청의 재전송 (이전 결과)", "TermsVersion"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...termsPartyErrors,
+          409: errorResponse(
+            "협의 중이 아님, 계약·종료된 프로젝트, 다른 작성본이 먼저 저장됨, 같은 `commandId`에 다른 내용 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/work-requests/{workRequestId}/terms/versions/{versionNo}/signing": {
+      post: {
+        tags: ["terms"],
+        summary: "서명 요청 (TERMS-02)",
+        description: `마지막 \`DRAFT\` 버전에 대해 서명을 요청한다. 요청은 서명이 아니다. 기한은 요청 시각부터 ${TERMS_SIGNING_HOURS}시간이며, 금액과 조건 7개가 모두 있어야 한다. 이미 \`SIGNING\`이면 기한을 늘리지 않고 그대로 200이다. 상대방에게 \`TERMS_SIGNING_REQUESTED\` 알림이 간다.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId"), versionNoParam],
+        responses: {
+          200: jsonResponse("서명 요청된 버전", "TermsVersion"),
+          400: errorResponse(
+            "비어 있는 조건이 있음 (`VALIDATION_FAILED`, `details`에 항목)",
+          ),
+          ...termsPartyErrors,
+          409: errorResponse(
+            "협의 중이 아님, 최신 버전이 아님, 기한 만료, 서명 요청할 수 없는 상태 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/work-requests/{workRequestId}/terms/versions/{versionNo}/signatures":
+      {
+        post: {
+          tags: ["terms"],
+          summary: "본인 서명 (CONTRACT-01)",
+          description:
+            "`SIGNING`이고 기한 전인 버전에만 서명할 수 있다. `termsHash`는 화면이 본 버전의 해시이며 서버 값과 같아야 한다. 같은 버전의 두 번째 서명이면 한 트랜잭션에서 계약을 만들고, 요청·프로젝트를 `CONTRACTED`로, 같은 프로젝트의 다른 활성 지원을 `NOT_SELECTED`(`OTHER_SELECTED`)로, 그 지원들의 미확정 조건서를 `VOID`로 바꾼다. 양측에 `CONTRACT_SIGNED`, 다른 지원자에게 `APPLICATION_AUTO_REJECTED` 알림이 간다. 공고당 계약은 하나다. 이미 서명한 사람이 같은 내용으로 다시 보내면 200으로 이전 결과를 준다.",
+          security: [{ bearerAuth: [] }],
+          parameters: [idParam("workRequestId"), versionNoParam],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: requestSchema(signatureCreateSchema),
+              },
+            },
+          },
+          responses: {
+            201: jsonResponse(
+              "서명 결과 (계약이 체결되면 함께)",
+              "SignatureResponse",
+            ),
+            200: jsonResponse(
+              "같은 서명의 재전송 (이전 결과)",
+              "SignatureResponse",
+            ),
+            400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+            ...termsPartyErrors,
+            409: errorResponse(
+              "협의 중이 아님, 서명할 수 없는 버전·기한 만료, 내용 해시 불일치, 이미 다른 내용으로 서명함, 이미 다른 후보와 계약 확정 (`CONFLICT`)",
+            ),
+          },
+        },
+      },
+    "/api/work-requests/{workRequestId}/contract": {
+      get: {
+        tags: ["terms"],
+        summary: "계약서 조회 (SIGN-01)",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("workRequestId")],
+        responses: {
+          200: jsonResponse("계약", "Contract"),
+          ...bearerErrors,
+          403: errorResponse("이용 제한·탈퇴 회원 (`FORBIDDEN`)"),
+          404: errorResponse(
+            "계약이 없거나 그 요청의 당사자가 아님 (`NOT_FOUND`)",
+          ),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1214,6 +1349,180 @@ const openApiDocument = {
         type: "object",
         required: ["unreadCount"],
         properties: { unreadCount: { type: "integer" } },
+      },
+      TermsValues: {
+        type: "object",
+        required: [
+          "amountKrw",
+          "specification",
+          "scope",
+          "materials",
+          "deadline",
+          "revisions",
+          "usageRights",
+          "cancellation",
+        ],
+        properties: {
+          amountKrw: {
+            type: ["integer", "null"],
+            minimum: 1,
+            maximum: 1000000000,
+          },
+          specification: { type: ["string", "null"] },
+          scope: { type: ["string", "null"] },
+          materials: { type: ["string", "null"] },
+          deadline: { type: ["string", "null"] },
+          revisions: { type: ["string", "null"] },
+          usageRights: { type: ["string", "null"] },
+          cancellation: { type: ["string", "null"] },
+        },
+      },
+      TermsVersion: {
+        type: "object",
+        required: [
+          "versionNo",
+          "status",
+          "values",
+          "termsHash",
+          "authorId",
+          "createdAt",
+          "signing",
+          "signatures",
+        ],
+        properties: {
+          versionNo: { type: "integer", minimum: 1 },
+          status: { type: "string", enum: [...TERMS_VERSION_STATUSES] },
+          values: { $ref: "#/components/schemas/TermsValues" },
+          termsHash: { type: "string", pattern: "^[0-9a-f]{64}$" },
+          authorId: { type: "string" },
+          createdAt: { type: "string", format: "date-time" },
+          signing: {
+            type: ["object", "null"],
+            required: ["requestedBy", "requestedAt", "expiresAt"],
+            properties: {
+              requestedBy: { type: "string" },
+              requestedAt: { type: "string", format: "date-time" },
+              expiresAt: { type: "string", format: "date-time" },
+            },
+          },
+          signatures: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["userId", "signerName", "signedAt"],
+              properties: {
+                userId: { type: "string" },
+                signerName: { type: "string" },
+                signedAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+        },
+      },
+      Contract: {
+        type: "object",
+        required: [
+          "id",
+          "workRequestId",
+          "projectId",
+          "termsVersionNo",
+          "clientId",
+          "creatorId",
+          "amountKrw",
+          "termsHash",
+          "status",
+          "signedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          workRequestId: { type: "string" },
+          projectId: { type: ["string", "null"] },
+          termsVersionNo: { type: "integer" },
+          clientId: { type: "string" },
+          creatorId: { type: "string" },
+          amountKrw: { type: "integer" },
+          termsHash: { type: "string" },
+          status: { type: "string", enum: [...CONTRACT_STATUSES] },
+          signedAt: { type: "string", format: "date-time" },
+        },
+      },
+      TermsDocument: {
+        type: "object",
+        required: [
+          "workRequestId",
+          "workRequestStatus",
+          "projectStatus",
+          "reference",
+          "versions",
+          "contract",
+        ],
+        properties: {
+          workRequestId: { type: "string" },
+          workRequestStatus: {
+            type: "string",
+            enum: [...WORK_REQUEST_STATUSES],
+          },
+          projectStatus: nullableEnum(PROJECT_STATUSES),
+          reference: {
+            type: ["object", "null"],
+            description:
+              "첫 저장 때 고정한 참조 사본 (프로젝트 공개 필드, 지원 내용)",
+            required: ["project", "request"],
+            properties: {
+              project: {
+                type: ["object", "null"],
+                required: [
+                  "id",
+                  "title",
+                  "description",
+                  "purpose",
+                  "styles",
+                  "budget",
+                ],
+                properties: {
+                  id: { type: "string" },
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  purpose: { type: "string" },
+                  styles: { type: "array", items: { type: "string" } },
+                  budget: { type: "integer" },
+                },
+              },
+              request: {
+                type: "object",
+                required: ["message", "proposedAmount", "expectedDays"],
+                properties: {
+                  message: { type: "string" },
+                  proposedAmount: { type: "integer" },
+                  expectedDays: { type: "integer" },
+                },
+              },
+            },
+          },
+          versions: {
+            type: "array",
+            items: { $ref: "#/components/schemas/TermsVersion" },
+          },
+          contract: {
+            oneOf: [
+              { $ref: "#/components/schemas/Contract" },
+              { type: "null" },
+            ],
+          },
+        },
+      },
+      SignatureResponse: {
+        type: "object",
+        required: ["version", "contract"],
+        properties: {
+          version: { $ref: "#/components/schemas/TermsVersion" },
+          contract: {
+            oneOf: [
+              { $ref: "#/components/schemas/Contract" },
+              { type: "null" },
+            ],
+          },
+        },
       },
       HealthResponse: {
         type: "object",

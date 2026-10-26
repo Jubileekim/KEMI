@@ -20,6 +20,10 @@ import {
   createProjectService,
   type ProjectService,
 } from "../../src/projects/project.service.js";
+import {
+  createTermsService,
+  type TermsService,
+} from "../../src/terms/terms.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -35,6 +39,8 @@ interface TestAppOptions {
   projectService?: ProjectService;
   projectDiscoveryService?: ProjectDiscoveryService;
   pricingService?: PricingService;
+  // 서명 기한 테스트는 시계를 바꾼 조건서 서비스를 넘긴다.
+  termsService?: TermsService;
 }
 
 const EMPTY_PROJECT = {
@@ -106,6 +112,7 @@ export function createTestApp({
   projectService,
   projectDiscoveryService,
   pricingService,
+  termsService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -135,6 +142,8 @@ export function createTestApp({
         ? createProjectDiscoveryService({ prisma: client })
         : unusedProjectDiscoveryService),
     pricingService: pricingService ?? createPricingService(),
+    // 조건서 경로도 인증을 먼저 하므로, DB 없는 단위 테스트에서는 쿼리 전에 끝난다.
+    termsService: termsService ?? createTermsService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

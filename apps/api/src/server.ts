@@ -15,6 +15,7 @@ import { createPricingService } from "./pricing/pricing.service.js";
 import { createApplicationService } from "./applications/application.service.js";
 import { createNotificationService } from "./notifications/notification.service.js";
 import { createProjectService } from "./projects/project.service.js";
+import { createTermsService } from "./terms/terms.service.js";
 
 // 환경 변수가 있는 제공자만 켠다.
 function socialProvidersOf(env: Env): SocialProviders {
@@ -55,6 +56,7 @@ function start(env: Env) {
       apiKey: env.AI_PRICING_API_KEY,
       model: env.AI_PRICING_MODEL,
     }),
+    termsService: createTermsService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",
