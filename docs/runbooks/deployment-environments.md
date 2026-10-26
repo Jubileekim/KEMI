@@ -10,7 +10,7 @@
 - Vercel 프론트엔드: https://kemi-web-sigma.vercel.app/ (팀 `KEMI`, 프로젝트 `kemi-web`, Hobby)
 - Render 백엔드: https://kemi-api.onrender.com (서비스 `kemi-api`, ID `srv-dbdj8ha9lscs73bv4hc0`)
 - Render 대시보드: https://dashboard.render.com/web/srv-dbdj8ha9lscs73bv4hc0
-- Supabase 프로젝트: `nibqyycfknurkncdgqps`, Tokyo 리전. 현재 구형 스키마가 남아 있으므로 데이터 마이그레이션을 별도로 준비해야 한다.
+- Supabase 프로젝트: `nibqyycfknurkncdgqps`, Tokyo 리전. `main` 기준 Prisma 마이그레이션 7개 완료. 구형 테이블은 기존 데이터 보존을 위해 별도 유지하며, 향후 기능 마이그레이션은 아직 미적용이다.
 
 ## 2. Vercel 프론트엔드
 
@@ -20,7 +20,7 @@
 - Node.js: 루트 `.nvmrc`의 24를 기준으로 사용한다.
 - `apps/web/vercel.json`: `/api/:path*` → `https://kemi-api.onrender.com/api/:path*`를 먼저 rewrite하고, 그다음 모든 SPA 경로를 `/index.html`로 fallback한다.
 - 첫 Production 배포: 2026-10-23, 커밋 `73057fe`.
-- FE 통합 배포: 2026-10-26, PR #50 병합 커밋 `4360bdc`, Production READY 확인.
+- FE 통합 배포: 2026-10-26, PR #50 병합 커밋 `4360bdc`. 현재 Production은 이후 `main` 커밋 `b4bc2e2`의 READY 배포가 확인되었다.
 - Vercel 팀은 Pro Trial에서 Hobby로 다운그레이드했다. 실제 결제 내역은 Billing에서만 확인 가능하다.
 - Hobby는 비상업적 시연 용도로만 사용하며 실제 상업 운영 전 요금제·사용량을 재검토한다.
 
@@ -39,9 +39,9 @@
 
 ## 4. 데이터베이스 주의 사항
 
-- 2026-10-26 읽기 전용 확인: `public."Project"`는 존재하나 `public.projects`, `public.users`, `public.work_requests`, `public.terms_versions`, `public.payments`, `public.chat_rooms`, `public.files`는 아직 없다.
-- 따라서 `/health/ready`의 200 응답은 DB 접속 성공만 의미하고, `/api/projects`는 Prisma `P2021`로 실패할 수 있다.
-- 운영 DB에 신규 마이그레이션을 바로 적용하지 않는다. [DB 이슈 #24](https://github.com/Jubileekim/KEMI/issues/24) 기준으로 격리된 `KEMI-dev`에서 데이터 보존·마이그레이션·RLS·E2E를 검증한 뒤 운영 변경을 결정한다.
+- 2026-10-26 재점검: `main`의 Prisma 마이그레이션 7건은 모두 완료(롤백 0건). `public.users`, `public.projects`, `public.work_requests`가 존재하며, `/health/ready`에서 `database: ok`, Render 및 Vercel `/api/projects`에서 정상 목록 JSON(현재 0건)을 확인했다. 종전 `P2021` 장애는 현재 재현되지 않는다.
+- 구형 `public."User"`(1행), `public."Skill"`(12행) 등 구 스키마와 백업된 이전 Prisma 이력은 유지되어 있다. 기존 계정은 신규 `users`로 자동 이관되지 않았으며 보존·이관 정책이 남아 있다.
+- 미병합 계약·결제·채팅·파일 기능의 `terms_versions`, `payments`, `chat_rooms`, `files` 등은 아직 운영 스키마에 적용하지 않았다. **새 기능 PR만 병합하면 DB 오류가 다시 발생할 수 있다.** [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)를 따라 격리 `KEMI-dev` 검증과 실제 데이터 백업·승인 후, 변경이 필요한 커밋의 DB 마이그레이션을 **서버 재시작과 독립적으로** 적용하고 배포해야 한다. `migrate reset` 및 레거시 테이블 삭제는 운영 금지.
 
 ## 5. 배포 전후 체크리스트
 
