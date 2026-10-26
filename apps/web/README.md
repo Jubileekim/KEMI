@@ -102,7 +102,7 @@ npm run test:web:e2e
 - 백엔드 Render: https://kemi-api.onrender.com (서비스 `kemi-api`, `main`).
 - `apps/web/vercel.json`의 `/api/:path*` rewrite가 Render의 같은 경로로 전달되며, SPA fallback보다 먼저 적용된다.
 - Render `APP_ORIGIN`은 `https://kemi-web-sigma.vercel.app`이며 끝에 `/`를 넣지 않는다.
-- `/health`와 `/health/ready`는 각각 서버 실행·DB 접속만 검사한다. 실제 API는 운영 DB 스키마 불일치로 실패할 수 있다.
+- `/health`와 `/health/ready`는 각각 서버 실행·DB 접속만 검사한다. 2026-10-26 현재 `main`의 Prisma 마이그레이션 7개가 적용되어 `/api/projects`를 Render·Vercel 경유로 조회하면 정상 JSON(현재 0건)을 반환한다. 단, 향후 미병합 계약·결제·채팅·파일 기능은 별도 마이그레이션 검증 후 배포해야 한다.
 - FE Mock 화면은 개발용이다. Vercel Production 배포 성공이 인증·계약·결제 E2E 성공을 뜻하지 않는다.
 - 배포 정보·남은 검증·장애 대응: [KEMI 배포 환경 운영 기록](../../docs/runbooks/deployment-environments.md).
 
