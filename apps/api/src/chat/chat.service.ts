@@ -11,6 +11,7 @@ import {
 } from "@kemi/shared";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
+import { requireReadyFiles } from "../files/file.service.js";
 
 type Tx = Prisma.TransactionClient;
 type Db = PrismaClient | Tx;
@@ -61,13 +62,19 @@ export async function postSystemMessage(
   });
 }
 
-interface MessageRow {
-  id: bigint;
-  kind: string;
-  senderId: bigint | null;
-  body: string;
-  createdAt: Date;
-}
+const includeAttachments = {
+  attachments: {
+    include: {
+      file: {
+        select: { id: true, fileName: true, mimeType: true, sizeBytes: true },
+      },
+    },
+  },
+} satisfies Prisma.ChatMessageInclude;
+
+type MessageRow = Prisma.ChatMessageGetPayload<{
+  include: typeof includeAttachments;
+}>;
 
 function toMessage(row: MessageRow): ChatMessage {
   return {
@@ -75,6 +82,12 @@ function toMessage(row: MessageRow): ChatMessage {
     kind: chatMessageKindSchema.parse(row.kind),
     senderId: row.senderId?.toString() ?? null,
     body: row.body,
+    attachments: row.attachments.map(({ file }) => ({
+      fileId: file.id.toString(),
+      fileName: file.fileName,
+      mimeType: file.mimeType,
+      sizeBytes: Number(file.sizeBytes),
+    })),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -91,7 +104,7 @@ const roomInclude = {
       project: { select: { title: true } },
     },
   },
-  messages: { orderBy: { id: "desc" }, take: 1 },
+  messages: { orderBy: { id: "desc" }, take: 1, include: includeAttachments },
 } satisfies Prisma.ChatRoomInclude;
 
 type RoomRow = Prisma.ChatRoomGetPayload<{ include: typeof roomInclude }>;
@@ -215,6 +228,7 @@ export function createChatService({
         },
         orderBy: { id: after ? "asc" : "desc" },
         take: limit + 1,
+        include: includeAttachments,
       });
       const hasMore = rows.length > limit;
       const page = rows.slice(0, limit);
@@ -238,15 +252,30 @@ export function createChatService({
         );
       }
       const dedupeKey = `user:${userId}:${data.clientMessageId}`;
+      const fileIds = data.attachmentFileIds.map(BigInt);
       try {
-        const created = await prisma.chatMessage.create({
-          data: {
-            roomId: room.id,
-            kind: "USER",
-            senderId: userId,
-            body: data.body,
-            dedupeKey,
-          },
+        const created = await prisma.$transaction(async (tx) => {
+          await requireReadyFiles(tx, fileIds, {
+            ownerId: userId,
+            purpose: "CHAT_ATTACHMENT",
+            workRequestId,
+          });
+          const message = await tx.chatMessage.create({
+            data: {
+              roomId: room.id,
+              kind: "USER",
+              senderId: userId,
+              body: data.body,
+              dedupeKey,
+            },
+          });
+          await tx.chatAttachment.createMany({
+            data: fileIds.map((fileId) => ({ messageId: message.id, fileId })),
+          });
+          return tx.chatMessage.findUniqueOrThrow({
+            where: { id: message.id },
+            include: includeAttachments,
+          });
         });
         return { created: true, message: toMessage(created) };
       } catch (err) {
@@ -256,6 +285,7 @@ export function createChatService({
         ) {
           const existing = await prisma.chatMessage.findUniqueOrThrow({
             where: { roomId_dedupeKey: { roomId: room.id, dedupeKey } },
+            include: includeAttachments,
           });
           if (existing.body !== data.body) {
             throw new AppError(

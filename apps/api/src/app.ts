@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import createApplicationRouter from "./applications/application.router.js";
 import createChatRouter from "./chat/chat.router.js";
+import createFileRouter from "./files/file.router.js";
+import type { FileService } from "./files/file.service.js";
 import type { ChatService } from "./chat/chat.service.js";
 import type { ApplicationService } from "./applications/application.service.js";
 import { createAuthRouter } from "./auth/auth.router.js";
@@ -34,6 +36,7 @@ export interface AppDependencies {
   termsService: TermsService;
   paymentService: PaymentService;
   chatService: ChatService;
+  fileService: FileService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -54,6 +57,7 @@ export function createApp({
   termsService,
   paymentService,
   chatService,
+  fileService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -91,6 +95,8 @@ export function createApp({
   app.use("/api", createPaymentRouter(authService, paymentService));
   // 요청별 대화 (CHAT-01~05)
   app.use("/api", createChatRouter(authService, chatService));
+  // 파일 업로드·확인·다운로드 (FILE-01)
+  app.use("/api", createFileRouter(authService, fileService));
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }

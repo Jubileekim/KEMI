@@ -29,6 +29,10 @@ import {
   type PaymentService,
 } from "../../src/payments/payment.service.js";
 import { createChatService } from "../../src/chat/chat.service.js";
+import {
+  createFileService,
+  type FileService,
+} from "../../src/files/file.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -48,6 +52,8 @@ interface TestAppOptions {
   termsService?: TermsService;
   // 결제 테스트는 가짜 Toss 클라이언트를 넣은 결제 서비스를 넘긴다.
   paymentService?: PaymentService;
+  // 파일 테스트는 가짜 저장소를 넣은 파일 서비스를 넘긴다.
+  fileService?: FileService;
 }
 
 const EMPTY_PROJECT = {
@@ -127,6 +133,7 @@ export function createTestApp({
   pricingService,
   termsService,
   paymentService,
+  fileService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -160,6 +167,7 @@ export function createTestApp({
     termsService: termsService ?? createTermsService({ prisma: client }),
     paymentService: paymentService ?? createPaymentService({ prisma: client }),
     chatService: createChatService({ prisma: client }),
+    fileService: fileService ?? createFileService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

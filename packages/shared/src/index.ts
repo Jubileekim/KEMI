@@ -2,6 +2,7 @@ export * from "./application.js";
 export * from "./auth.js";
 export * from "./chat.js";
 export * from "./errors.js";
+export * from "./file.js";
 export * from "./health.js";
 export * from "./notification.js";
 export * from "./payment.js";

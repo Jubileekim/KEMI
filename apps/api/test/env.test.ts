@@ -18,6 +18,7 @@ describe("parseEnv", () => {
       APP_ORIGIN,
       TRUST_PROXY_HOPS: 0,
       AI_PRICING_MODEL: "gpt-4o-mini",
+      STORAGE_BUCKET: "kemi-private",
     });
   });
 

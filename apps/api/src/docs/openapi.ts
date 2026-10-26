@@ -8,6 +8,10 @@ import {
   CREATOR_SERVICE_STATUSES,
   creatorProfileUpdateSchema,
   ERROR_CODES,
+  FILE_MIME_TYPES,
+  FILE_PURPOSES,
+  FILE_STATUSES,
+  fileUploadCreateSchema,
   NOTIFICATION_TYPES,
   PAYMENT_STATUSES,
   paymentConfirmSchema,
@@ -229,6 +233,11 @@ const openApiDocument = {
     { name: "notifications", description: "인앱 알림" },
     { name: "discovery", description: "프로젝트 북마크·기본 추천" },
     { name: "pricing", description: "AI 제작 단가 분석·예산 입력 보조" },
+    {
+      name: "files",
+      description:
+        "파일 업로드(브라우저 → Supabase Storage 직접)·확인·다운로드 (결정 기록 4장)",
+    },
     {
       name: "chat",
       description:
@@ -937,6 +946,89 @@ const openApiDocument = {
         },
       },
     },
+    "/api/files": {
+      post: {
+        tags: ["files"],
+        summary: "업로드 준비 (FILE-01)",
+        description:
+          "선언한 형식·크기·쓰임을 검사하고 Supabase Storage 서명 업로드 URL을 준다. 브라우저는 그 URL로 파일을 직접 올린 뒤 `/complete`를 부른다. 한도: 영상(MP4·MOV)·ZIP 50MB, 이미지(JPG·PNG·WebP) 10MB. 거래 파일(채팅 첨부·자료·납품물·수정 첨부)은 `workRequestId`가 필요하고, 그 요청의 당사자이며 요청이 협의 중이거나 계약 뒤여야 한다. 작업물은 크리에이터만. 저장소 미설정이면 503.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(fileUploadCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("파일(PENDING)과 업로드 URL", "FileUploadResponse"),
+          400: errorResponse("형식·크기·쓰임 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse(
+            "작업물을 크리에이터가 아닌 사람이 올림 (`FORBIDDEN`)",
+          ),
+          404: errorResponse("요청이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("협의 중·계약 상태가 아닌 요청 (`CONFLICT`)"),
+          503: errorResponse(
+            "파일 저장소 미설정·응답 없음 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
+    "/api/files/{fileId}/complete": {
+      post: {
+        tags: ["files"],
+        summary: "업로드 확인 (FILE-01)",
+        description:
+          "올린 사람만. 저장소의 실제 크기와 파일 앞부분(매직 바이트)으로 형식을 확인한다. 맞으면 `READY`, 크기·형식이 다르면 `REJECTED`(사유 포함). 아직 올리지 않았으면 409. 이미 끝난 파일은 그대로 돌려준다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("fileId")],
+        responses: {
+          200: jsonResponse("확인 결과", "StoredFile"),
+          ...bearerErrors,
+          404: errorResponse("파일이 없거나 올린 사람이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("업로드가 아직 끝나지 않음 (`CONFLICT`)"),
+          503: errorResponse(
+            "파일 저장소 미설정·응답 없음 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
+    "/api/files/{fileId}": {
+      get: {
+        tags: ["files"],
+        summary: "파일 정보",
+        description:
+          "올린 사람, 또는 거래 파일이면 그 요청의 당사자만 볼 수 있다. 나머지는 404.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("fileId")],
+        responses: {
+          200: jsonResponse("파일", "StoredFile"),
+          ...bearerErrors,
+          404: errorResponse("파일이 없거나 볼 권한이 없음 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/files/{fileId}/download": {
+      get: {
+        tags: ["files"],
+        summary: "다운로드·재생 URL",
+        description:
+          "확인이 끝난(`READY`) 파일의 서명 URL(10분)을 준다. 권한은 파일 정보와 같다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("fileId")],
+        responses: {
+          200: jsonResponse("서명 URL", "FileDownloadResponse"),
+          ...bearerErrors,
+          404: errorResponse("파일이 없거나 볼 권한이 없음 (`NOT_FOUND`)"),
+          409: errorResponse("확인이 끝나지 않은 파일 (`CONFLICT`)"),
+          503: errorResponse(
+            "파일 저장소 미설정·응답 없음 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
     "/api/chat/rooms": {
       get: {
         tags: ["chat"],
@@ -1606,14 +1698,86 @@ const openApiDocument = {
         required: ["unreadCount"],
         properties: { unreadCount: { type: "integer" } },
       },
+      StoredFile: {
+        type: "object",
+        required: [
+          "id",
+          "ownerId",
+          "purpose",
+          "kind",
+          "mimeType",
+          "fileName",
+          "sizeBytes",
+          "status",
+          "rejectionReason",
+          "workRequestId",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          ownerId: { type: "string" },
+          purpose: { type: "string", enum: [...FILE_PURPOSES] },
+          kind: { type: "string", enum: ["VIDEO", "IMAGE", "ZIP"] },
+          mimeType: { type: "string", enum: [...FILE_MIME_TYPES] },
+          fileName: { type: "string" },
+          sizeBytes: { type: "integer" },
+          status: { type: "string", enum: [...FILE_STATUSES] },
+          rejectionReason: { type: ["string", "null"] },
+          workRequestId: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      FileUploadResponse: {
+        type: "object",
+        required: ["file", "upload"],
+        properties: {
+          file: { $ref: "#/components/schemas/StoredFile" },
+          upload: {
+            type: "object",
+            required: ["url", "token"],
+            properties: {
+              url: { type: "string" },
+              token: { type: "string" },
+            },
+          },
+        },
+      },
+      FileDownloadResponse: {
+        type: "object",
+        required: ["url", "expiresAt"],
+        properties: {
+          url: { type: "string" },
+          expiresAt: { type: "string", format: "date-time" },
+        },
+      },
       ChatMessage: {
         type: "object",
-        required: ["id", "kind", "senderId", "body", "createdAt"],
+        required: [
+          "id",
+          "kind",
+          "senderId",
+          "body",
+          "attachments",
+          "createdAt",
+        ],
         properties: {
           id: { type: "string" },
           kind: { type: "string", enum: [...CHAT_MESSAGE_KINDS] },
           senderId: { type: ["string", "null"] },
           body: { type: "string" },
+          attachments: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["fileId", "fileName", "mimeType", "sizeBytes"],
+              properties: {
+                fileId: { type: "string" },
+                fileName: { type: "string" },
+                mimeType: { type: "string" },
+                sizeBytes: { type: "integer" },
+              },
+            },
+          },
           createdAt: { type: "string", format: "date-time" },
         },
       },

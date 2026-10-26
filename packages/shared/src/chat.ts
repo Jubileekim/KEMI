@@ -8,10 +8,23 @@ export type ChatMessageKind = z.infer<typeof chatMessageKindSchema>;
 
 // 메시지 전송. clientMessageId는 화면이 만든 식별자로, 응답을 잃고 다시 보내도 한 번만 저장된다.
 // 글자 수 4,000자 [제안, D07]
-export const chatMessageCreateSchema = z.strictObject({
-  clientMessageId: z.uuid(),
-  body: z.string().trim().min(1).max(4000),
-});
+export const chatMessageCreateSchema = z
+  .strictObject({
+    clientMessageId: z.uuid(),
+    body: z.string().trim().max(4000),
+    // 본인이 올려 확인이 끝난 같은 거래의 CHAT_ATTACHMENT 파일(최대 5개)
+    attachmentFileIds: z
+      .array(z.string().regex(/^[1-9]\d*$/))
+      .max(5)
+      .default([]),
+  })
+  .refine(
+    (value) => value.body.length > 0 || value.attachmentFileIds.length > 0,
+    {
+      path: ["body"],
+      message: "내용이나 첨부가 필요합니다.",
+    },
+  );
 export type ChatMessageCreateRequest = z.input<typeof chatMessageCreateSchema>;
 
 // 읽음 처리: 화면에 보인 마지막 메시지까지 읽음으로 한다. 뒤로 가지 않는다.
@@ -36,12 +49,21 @@ export const chatMessageListQuerySchema = z.strictObject({
     .optional(),
 });
 
+export interface ChatAttachment {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface ChatMessage {
   id: string;
   kind: ChatMessageKind;
   // SYSTEM 메시지는 null
   senderId: string | null;
   body: string;
+  // 다운로드·재생은 GET /api/files/{fileId}/download
+  attachments: ChatAttachment[];
   createdAt: string;
 }
 

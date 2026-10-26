@@ -19,6 +19,8 @@ import { createTermsService } from "./terms/terms.service.js";
 import { createPaymentService } from "./payments/payment.service.js";
 import { createTossClient } from "./payments/toss.js";
 import { createChatService } from "./chat/chat.service.js";
+import { createFileService } from "./files/file.service.js";
+import { createSupabaseStorage } from "./files/storage.js";
 
 // 환경 변수가 있는 제공자만 켠다.
 function socialProvidersOf(env: Env): SocialProviders {
@@ -61,6 +63,17 @@ function start(env: Env) {
     }),
     termsService: createTermsService({ prisma }),
     chatService: createChatService({ prisma }),
+    fileService: createFileService({
+      prisma,
+      storage:
+        env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+          ? createSupabaseStorage({
+              supabaseUrl: env.SUPABASE_URL,
+              serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+              bucket: env.STORAGE_BUCKET,
+            })
+          : undefined,
+    }),
     // 테스트 시크릿 키가 있을 때만 결제를 켠다(env.ts가 live 키를 거부한다).
     paymentService: createPaymentService({
       prisma,
