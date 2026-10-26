@@ -12,6 +12,8 @@ import {
 } from "./payment-model";
 
 const records = new Map<string, PaymentOrder[]>();
+export const readMockPaidOrder = (id: string) =>
+  records.get(id)?.find((order) => order.status === "SUCCEEDED");
 export const mockContractPaid = (id: string) =>
   records.get(id)?.some((order) => order.status === "SUCCEEDED") ?? false;
 let scenario = "success";

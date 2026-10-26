@@ -13,6 +13,7 @@ import {
 } from "./signature-model";
 
 const records = new Map<string, SignatureRound[]>();
+export const readMockSignatureRounds = (id: string) => records.get(id) ?? [];
 export function readMockSignedContract(id: string) {
   const entry = [...records.entries()].find(([, rounds]) =>
     rounds.some(

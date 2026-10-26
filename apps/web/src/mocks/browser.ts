@@ -11,6 +11,7 @@ import signatureHandlers from "./signature-handlers";
 import paymentHandlers from "./payment-handlers";
 import productionHandlers from "./production-handlers";
 import deliveryHandlers from "./delivery-handlers";
+import settlementHandlers from "./settlement-handlers";
 
 const worker = setupWorker(
   ...handlers,
@@ -25,6 +26,7 @@ const worker = setupWorker(
   ...paymentHandlers,
   ...productionHandlers,
   ...deliveryHandlers,
+  ...settlementHandlers,
 );
 
 export default worker;
