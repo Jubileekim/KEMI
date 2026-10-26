@@ -12,6 +12,7 @@
 - 제품 요구사항 기준: [docs/product/prd-v2.0.md](docs/product/prd-v2.0.md)
 - PRD v2.0 백엔드 구현 기준: [docs/product/prd-v2.0-implementation.md](docs/product/prd-v2.0-implementation.md)
 - 인증 배포·검증 절차: [docs/runbooks/auth-deploy-verification.md](docs/runbooks/auth-deploy-verification.md)
+- 운영 배포 주소·환경·검증 기록: [docs/runbooks/deployment-environments.md](docs/runbooks/deployment-environments.md)
 
 Node.js 24 / npm 11 환경에서 저장소 루트에서 실행한다.
 
