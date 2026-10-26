@@ -23,6 +23,8 @@ shared 빌드와 브라우저 검사를 겹치지 않는다. 설치된 Edge, 전
 npm exec -w @kemi/web -- playwright test --config ../../qa/frontend-4c/playwright.edge.config.ts delivery.spec.ts production.spec.ts proposals.spec.ts
 ```
 
+최종 고정 소스 검증은 `revisions.spec.ts delivery.spec.ts production.spec.ts proposals.spec.ts`를 같은 명령에 전달해44개를 한 번에 실행했다. 상세 결과/검증 SHA는 진행 기록을 따른다. 캡처 flag는4-C 단독 실행에만 지정하면 연관 화면의 중복 캡처를 만들지 않는다.
+
 운영 제외는 두 flag를 켠 운영 빌드 후 독립 HTTP 인증 fixture로 확인한다:
 
 ```powershell
