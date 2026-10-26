@@ -2,6 +2,8 @@ import { http, HttpResponse, delay } from "msw";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { readMockSignedContract } from "./signature-handlers";
+import { readMockTerms } from "./terms-handlers";
+import { changeRevisions, revisionCommandSchema } from "./revision-model";
 import { readMockProposal } from "./proposal-handlers";
 import { participant, ProposalError } from "./proposal-model";
 import { mockContractPaid } from "./payment-handlers";
@@ -79,11 +81,32 @@ async function handle({
       canSubmit: creator && allowed(contract.id),
       started: Boolean(readMockProduction(contract.id).startedAt),
       prepared: allowed(contract.id),
+      revisionTerms:
+        readMockTerms(contract.requestId)?.versions.find(
+          (v) => v.id === contract.versionId,
+        )?.values.revisions ?? "",
       state,
     });
   if (request.method !== "POST") return fail(405);
-  if (!creator) return fail(403);
   try {
+    if (suffix[0] === "requests" && suffix.length === 1) {
+      const raw: unknown = await request.json();
+      const cmd = revisionCommandSchema.safeParse(raw);
+      if (!cmd.success) return fail(400);
+      if (epoch !== session.epoch() || actor(request)?.id !== user.id)
+        return fail(401);
+      const next = changeRevisions(
+        records.get(contract.id) ?? emptyDelivery(),
+        cmd.data,
+        { id: user.id, side: creator ? "creator" : "client" },
+        allowed(contract.id),
+        new Date().toISOString(),
+      );
+      records.set(contract.id, next);
+      if (selected === "lost-response") return HttpResponse.error();
+      return HttpResponse.json({ ok: true });
+    }
+    if (!creator) return fail(403);
     if (suffix[0] === "assets" && suffix.length === 1) {
       if (!allowed(contract.id)) return fail(409);
       const form = await request.formData();
@@ -156,6 +179,19 @@ export default [
       );
     },
   ),
+  http.get("/__mock__/revision-events/:requestId", ({ request, params }) => {
+    const user = actor(request);
+    if (!user) return fail(401);
+    const item = readMockProposal(String(params.requestId));
+    if (!item || !participant(item, user)) return fail(404);
+    return HttpResponse.json(
+      [...records.entries()].flatMap(([id, state]) =>
+        readMockSignedContract(id)?.requestId === item.id
+          ? state.requests.map((revision) => ({ contractId: id, revision }))
+          : [],
+      ),
+    );
+  }),
   http.all("/__mock__/deliveries/:contractId/*", handle),
   http.all("/__mock__/deliveries/:contractId", handle),
 ];

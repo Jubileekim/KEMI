@@ -4,6 +4,7 @@ import { session, useSession } from "../app/session";
 import Button from "../components/ui/button";
 import { loadDeliveryEvents } from "./delivery-api";
 import deadlineTime from "../features/production/time";
+import { deliveryEventLabels } from "./delivery-model";
 
 export default function DeliveryNoticesMock({ roomId }: { roomId: string }) {
   const { user } = useSession();
@@ -30,11 +31,9 @@ export default function DeliveryNoticesMock({ roomId }: { roomId: string }) {
           <p key={version.id} className="rounded-xl bg-muted p-4">
             시스템 · {deadlineTime(version.at)} ·{" "}
             <Link
-              to={`/contracts/${contractId}/deliveries?version=${version.id}`}
+              to={`/contracts/${contractId}/deliveries?version=${version.id}${version.requestId ? `&request=${version.requestId}` : ""}`}
             >
-              v{version.number}{" "}
-              {version.kind === "DRAFT" ? "초안 공유" : "완성 검토본 제출"}{" "}
-              바로가기
+              v{version.number} {deliveryEventLabels[version.kind]} 바로가기
             </Link>
           </p>
         ))}

@@ -1,6 +1,6 @@
 # KEMI 프론트엔드 진행 기록
 
-갱신: 2026-10-25 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현 및 공개 제안 통합 검증 완료. 실제 Toss Sandbox·카카오 미연결. 4-A 준비·제작 시작·납기 날짜 합의의 클라이언트/명시적 Mock 구현 및 통합 검증 완료. 4-B 초안·완성 검토본 제출·영상 버전 조회 클라이언트/명시적 Mock 및 공개 제안 통합 검증 완료. 실제 파일 저장·영상 접근 API/D17과 수정·승인·수령·정산은 남음. WORK-02 금액/범위 변경과 D09/D10 조율은 남음. 0단계·1단계·2단계·3단계·4단계 전체 완료 아님.
+갱신: 2026-10-26 · 현재: 0-A·0-B·0-C 완료. 1-A 이메일·1-B Google·1-C 프로필·1-D 패키지/대표/서비스 공개/작업물과 2-A 캠페인 작성·임시 저장·공개, 2-B 선택 AI 분석·명시 예산 반영과 2-C 모집 목록·검색·상세·마감 및 2-D 제안·후보·협의·텍스트 채팅의 클라이언트·명시적 Mock 구현 및 각 묶음 통합 검증 완료. 실제 API/DB/파일 저장·외부 제공자 검증과 정책 조율은 남음. 3-A 최종 조건서 작성·버전 관리 및 3-B 양측 서명·48시간 만료·최종 선정의 클라이언트·명시적 Mock 구현 및 통합 검증 완료. 3-C 테스트 결제·결과/재조회 클라이언트·명시적 PG Mock 구현 및 공개 제안 통합 검증 완료. 실제 Toss Sandbox·카카오 미연결. 4-A 준비·제작 시작·납기 날짜 합의의 클라이언트/명시적 Mock 구현 및 통합 검증 완료. 4-B 초안·완성 검토본 제출·영상 버전 조회 클라이언트/명시적 Mock 및 공개 제안 통합 검증 완료. 실제 파일 저장·영상 접근 API/D17과 수정·승인·수령·정산은 남음. WORK-02 금액/범위 변경과 D09/D10 조율은 남음. 4-C 시간 위치별 요청·원요청 연결 수정본·회차 완료·초안/오류 별도 관리의 클라이언트/명시적 Mock 및 통합 검증 완료. D11 예외/실제 수정 API·승인/수령/정산은 남음. 0단계·1단계·2단계·3단계·4단계 전체 완료 아님.
 
 ## 기준과 결정
 
@@ -113,7 +113,7 @@
 
 ## 다음 작업 하나
 
-**4-B 제출·영상 접근 API 및 D17 파일 정책 조율:** 파일 준비/정식 제출·버전/안내·비공개 영상 접근과 파일 한도/검사/보존 계약을 합의한다. 별도 요청 후 착수한다. 이전 단계 실환경/정책 검증도 미완료다.
+**4-C 수정 API 및 D11 예외 정책 조율:** 요청·원영상·수정본·완료 회차의 서버 계약과 혼합/이견/납기/진행 중 변경 정책을 합의한다. 별도 요청 후 착수한다. 이전 단계 실환경/정책 검증도 미완료다.
 
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
@@ -663,3 +663,44 @@
 - **원격 Web CI 기능/검사 SHA:** [run107/40175634211](https://github.com/Jubileekim/KEMI/actions/runs/40175634211), job121115568588에서 설치·형식·단위·build:web·Chromium 설치는 success, 확인 시 브라우저 E2E는 in_progress·report는 pending이었다. 원격 전체 통과가 아니다. 마지막 입력 정리/전달 푸시는 기존 cancel-in-progress에 따라 새 실행을 만들 수 있어 **최신 전달 SHA의 최종 CI는 미검증**으로 구분하고 [PR #48 Checks](https://github.com/Jubileekim/KEMI/pull/48/checks)에서 확인한다. 기존 CI job10분·workers1/timeout/retry 유지, 수동 재실행/설정 완화 없음.
 - **기존 Vercel 연결 검사:** 37e45f9 status는 failure/Blocked다. [봇 설명](https://github.com/Jubileekim/KEMI/pull/48#issuecomment-6395251756)은 Dev-Yuncheol이 KEMI Vercel 팀 멤버가 아니라는 내용이다. Web CI/로컬 빌드와 별개다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포를 하지 않았다.
 - **종료 경계:** 클라이언트/명시적 Mock의4-B만 완료다. 실제 API/DB/파일·워터마크 검사·영구 저장/복원·알림과 D17/D20/D11·수정/승인/최종 수령/정산·4단계 전체는 남는다. 다음 작업은 위4-B API/D17 조율1개이며 자동 착수하지 않는다. 전용5190 QA 서버는 최종 검사 exit0으로 정상 정리했고4194 preview도 q로 exit0 종료했다. 최종 변경을 같은 브랜치에 커밋·푸시한 후 로컬/원격/PR head와 깨끗한 작업 트리를 대조한다. 병합·자동 병합·명시적 배포 없음.
+
+## 4-C 시간 위치별 수정 요청·수정본·회차 (2026-10-26)
+
+### 구현 범위·근거
+
+- REV-01/02와 WORK-03/04의 요청·수정본 이력/같은 방 안내 부분만 구현했다. 원본 엑셀 기능45/46행, P14/D11, 계획4단계2·4항, 기술 PDF, 디자인 토큰, API 문서와 실제 API/shared 소스를 대조했다. 대응 API/DTO가 없어 DEV/MSW로 분리했다. 원본/API/shared·의존성/lockfile·검사 규칙은 변경하지 않았다.
+- 시간 위치·문제·희망 변경·참고 체크리스트를 대상 영상에 묶고, 요청/수정본·처리 설명·이전 영상·일반 완료 회차를 보존한다. 현재 재생 위치 사용과 정확한 버전/요청/시간 URL을 제공한다. 일반 수정은 요청/파일 준비가 아니라 연결된 새 수정본 제출 시 한 번만 완료된다. 초안 수정본도 초안으로 유지하고 합의한 계약 오류는 회차 제외다.
+- P14 횟수/범위는 서명 조건 원문을 함께 표시하고 양측이 같은 구조화 Mock 예시를 확인해야 일반 요청할 수 있다. 기본 한도를 임의 부여하거나 서명 문구를 자동 해석하지 않는다. 실제 계약 수정/전자서명이 아니다. 한도 초과 일반 요청은 협의 안내, 오류는 횟수만으로 차단하지 않으며 제작자 시정 동의 전 보류한다.
+- D11 혼합/이견/수정본 납기/요청 중 변경·승인은 미결정 유지. 혼합·추가 작업 보류, 진행 중 요청1개, 입력20항목/1000자/0~86400초/한도0~20은 개발 예시다. 실제 서비스 정책으로 확정하지 않았다. 설명/참고는 이스케이프 텍스트이며 외부 URL을 자동 열지 않는다.
+- 요청·영상·회차를 같은 Mock 기록에서 갱신한다. 최신 revision/대상 버전/준비 상태·당사자/Bearer·본문 처리 후 epoch를 확인하고 ID/작성자/내용을 재검사한다. 유실 시 새 명령을 잠그고 재조회/같은 ID 재시도로 복구한다. 성공한 저장본에서만 시스템 안내를 만든다. 조회 오류는 기존 입력을 메모리에 보존하지만 영상·작업 정보는 숨기고 쓰기를 차단한다.
+
+### 변경 파일
+
+- 모델/통신: `apps/web/src/mocks/revision-model.ts`, `delivery-{model,api,handlers}.ts`.
+- 화면: `apps/web/src/features/production/{RevisionRequestForm,ReviewPlayer}.tsx`, `apps/web/src/mocks/{RevisionPanelMock,RevisionNoticesMock,DeliveryMock,DeliveryNoticesMock,ChatPanelMock}.tsx`.
+- 검사/근거: `apps/web/test/revisions.test.ts`, `apps/web/e2e/revisions.spec.ts`, `qa/frontend-4c/`, `docs/{frontend-revisions-4c,frontend-feature-matrix,frontend-progress}.md`. CI에는 stacked base `feat/frontend-4b-delivery` 허용1행만 추가했다. 기존 timeout/retry/workers/검사 명령 유지.
+
+### 로컬 검증·검토
+
+- 단위 **186/186·실패0·exit0**(기존180+신규6). 두 개발 flag를 켠 `npm run build:web` **exit0**(타입·기존 ESLint·운영 빌드 포함). `check:tokens` PASS, 추적 파일 전체 Prettier 검사·diff 검사 PASS. 전체 `npm run format:check`는 시작부터 있던 미추적 `outputs/share/KEMI-interactive.html`, `tools/share-html/{build.mjs,main.tsx,serve.mjs,share.css,ShareGuide.tsx}` 6개 형식으로 실패했다. 이 파일들은 수정·스테이징하지 않았다. `git -c core.quotepath=false ls-files`로 전달 파일 전체를 별도 검사해 통과했다.
+- 두 flag 운영 빌드의 4-C Mock/endpoint 제외 검사와 기존 독립 HTTP 인증 fixture **4개·exit0**. 비회원/의뢰인/크리에이터 경로, worker/제품 API/Mock 요청 없음. 실제 API·인증 서버 검증이 아니다.
+- 정상 4-C 통합 **데스크톱/모바일2/2·exit0**에서 공개 제안→서명→전액 Mock 결제→준비/시작→검토본→양측 Mock 조건 확인→2항목 요청→시간 바로가기/실제 재생 시각→수정본→1회 완료→같은 방 안내→원영상/수정본 연결을 검증했다. 320/390/600/768/1024/1280px 넘침 없음·페이지 오류0·관련 실제 제품 API/외부 참고 URL 요청0. 최종 통합/연관 회귀는 아래 기록을 따른다.
+- 초기 WebM duration=Infinity로 시간 선택이 잠겼고, 실제 끝까지 재생한 뒤 길이를 확인하도록 보완했다. 잘못 고정한0:00 locator로 첫 완주10/12(2실패) 후 실제 저장 시간/재생 시각 검사로 수정했다. 이어320px 중첩 카드/긴 버튼 넘침을 수정해 통합2/2 통과했다. 회귀 중 오류 응답에 이전 선택 영상이 남는 것을 발견해 영상/정보 숨김과 입력 보존을 함께 복구했다. 중간 실패/중단 실행을 최종 통과 수에 합산하지 않는다. timeout/retry나 기존4-B 검사는 완화하지 않았다.
+- fresh-context-review·security-review·React 품질 관점으로 명세/코드 자체 검토했다. 입력 실행/외부 URL 호출/비밀 노출, 객체 권한, 세션 변경, 원자적 회차·중복, Blob URL 정리, 운영 DEV 제외를 확인했다. 실제 서버 보안·사람 검토는 남아 Draft로 전달한다.
+
+### 남은 일·다음 작업 하나
+
+- 실제 API/DB/파일 저장·미디어 길이 서버 검증·워터마크 검사·알림/외부 제공자·영구 저장/새로고침 복원·다중 탭은 미연결/미검증이다. 단일 탭 메모리이며 새로고침 시 계약/영상/요청 기록이 초기화된다. 실제 브라우저 메뉴200% 확대·스크린리더·Edge 외 브라우저도 미검증이다.
+- D11과 선행 D17/D20 등 정책/API 조율은 남는다. 승인·최종 전달·수령·정산 및 WORK-03/04 전체·**4단계 전체는 미완료**다. 최종 수령→정산의 단계 전체 완료 검증은 하지 않았다.
+- 다음 작업 하나: **4-C 수정 API 및 D11 예외 정책 조율**. 다음 작업 자동 착수·PR 병합·자동 병합·명시적 배포/재배포는 하지 않는다.
+
+### Git·최종 통합·원격 CI
+
+- 시작 시4-C 브랜치/PR 없음, 선행 [Draft PR #48](https://github.com/Jubileekim/KEMI/pull/48)의 open/Draft·미병합과 로컬/원격/head `e5becb0` 일치를 확인했다. `feat/frontend-4c-revisions`를 만들었으며 base는 `feat/frontend-4b-delivery`다. 선행 병합 후 base 조정 검토가 필요하다.
+- 모델/통신/단위/근거 [48255ae](https://github.com/Jubileekim/KEMI/commit/48255ae)를 커밋·푸시했다. 요청→수정본→회차·안내는 하나의 검증 가능한 흐름으로 PR1개에 묶고 모델/화면/검사·전달 커밋으로 나눈다.
+- **최종 통합/연관 회귀:** 기능/검사 SHA `dea8bca`에서 Edge 데스크톱/모바일 **44/44·실패0·exit0·7.0분**. 4-C12개 + 4-B12개 + 준비10개 + 제안/채팅10개다. 정상 통합의 시간 이동/실제 재생 시각·요청2항목1회·원영상/수정본/같은 방 안내, 한도 소진/계약 오류 시정 합의·초안 무차감, 실패 입력 보존·유실/같은 ID·위조/타인/구버전/지연 로그아웃·새로고침·6너비를 포함한다. 기존4-B 오류 응답 시 선택 영상 숨김도 통과했다. 과거 통합2개와 합산하지 않으며 전체 회귀·4단계 전체 완료가 아니다.
+- **Git 전달:** 화면 [4130cd7](https://github.com/Jubileekim/KEMI/commit/4130cd7), 검사/기록 [dea8bca](https://github.com/Jubileekim/KEMI/commit/dea8bca)를 푸시했고 [Draft PR #52](https://github.com/Jubileekim/KEMI/pull/52)를 생성·이 채팅에 연결했다. 확인 시 open/Draft·미병합·mergeable=true였다. 마지막은 최종 결과/캡처만 추가하며 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/52/commits)에서 전달 커밋까지 확인한다.
+- **원격 Web CI:** 기능/검사 SHAdea8bca의 [run40252203550](https://github.com/Jubileekim/KEMI/actions/runs/40252203550), job121346354827은 설치·형식·단위·build:web·Chromium 설치 success, 확인 시 브라우저 E2E in_progress·report pending이었다. 원격 전체 통과가 아니다. 최종 문서/캡처 푸시는 새 CI 대상이며 **최신 전달 SHA의 최종 CI는 미검증**이다. [최신 Checks](https://github.com/Jubileekim/KEMI/pull/52/checks)에서 확인한다. CI job10분/CI workers1·timeout/retry 유지, 수동 재실행 없음.
+- **기존 Vercel 연결:** dea8bca status는 failure이며 Git 작성자 Dev-Yuncheol의 Vercel 프로젝트 접근 권한이 필요하다는 응답을 확인했다. 별도 Vercel Preview Comments 체크 success는 배포 성공 증거가 아니다. 초대·권한/공개 범위·배포 설정 변경·명시적 배포/재배포 없음.
+- **최종 캡처/정리:** `qa/frontend-4c/revisions-{390,1280}.png`를 영상 readyState/실제 재생·일시정지 확인 후 저장·시각 확인했다. 기존 favicon MSW/React DevTools 경고가 있어 전체 콘솔 경고0이라고 주장하지 않는다. 연관 검사로 생긴 중복 캡처는 제거하고4-C 캡처만 전달한다. 전용5191 QA 서버는44개 실행 exit0으로 정리했고4195 preview도 종료했다. 기존 미추적 outputs/tools는 보존·미포함이다. 시스템 Python 실행기는 접근 오류였고 번들 Python으로 문서만 갱신했다.
+- **종료 경계:** 4-C 클라이언트/명시적 Mock만 완료다. 실제 API/DB/파일·외부 제공자·영구 복원·D11/D17/D20·승인/최종 수령/정산과4단계 전체는 남는다. 다음 작업은4-C API/D11 조율1개이며 자동 착수하지 않는다. 병합·자동 병합·명시적 배포 없음. 최종 커밋 후 로컬/원격/PR head와 추적 파일 변경 없음(기존 미추적2개 폴더 제외)을 대조한다.

@@ -14,22 +14,31 @@ import {
   loadDeliveryMedia,
   saveDelivery,
   uploadDelivery,
+  saveRevision,
 } from "./delivery-api";
 import {
   assetSchema,
   deliveryCommandSchema,
   type DeliveryAsset,
   type DeliveryCommand,
+  deliveryKindLabels,
+  deliverySubmitLabels,
 } from "./delivery-model";
+import RevisionPanelMock from "./RevisionPanelMock";
+import type { RevisionCommand } from "./revision-model";
 
 function Video({
   contractId,
   versionId,
   name,
+  initialSeconds,
+  onPosition,
 }: {
   contractId: string;
   versionId: string;
   name: string;
+  initialSeconds: number;
+  onPosition: (position: { seconds: number; duration: number }) => void;
 }) {
   const { user } = useSession();
   const query = useQuery({
@@ -52,7 +61,13 @@ function Video({
     );
   return (
     query.data && (
-      <ReviewPlayer key={query.dataUpdatedAt} blob={query.data} name={name} />
+      <ReviewPlayer
+        key={query.dataUpdatedAt}
+        blob={query.data}
+        name={name}
+        initialSeconds={initialSeconds}
+        onPosition={onPosition}
+      />
     )
   );
 }
@@ -62,10 +77,17 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [asset, setAsset] = useState<DeliveryAsset | null>(null);
-  const [kind, setKind] = useState<"DRAFT" | "REVIEW">("DRAFT");
+  const [kind, setKind] = useState<"DRAFT" | "REVIEW" | "REVISION">("DRAFT");
   const [description, setDescription] = useState("");
   const [watermark, setWatermark] = useState(false);
-  const [pending, setPending] = useState<DeliveryCommand | null>(null);
+  const [pending, setPending] = useState<
+    DeliveryCommand | RevisionCommand | null
+  >(null);
+  const [position, setPosition] = useState({
+    versionId: "",
+    seconds: 0,
+    duration: 0,
+  });
   const [notice, setNotice] = useState("");
   const valid = z.string().uuid().safeParse(contractId).success;
   const query = useQuery({
@@ -78,12 +100,21 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
     mutationFn: (value: File) => uploadDelivery(contractId, value),
   });
   const submit = useMutation({
-    mutationFn: (value: DeliveryCommand) => saveDelivery(contractId, value),
+    mutationFn: (value: DeliveryCommand | RevisionCommand) =>
+      "type" in value
+        ? saveRevision(contractId, value)
+        : saveDelivery(contractId, value),
   });
   const busy = query.isFetching || upload.isPending || submit.isPending;
   const disabled =
     busy || Boolean(query.error) || Boolean(pending) || !query.data?.canSubmit;
   const versions = query.data?.state.versions ?? [];
+  const openRequest = query.data?.state.requests.find(
+    (r) => !r.resultVersionId,
+  );
+  let activeKind = kind;
+  if (kind === "REVISION") activeKind = "REVIEW";
+  if (openRequest) activeKind = "REVISION";
   const selectedId = params.get("version");
   const version = selectedId
     ? versions.find((v) => v.id === selectedId)
@@ -96,7 +127,13 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
       pending &&
       response.data.state.receipts.some((r) => r.id === pending.id)
     ) {
-      setParams({ version: pending.id });
+      if (!("type" in pending))
+        setParams({
+          version: pending.id,
+          ...(pending.requestId ? { request: pending.requestId } : {}),
+        });
+      else if (pending.type === "request")
+        setParams({ version: pending.versionId, request: pending.id });
       setPending(null);
       setAsset(null);
       setFile(null);
@@ -107,7 +144,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
     }
     setNotice("영상 버전을 재조회했어요.");
   };
-  const dispatch = (cmd: DeliveryCommand) => {
+  const dispatch = (cmd: DeliveryCommand | RevisionCommand) => {
     if (busy) return;
     const epoch = session.epoch();
     setPending(cmd);
@@ -119,14 +156,24 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
         if (epoch !== session.epoch() || response.isError || !response.data)
           return;
         if (response.data.state.receipts.some((r) => r.id === cmd.id)) {
-          setParams({ version: cmd.id });
+          if (!("type" in cmd))
+            setParams({
+              version: cmd.id,
+              ...(cmd.requestId ? { request: cmd.requestId } : {}),
+            });
+          else if (cmd.type === "request")
+            setParams({ version: cmd.versionId, request: cmd.id });
           setPending(null);
           setAsset(null);
           setFile(null);
           if (fileInput.current) fileInput.current.value = "";
           setDescription("");
           setWatermark(false);
-          setNotice("영상 제출이 모의 기록에 반영됐어요.");
+          setNotice(
+            "type" in cmd
+              ? "수정 상태가 모의 기록에 반영됐어요."
+              : "영상 제출이 모의 기록에 반영됐어요.",
+          );
         }
       },
     });
@@ -135,7 +182,8 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
     id: crypto.randomUUID(),
     revision: query.data?.state.revision,
     assetId: asset?.id,
-    kind,
+    kind: activeKind,
+    ...(openRequest ? { requestId: openRequest.id } : {}),
     description,
     watermarkConfirmed: watermark,
   });
@@ -187,8 +235,11 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
           </Button>
         </div>
       )}
-      {query.data && !query.error && (
-        <>
+      {query.data && (
+        <div
+          className={query.error ? "hidden" : "grid min-w-0 gap-6"}
+          hidden={Boolean(query.error)}
+        >
           <p>
             계약: {contractId} · {!query.data.started && "제작 시작 전"}
             {query.data.started && !query.data.prepared && "준비 문제 보류"}
@@ -196,7 +247,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               (versions.some((v) => v.kind === "REVIEW")
                 ? "검토 중"
                 : "제작 중·초안 단계")}{" "}
-            · 일반 수정 회차 차감 없음
+            · 초안·조회·대화는 회차 차감 없음
           </p>
           <div className="flex flex-wrap gap-4">
             <Link to={`/workspace/${query.data.requestId}`}>
@@ -277,11 +328,20 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
                 </p>
               )}
               <Label htmlFor="delivery-kind">제출 종류</Label>
+              {openRequest && (
+                <p>
+                  원요청 {openRequest.id}에 연결된 수정본 ·{" "}
+                  {openRequest.category === "ERROR" &&
+                  !openRequest.correctionAccepted
+                    ? "오류 시정 합의 대기·제출 보류"
+                    : "처리 설명과 새 영상을 준비해 주세요."}
+                </p>
+              )}
               <select
                 id="delivery-kind"
                 className="w-full rounded-xl border p-3"
-                disabled={disabled}
-                value={kind}
+                disabled={disabled || Boolean(openRequest)}
+                value={activeKind}
                 onChange={(e) => {
                   setKind(e.target.value === "REVIEW" ? "REVIEW" : "DRAFT");
                   setWatermark(false);
@@ -289,6 +349,9 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               >
                 <option value="DRAFT">초안 공유</option>
                 <option value="REVIEW">완성 검토본 제출</option>
+                {openRequest && (
+                  <option value="REVISION">요청 연결 수정본 제출</option>
+                )}
               </select>
               <Label htmlFor="delivery-description">영상 설명</Label>
               <Textarea
@@ -298,7 +361,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-              {kind === "REVIEW" && (
+              {activeKind !== "DRAFT" && (
                 <Label>
                   <input
                     type="checkbox"
@@ -310,12 +373,19 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
                 </Label>
               )}
               <Button
-                disabled={disabled || !input.success}
+                disabled={
+                  disabled ||
+                  !input.success ||
+                  Boolean(
+                    openRequest?.category === "ERROR" &&
+                    !openRequest.correctionAccepted,
+                  )
+                }
                 onClick={() => {
                   if (input.success) dispatch(input.data);
                 }}
               >
-                {kind === "DRAFT" ? "초안 정식 공유" : "완성 검토본 정식 제출"}
+                {deliverySubmitLabels[activeKind]}
               </Button>
             </section>
           )}
@@ -334,7 +404,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
                     aria-current={v.id === version?.id ? "page" : undefined}
                     to={`?version=${v.id}`}
                   >
-                    v{v.number} · {v.kind === "DRAFT" ? "초안" : "완성 검토본"}
+                    v{v.number} · {deliveryKindLabels[v.kind]}
                   </Link>
                   <p>
                     {deadlineTime(v.at)} ·{" "}
@@ -351,34 +421,60 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               않아요.
             </p>
           )}
-          {version && (
+          {version && !query.error && (
             <section
               className="grid min-w-0 gap-3"
               aria-label="선택한 영상 버전"
             >
               <h2 className="type-heading-md">
-                v{version.number} ·{" "}
-                {version.kind === "DRAFT" ? "초안" : "완성 검토본 · 검토 중"}
+                v{version.number} · {deliveryKindLabels[version.kind]}
+                {version.kind !== "DRAFT" && " · 검토 중"}
               </h2>
               <p>{version.description}</p>
-              {version.kind === "REVIEW" && (
+              {version.kind !== "DRAFT" && (
                 <p>
                   영상 자체 KEMI 워터마크: 제작자 준비 확인 (자동 검사 아님)
                 </p>
               )}
               <Video
-                key={`${version.id}-${session.epoch()}`}
+                key={`${version.id}-${params.get("t")}-${session.epoch()}`}
                 contractId={contractId}
                 versionId={version.id}
                 name={version.asset.name}
+                initialSeconds={Math.max(
+                  0,
+                  Math.min(86400, Number(params.get("t")) || 0),
+                )}
+                onPosition={(value) =>
+                  setPosition({ ...value, versionId: version.id })
+                }
               />
             </section>
           )}
+          <RevisionPanelMock
+            state={query.data.state}
+            version={version}
+            creator={user?.id === query.data.creatorId}
+            terms={query.data.revisionTerms}
+            disabled={
+              busy ||
+              Boolean(query.error) ||
+              Boolean(pending) ||
+              !query.data.prepared
+            }
+            position={
+              position.versionId === version?.id
+                ? position
+                : { seconds: 0, duration: 0 }
+            }
+            selectedRequest={params.get("request")}
+            submit={dispatch}
+          />
           <p>
             초안 공유·조회·대화는 수정 회차·승인·완료·수령·정산을 변경하지
-            않아요. 수정 요청·승인·최종 전달은 후속 범위예요.
+            않아요. 승인·최종 전달·수령·정산은 후속 범위예요.
           </p>
-        </>
+        </div>
       )}
       {notice && <p role="status">{notice}</p>}
       <details>

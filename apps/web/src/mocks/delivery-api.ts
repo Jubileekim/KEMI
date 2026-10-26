@@ -2,6 +2,7 @@ import axios from "axios";
 import { z } from "zod";
 import { api } from "../shared/api/client";
 import { session } from "../app/session";
+import { revisionRequestSchema, type RevisionCommand } from "./revision-model";
 import {
   assetSchema,
   deliveryVersionSchema,
@@ -13,7 +14,7 @@ import {
 async function request(
   path: string,
   signal?: AbortSignal,
-  data?: DeliveryCommand | FormData,
+  data?: DeliveryCommand | RevisionCommand | FormData,
   media = false,
 ) {
   const epoch = session.epoch();
@@ -49,6 +50,26 @@ export async function saveDelivery(id: string, command: DeliveryCommand) {
   return z
     .strictObject({ ok: z.literal(true) })
     .parse(await request(path(id), undefined, command));
+}
+export async function saveRevision(id: string, command: RevisionCommand) {
+  return z
+    .strictObject({ ok: z.literal(true) })
+    .parse(await request(`${path(id)}/requests`, undefined, command));
+}
+export async function loadRevisionEvents(roomId: string, signal?: AbortSignal) {
+  return z
+    .array(
+      z.strictObject({
+        contractId: z.string().uuid(),
+        revision: revisionRequestSchema,
+      }),
+    )
+    .parse(
+      await request(
+        `/__mock__/revision-events/${encodeURIComponent(roomId)}`,
+        signal,
+      ),
+    );
 }
 export async function loadDeliveryMedia(
   id: string,
