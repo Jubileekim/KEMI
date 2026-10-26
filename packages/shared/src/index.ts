@@ -1,5 +1,6 @@
 export * from "./application.js";
 export * from "./auth.js";
+export * from "./catalog.js";
 export * from "./chat.js";
 export * from "./delivery.js";
 export * from "./errors.js";

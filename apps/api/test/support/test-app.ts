@@ -41,6 +41,11 @@ import {
   createDeliveryService,
   type DeliveryService,
 } from "../../src/delivery/delivery.service.js";
+import {
+  type CatalogService,
+  createCatalogService,
+} from "../../src/catalog/catalog.service.js";
+import { createProjectDraftService } from "../../src/projects/project-draft.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -65,6 +70,7 @@ interface TestAppOptions {
   // 제작 마감일 테스트는 시계를 바꾼 제작 서비스를 넘긴다.
   productionService?: ProductionService;
   deliveryService?: DeliveryService;
+  catalogService?: CatalogService;
 }
 
 const EMPTY_PROJECT = {
@@ -147,6 +153,7 @@ export function createTestApp({
   fileService,
   productionService,
   deliveryService,
+  catalogService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -185,6 +192,8 @@ export function createTestApp({
       productionService ?? createProductionService({ prisma: client }),
     deliveryService:
       deliveryService ?? createDeliveryService({ prisma: client }),
+    catalogService: catalogService ?? createCatalogService({ prisma: client }),
+    projectDraftService: createProjectDraftService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

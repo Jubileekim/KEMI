@@ -45,6 +45,9 @@ const APP_TABLES = [
   "revision_files",
   "settlements",
   "reviews",
+  "service_packages",
+  "portfolios",
+  "project_drafts",
 ];
 const DATA_API_ROLES = ["anon", "authenticated"];
 // PostgreSQL 17의 테이블 권한 전체. MAINTAIN은 information_schema에 나오지 않으므로 직접 포함해 검사한다.

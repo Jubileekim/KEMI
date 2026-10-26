@@ -4,6 +4,9 @@ import createChatRouter from "./chat/chat.router.js";
 import createFileRouter from "./files/file.router.js";
 import createProductionRouter from "./production/production.router.js";
 import createDeliveryRouter from "./delivery/delivery.router.js";
+import createCatalogRouter from "./catalog/catalog.router.js";
+import type { CatalogService } from "./catalog/catalog.service.js";
+import type { ProjectDraftService } from "./projects/project-draft.service.js";
 import type { DeliveryService } from "./delivery/delivery.service.js";
 import type { ProductionService } from "./production/production.service.js";
 import type { FileService } from "./files/file.service.js";
@@ -43,6 +46,8 @@ export interface AppDependencies {
   fileService: FileService;
   productionService: ProductionService;
   deliveryService: DeliveryService;
+  catalogService: CatalogService;
+  projectDraftService: ProjectDraftService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -66,6 +71,8 @@ export function createApp({
   fileService,
   productionService,
   deliveryService,
+  catalogService,
+  projectDraftService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -109,6 +116,11 @@ export function createApp({
   app.use("/api", createProductionRouter(authService, productionService));
   // 검토·수정·최종 수령·정산·리뷰 (DEL·REV·SETTLE·REVIEW)
   app.use("/api", createDeliveryRouter(authService, deliveryService));
+  // 제작 패키지·작업물·서비스 공개, 공고 임시 저장 (PACK·PORT·CAMP-01·02)
+  app.use(
+    "/api",
+    createCatalogRouter(authService, catalogService, projectDraftService),
+  );
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }

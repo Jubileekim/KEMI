@@ -22,6 +22,8 @@ import { createChatService } from "./chat/chat.service.js";
 import { createFileService } from "./files/file.service.js";
 import { createProductionService } from "./production/production.service.js";
 import { createDeliveryService } from "./delivery/delivery.service.js";
+import { createCatalogService } from "./catalog/catalog.service.js";
+import { createProjectDraftService } from "./projects/project-draft.service.js";
 import { createSupabaseStorage } from "./files/storage.js";
 
 // 환경 변수가 있는 제공자만 켠다.
@@ -45,6 +47,15 @@ function socialProvidersOf(env: Env): SocialProviders {
 function start(env: Env) {
   const prisma = createPrismaClient(env);
 
+  // 파일 저장소(Supabase Storage). 없으면 업로드·다운로드·작업물 재생은 503
+  const storage =
+    env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+      ? createSupabaseStorage({
+          supabaseUrl: env.SUPABASE_URL,
+          serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+          bucket: env.STORAGE_BUCKET,
+        })
+      : undefined;
   const app = createApp({
     checkDatabase: async () => {
       await prisma.$queryRaw`SELECT 1`;
@@ -67,16 +78,11 @@ function start(env: Env) {
     chatService: createChatService({ prisma }),
     productionService: createProductionService({ prisma }),
     deliveryService: createDeliveryService({ prisma }),
+    catalogService: createCatalogService({ prisma, storage }),
+    projectDraftService: createProjectDraftService({ prisma }),
     fileService: createFileService({
       prisma,
-      storage:
-        env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
-          ? createSupabaseStorage({
-              supabaseUrl: env.SUPABASE_URL,
-              serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
-              bucket: env.STORAGE_BUCKET,
-            })
-          : undefined,
+      storage,
     }),
     // 테스트 시크릿 키가 있을 때만 결제를 켠다(env.ts가 live 키를 거부한다).
     paymentService: createPaymentService({
