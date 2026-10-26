@@ -70,7 +70,8 @@ interface Resolution {
   failureMessage?: string | null;
 }
 
-// Toss 결제 객체를 주문 상태로 줄인다. 승인 완료(DONE)는 주문 번호·금액이 저장한 값과 같을 때만 인정한다.
+// Toss 결제 객체를 주문 상태로 줄인다. 어떤 상태든 주문 번호·금액이 저장한 값과 같을 때만 반영한다.
+// 다르면 다른 결제의 결과일 수 있어 UNKNOWN으로 묶어 두고(새 주문 불가) 운영 확인을 기다린다.
 function fromTossPayment(
   order: PaymentRow,
   payment: TossPayment,
@@ -78,14 +79,22 @@ function fromTossPayment(
   const matches =
     payment.orderId === order.orderId &&
     payment.totalAmount === Number(order.amountKrw);
+  const mismatch = (): Resolution => {
+    console.warn("[payments] Toss payment did not match the order", {
+      orderId: order.orderId,
+      status: payment.status,
+    });
+    return {
+      status: "UNKNOWN",
+      failureCode: "PG_ORDER_MISMATCH",
+      failureMessage:
+        "결제사 조회 결과가 주문과 맞지 않습니다. 운영 확인이 필요합니다.",
+    };
+  };
+  if (!matches) return mismatch();
   switch (payment.status) {
     case "DONE":
-      if (!matches || !payment.approvedAt) {
-        console.warn("[payments] Toss DONE did not match the order", {
-          orderId: order.orderId,
-        });
-        return { status: "UNKNOWN" };
-      }
+      if (!payment.approvedAt) return mismatch();
       return {
         status: "SUCCEEDED",
         paymentKey: payment.paymentKey,
@@ -102,8 +111,14 @@ function fromTossPayment(
         failureMessage: "결제 승인이 완료되지 않았습니다.",
       };
     case "CANCELED":
-    case "PARTIAL_CANCELED":
       return { status: "CANCELED", failureCode: payment.status };
+    case "PARTIAL_CANCELED":
+      // 일부 금액이 결제된 채로 남아 있다. 새 결제를 열지 않고 운영 확인까지 보류한다.
+      return {
+        status: "UNKNOWN",
+        failureCode: payment.status,
+        failureMessage: "부분 취소된 결제입니다. 운영 확인이 필요합니다.",
+      };
     default:
       // READY·IN_PROGRESS·WAITING_FOR_DEPOSIT: 아직 끝나지 않았다.
       return order.status === "UNKNOWN" ? null : { status: "UNKNOWN" };
@@ -192,7 +207,11 @@ export function createPaymentService({
     resolution: Resolution | null,
     contract: { creatorId: bigint; workRequestId: bigint },
   ): Promise<PaymentRow> {
-    if (!resolution || resolution.status === order.status) {
+    if (
+      !resolution ||
+      (resolution.status === order.status &&
+        (resolution.failureCode ?? order.failureCode) === order.failureCode)
+    ) {
       return order;
     }
     const updated = await tx.payment.update({
@@ -396,29 +415,44 @@ export function createPaymentService({
       });
     },
 
-    // Toss failUrl로 돌아온 경우(사용자 취소·인증 실패). 승인 요청 전(READY) 주문만 닫는다.
+    // Toss failUrl로 돌아온 경우(사용자 취소·인증 실패). 브라우저 값은 사용자 의사 기록·조회 계기로만 쓴다.
+    // Toss 조회로 결제 기록이 없거나(NOT_FOUND_PAYMENT) 미승인으로 끝났음을 확인해야 주문을 닫는다.
+    // 그 전에는 UNKNOWN으로 묶어 새 주문(이중 결제)을 막는다.
     async fail(user, orderId, input) {
       const data = paymentFailSchema.parse(input);
       return inTransaction(async (tx) => {
         const { order, contract } = await lockOrder(tx, user, orderId);
         requireClient(user, contract);
-        if (order.status !== "READY") {
-          throw new AppError(
-            409,
-            "CONFLICT",
-            "승인 요청 전인 주문만 취소·실패로 닫을 수 있습니다.",
-          );
+        // 이미 결과가 정해진 주문(늦게 온 fail 콜백)은 그대로 준다.
+        if (order.status !== "READY" && order.status !== "UNKNOWN") {
+          return toOrder(order);
         }
-        const updated = await tx.payment.update({
-          where: { id: order.id },
-          data: {
+        const reported = {
+          failureCode: data.code,
+          failureMessage: data.message ?? null,
+        };
+        let resolution: Resolution = { status: "UNKNOWN", ...reported };
+        const outcome: TossOutcome = toss
+          ? await toss.getByOrderId(order.orderId)
+          : { kind: "unavailable" };
+        if (
+          outcome.kind === "rejected" &&
+          outcome.code === "NOT_FOUND_PAYMENT"
+        ) {
+          resolution = {
             status:
               data.code === "PAY_PROCESS_CANCELED" ? "CANCELED" : "FAILED",
-            failureCode: data.code,
-            failureMessage: data.message ?? null,
-          },
-        });
-        return toOrder(updated);
+            ...reported,
+          };
+        } else if (outcome.kind === "payment") {
+          const fromPg = fromTossPayment(order, outcome.payment);
+          // 아직 진행 중(READY·IN_PROGRESS)이면 브라우저가 알린 코드를 남기고 UNKNOWN으로 둔다.
+          if (fromPg && (fromPg.status !== "UNKNOWN" || fromPg.failureCode)) {
+            resolution = fromPg;
+          }
+        }
+        // 조회 실패·키 오류·그 밖의 거절은 결과를 모르는 것이다(UNKNOWN). 나중에 sync로 맞춘다.
+        return toOrder(await apply(tx, order, resolution, contract));
       });
     },
   };
