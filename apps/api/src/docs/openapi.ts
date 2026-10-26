@@ -37,6 +37,14 @@ import {
   USER_ROLES,
   USER_STATUSES,
   CONTRACT_STATUSES,
+  DELIVERABLE_KINDS,
+  DELIVERABLE_STATUSES,
+  deliverableCreateSchema,
+  REVISION_STATUSES,
+  REVISION_TYPES,
+  revisionRequestCreateSchema,
+  reviewCreateSchema,
+  SETTLEMENT_STATUSES,
   DEADLINE_CHANGE_STATUSES,
   deadlineChangeCreateSchema,
   MATERIAL_KINDS,
@@ -249,6 +257,11 @@ const openApiDocument = {
       name: "chat",
       description:
         "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
+    },
+    {
+      name: "delivery",
+      description:
+        "검토·수정·최종 수령·모의 정산·리뷰 (계약 단위, DEL-01~05, REV-01~02, SETTLE-01, REVIEW-01)",
     },
     {
       name: "production",
@@ -1123,6 +1136,159 @@ const openApiDocument = {
           400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
           ...bearerErrors,
           404: errorResponse("방·메시지가 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/delivery": {
+      get: {
+        tags: ["delivery"],
+        summary: "납품·수정·정산·리뷰 현황",
+        description:
+          "계약 당사자가 본다. 버전 목록(초안·검토본·최종본), 수정 요청(체크리스트·첨부·회차 차감 여부), 일반 수정 회차(계약·사용·남음), 모의 정산, 리뷰, 리뷰 가능 여부.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+          ...bearerErrors,
+          404: errorResponse("계약이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/deliverables": {
+      post: {
+        tags: ["delivery"],
+        summary: "버전 제출 (DEL-01·02)",
+        description:
+          "크리에이터. 확인이 끝난 본인 DELIVERABLE 파일을 묶어 버전으로 정식 제출한다(파일 업로드만으로는 납품이 아니다). 수정 요청이 열려 있으면 이 버전이 수정본이 되고 요청은 RESOLVED(일반 회차는 이때 한 번 차감). 같은 `commandId` 재전송은 새 버전·차감을 만들지 않는다. 최종본(FINAL)은 검토본 승인 뒤에만, 승인 뒤에는 최종본만 낼 수 있다. 제작 중(IN_PROGRESS)에만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(deliverableCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+          400: errorResponse("입력값·파일 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·버전이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/deliverables/{deliverableId}/revision-requests":
+      {
+        post: {
+          tags: ["delivery"],
+          summary: "수정 요청 (REV-01·02)",
+          description:
+            "의뢰인. 최신 버전(검토 대기)에만. 체크리스트(영상 위치·현재 문제·원하는 변경)와 REVISION 첨부. 초안에는 초안 의견(DRAFT_FEEDBACK), 검토본에는 일반 수정(GENERAL)·계약 오류 시정(CONTRACT_FIX), 최종본에는 CONTRACT_FIX만. 일반 수정만 계약 회차에서 차감하며 남은 회차가 없으면 409. 수정본을 기다리는 요청은 하나뿐이다.",
+          security: [{ bearerAuth: [] }],
+          parameters: [idParam("contractId"), idParam("deliverableId")],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: requestSchema(revisionRequestCreateSchema),
+              },
+            },
+          },
+          responses: {
+            201: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+            400: errorResponse("입력값·파일 오류 (`VALIDATION_FAILED`)"),
+            ...bearerErrors,
+            403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+            404: errorResponse(
+              "계약·버전이 없거나 당사자가 아님 (`NOT_FOUND`)",
+            ),
+            409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+          },
+        },
+      },
+    "/api/contracts/{contractId}/deliverables/{deliverableId}/approve": {
+      post: {
+        tags: ["delivery"],
+        summary: "검토본 승인 (DEL-03)",
+        description:
+          "의뢰인. 최신 검토본만. 승인만으로는 정산되지 않는다. 이후 크리에이터가 깨끗한 최종본을 낸다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("deliverableId")],
+        responses: {
+          200: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·버전이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/deliverables/{deliverableId}/receive": {
+      post: {
+        tags: ["delivery"],
+        summary: "최종본 수령 확인 (DEL-04·05, SETTLE-01)",
+        description:
+          "의뢰인. 최신 최종본만. 채팅의 동의·다운로드로 대신할 수 없다. 결제 완료·보류 없음이면 계약 당시 요율(10%)로 모의 정산(원 단위 내림 [제안, D12])하고 거래를 COMPLETED로 닫는다. 정산할 수 없으면 DELIVERED로 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("deliverableId")],
+        responses: {
+          200: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·버전이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/reviews": {
+      post: {
+        tags: ["delivery"],
+        summary: "리뷰 작성 (REVIEW-01)",
+        description:
+          "완료(COMPLETED)된 거래의 당사자가 상대방을 한 번 평가한다. 평점 1~5 정수 [제안, D14].",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(reviewCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse("납품·수정·정산·리뷰 현황", "Delivery"),
+          400: errorResponse("입력값·파일 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("계약·버전이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/settlements/me": {
+      get: {
+        tags: ["delivery"],
+        summary: "내 모의 정산 내역",
+        description:
+          "내가 당사자인 거래의 모의 정산(거래 금액·수수료·지급 예정액). 실제 송금이 아니다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("정산 내역", "SettlementListResponse"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/users/{userId}/reviews": {
+      get: {
+        tags: ["delivery"],
+        summary: "받은 리뷰 (공개)",
+        description: "프로필 화면용. 평균 평점·개수와 최근 50개.",
+        parameters: [idParam("userId")],
+        responses: {
+          200: jsonResponse("받은 리뷰", "ReviewListResponse"),
+          400: errorResponse("ID 오류 (`VALIDATION_FAILED`)"),
         },
       },
     },
@@ -2004,6 +2170,190 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/ChatMessage" },
           },
           hasMore: { type: "boolean" },
+        },
+      },
+      Deliverable: {
+        type: "object",
+        required: [
+          "id",
+          "versionNo",
+          "kind",
+          "status",
+          "fileIds",
+          "note",
+          "resolvesRevisionRequestId",
+          "createdAt",
+          "approvedAt",
+          "receivedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          versionNo: { type: "integer" },
+          kind: { type: "string", enum: [...DELIVERABLE_KINDS] },
+          status: { type: "string", enum: [...DELIVERABLE_STATUSES] },
+          fileIds: { type: "array", items: { type: "string" } },
+          note: { type: ["string", "null"] },
+          resolvesRevisionRequestId: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+          approvedAt: { type: ["string", "null"], format: "date-time" },
+          receivedAt: { type: ["string", "null"], format: "date-time" },
+        },
+      },
+      RevisionRequest: {
+        type: "object",
+        required: [
+          "id",
+          "deliverableId",
+          "type",
+          "status",
+          "items",
+          "fileIds",
+          "note",
+          "countsTowardLimit",
+          "createdAt",
+          "resolvedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          deliverableId: { type: "string" },
+          type: { type: "string", enum: [...REVISION_TYPES] },
+          status: { type: "string", enum: [...REVISION_STATUSES] },
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["problem", "desired"],
+              properties: {
+                position: { type: "string" },
+                problem: { type: "string" },
+                desired: { type: "string" },
+              },
+            },
+          },
+          fileIds: { type: "array", items: { type: "string" } },
+          note: { type: ["string", "null"] },
+          countsTowardLimit: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+          resolvedAt: { type: ["string", "null"], format: "date-time" },
+        },
+      },
+      Settlement: {
+        type: "object",
+        required: [
+          "contractId",
+          "status",
+          "grossKrw",
+          "feeRateBps",
+          "feeKrw",
+          "payoutKrw",
+          "createdAt",
+        ],
+        properties: {
+          contractId: { type: "string" },
+          status: { type: "string", enum: [...SETTLEMENT_STATUSES] },
+          grossKrw: { type: "integer" },
+          feeRateBps: { type: "integer", description: "만분율. 1000 = 10%" },
+          feeKrw: { type: "integer" },
+          payoutKrw: { type: "integer" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      Review: {
+        type: "object",
+        required: [
+          "id",
+          "contractId",
+          "reviewerId",
+          "revieweeId",
+          "rating",
+          "comment",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          contractId: { type: "string" },
+          reviewerId: { type: "string" },
+          revieweeId: { type: "string" },
+          rating: { type: "integer", minimum: 1, maximum: 5 },
+          comment: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      Delivery: {
+        type: "object",
+        required: [
+          "contractId",
+          "workRequestId",
+          "productionStatus",
+          "revisionLimit",
+          "revisionsUsed",
+          "revisionsRemaining",
+          "deliverables",
+          "revisionRequests",
+          "settlement",
+          "reviews",
+          "canReview",
+        ],
+        properties: {
+          contractId: { type: "string" },
+          workRequestId: { type: "string" },
+          productionStatus: { type: "string", enum: [...PRODUCTION_STATUSES] },
+          revisionLimit: { type: "integer" },
+          revisionsUsed: { type: "integer" },
+          revisionsRemaining: { type: "integer" },
+          deliverables: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Deliverable" },
+          },
+          revisionRequests: {
+            type: "array",
+            items: { $ref: "#/components/schemas/RevisionRequest" },
+          },
+          settlement: {
+            oneOf: [
+              { $ref: "#/components/schemas/Settlement" },
+              { type: "null" },
+            ],
+          },
+          reviews: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Review" },
+          },
+          canReview: { type: "boolean" },
+        },
+      },
+      SettlementListResponse: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              allOf: [
+                { $ref: "#/components/schemas/Settlement" },
+                {
+                  type: "object",
+                  required: ["workRequestId", "title"],
+                  properties: {
+                    workRequestId: { type: "string" },
+                    title: { type: "string" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      ReviewListResponse: {
+        type: "object",
+        required: ["averageRating", "count", "items"],
+        properties: {
+          averageRating: { type: ["number", "null"] },
+          count: { type: "integer" },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Review" },
+          },
         },
       },
       Production: {

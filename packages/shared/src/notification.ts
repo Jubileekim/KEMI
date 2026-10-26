@@ -23,6 +23,11 @@ export const NOTIFICATION_TYPES = [
   "TERMS_SIGNING_REQUESTED",
   "CONTRACT_SIGNED",
   "PAYMENT_SUCCEEDED",
+  "DELIVERABLE_SUBMITTED",
+  "REVISION_REQUESTED",
+  "DELIVERABLE_APPROVED",
+  "DELIVERY_RECEIVED",
+  "REVIEW_RECEIVED",
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;

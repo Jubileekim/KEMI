@@ -21,6 +21,7 @@ import { createTossClient } from "./payments/toss.js";
 import { createChatService } from "./chat/chat.service.js";
 import { createFileService } from "./files/file.service.js";
 import { createProductionService } from "./production/production.service.js";
+import { createDeliveryService } from "./delivery/delivery.service.js";
 import { createSupabaseStorage } from "./files/storage.js";
 
 // 환경 변수가 있는 제공자만 켠다.
@@ -65,6 +66,7 @@ function start(env: Env) {
     termsService: createTermsService({ prisma }),
     chatService: createChatService({ prisma }),
     productionService: createProductionService({ prisma }),
+    deliveryService: createDeliveryService({ prisma }),
     fileService: createFileService({
       prisma,
       storage:
