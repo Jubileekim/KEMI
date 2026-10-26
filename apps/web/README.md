@@ -11,7 +11,7 @@ npm run dev:web
 ```
 
 `http://localhost:5173`에서 열린다. API 서버 없이도 화면 개발이 가능하다.
-`API 연결 확인`은 API가 실행 중이어야 성공한다. 브라우저 새로고침 시 폼·화면 상태는 초기화된다.
+`API 연결 확인`은 개발 전용 `/__dev/health`로 이동했다. 해당 진단은 API가 실행 중이어야 성공한다. 브라우저 새로고침 시 폼·화면 상태는 초기화된다.
 
 백엔드를 함께 실행할 때는 [API 실행 안내](../api/README.md)에 따라 별도 터미널에서 `npm run dev:api`를 실행한다. DB 접속 정보는 API 담당자에게 받는다. 프론트엔드 `.env`에 DB 비밀번호나 JWT 비밀값을 넣지 않는다.
 
@@ -24,7 +24,7 @@ Copy-Item apps/web/.env.example apps/web/.env.local
 
 브라우저는 `/api/*`로 호출하고 Vite가 API 서버로 전달한다. `/health`, `/health/ready`도 로컬에서 같은 서버로 전달한다. 경로에서 `/api`를 제거하지 않는다. `Origin`은 그대로 유지하므로 추후 인증 API의 허용 출처에 `http://localhost:5173`을 등록해야 한다.
 
-`API_PROXY_TARGET`은 개발 서버 전용이다. `VITE_*` 값은 번들에 공개되므로 비밀값을 넣지 않는다. 현재 클라이언트 환경 변수는 필요 없다. ([Vite 공식 문서](https://vite.dev/guide/env-and-mode))
+`API_PROXY_TARGET`은 개발 서버 전용이다. `VITE_*` 값은 번들에 공개되므로 비밀값을 넣지 않는다. 0-C Mock 실행용 `VITE_ENABLE_MOCKS`와 향후 Origin용 `VITE_API_BASE_URL`은 `.env.example`과 [기반 실행 안내](../../docs/frontend-setup.md)를 참고한다. ([Vite 공식 문서](https://vite.dev/guide/env-and-mode))
 
 ## 명령어 (저장소 루트)
 
@@ -94,19 +94,19 @@ npm run test:web:e2e
 
 ## Vercel 배포·운영 현황
 
-**2026-10-23 최초 Production 배포 완료 (`Ready`, 사용자 대시보드 확인).** 운영 주소는 **https://kemi-web-sigma.vercel.app/** 이다. 배포·연동·후속 검증 현황과 기록은 [배포 환경 및 운영 기록](../../docs/runbooks/deployment-environments.md)에서 관리한다.
+- 프론트엔드 Production: https://kemi-web-sigma.vercel.app/ (`kemi-web`, `main`)
+- 최초 Production: 2026-10-23, `73057fe`. FE 통합 PR #50 병합 후 2026-10-26 `4360bdc` 배포 완료.
+- Vercel 팀: `KEMI` (Hobby); GitHub 저장소 `Jubileekim/KEMI`. 무료 플랜은 비상업적 시연 용도에 한정된다.
+- Root Directory: `apps/web`, Framework: Vite, Node.js: 저장소 `.nvmrc` 기준 24.
+- Install: `cd ../.. && npm ci --include=dev`, Build: `cd ../.. && npm run build:web`, Output: `dist`.
+- 백엔드 Render: https://kemi-api.onrender.com (서비스 `kemi-api`, `main`).
+- `apps/web/vercel.json`의 `/api/:path*` rewrite가 Render의 같은 경로로 전달되며, SPA fallback보다 먼저 적용된다.
+- Render `APP_ORIGIN`은 `https://kemi-web-sigma.vercel.app`이며 끝에 `/`를 넣지 않는다.
+- `/health`와 `/health/ready`는 각각 서버 실행·DB 접속만 검사한다. 실제 API는 운영 DB 스키마 불일치로 실패할 수 있다.
+- FE Mock 화면은 개발용이다. Vercel Production 배포 성공이 인증·계약·결제 E2E 성공을 뜻하지 않는다.
+- 배포 정보·남은 검증·장애 대응: [KEMI 배포 환경 운영 기록](../../docs/runbooks/deployment-environments.md).
 
-- Vercel 팀: `KEMI` (Pro Trial), 프로젝트: `kemi-web`, 연결 저장소: `Jubileekim/KEMI`, Production Branch: `main`.
-- Root Directory: `apps/web`; 모노레포 루트 및 `packages/shared` 접근 설정을 확인한다.
-- Install Command: `cd ../.. && npm ci --include=dev`
-- Build Command: `cd ../.. && npm run build:web`
-- Output Directory: `dist`; Framework: `Vite`; Node.js: 저장소 `.nvmrc`는 24.
-- 최초 확인 커밋: [`73057fe`](https://github.com/Jubileekim/KEMI/commit/73057fe69916631b553723c8e14869629c17de53).
-- API 서버 주소는 아직 확정되지 않았다. 현재 프로덕션 초기 화면 표시만 성공했으며 실제 API·인증 검증을 마쳤다는 의미는 아니다.
-
-Render 주소가 확정되면 `vercel.json`의 `/api/:path*` rewrite를 Render의 같은 경로로 전달하도록 추가하고, **SPA fallback보다 먼저** 두어야 한다. SPA fallback 기본 구성은 [PR #32](https://github.com/Jubileekim/KEMI/pull/32)에서 검토 중이며, `main` 반영 이후 실제 페이지 직접 진입·새로고침을 검증한다.
-
-배포 연결은 Render 서비스 주소의 `/health`를 직접 열어 확인하고, DB 준비 상태는 `/health/ready`로 확인한다. `/api/health`를 사용하지 않는다. Render의 `APP_ORIGIN`에는 `https://kemi-web-sigma.vercel.app` (끝 슬래시 없음)을 넣고, 로그인 화면 구현 이후 쿠키·Origin 검사·OAuth 콜백을 검증한다.
+실제 로그인, 쿠키·Origin 검사, OAuth 콜백, 공개 페이지 새로고침, API 응답은 별도로 검증한다. [Vercel rewrite 공식 문서](https://vercel.com/docs/rewrites)
 
 ## CI와 작업 방식
 
