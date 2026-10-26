@@ -1208,7 +1208,7 @@ const openApiDocument = {
         tags: ["payments"],
         summary: "결제 취소·실패 기록",
         description:
-          "Toss failUrl로 돌아온 `code`·`message`를 기록하고 승인 전(`READY`) 주문을 닫는다. `PAY_PROCESS_CANCELED`면 `CANCELED`, 그 밖에는 `FAILED`. 닫힌 뒤에는 새 주문을 만들 수 있다. 의뢰인만 부를 수 있다.",
+          "Toss failUrl로 돌아온 `code`·`message`를 기록하고, 서버가 Toss 주문 조회로 결과를 확인한다(브라우저 값만으로 닫지 않는다). 결제 기록이 없으면(`NOT_FOUND_PAYMENT`) `PAY_PROCESS_CANCELED`는 `CANCELED`, 그 밖에는 `FAILED`. 주문과 맞는 `ABORTED`·`EXPIRED`는 `FAILED`, 이미 승인(`DONE`)됐으면 `SUCCEEDED`. 조회가 안 되거나 진행 중·불일치·부분 취소면 `UNKNOWN`으로 두어 새 주문을 막는다(나중에 sync). 이미 끝난 주문은 그대로 돌려준다. 의뢰인만 부를 수 있다.",
         security: [{ bearerAuth: [] }],
         parameters: [orderIdParam],
         requestBody: {
