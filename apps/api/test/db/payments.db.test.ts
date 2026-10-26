@@ -91,7 +91,7 @@ async function signedContract() {
     });
   const requestId = String(applied.body.id);
   await request(app)
-    .post(`/api/applications/${requestId}/accept`)
+    .post(`/api/applications/${requestId}/discuss`)
     .set(auth(client.token));
   await request(app)
     .post(`/api/work-requests/${requestId}/terms/versions`)

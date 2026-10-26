@@ -13,6 +13,7 @@ import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
+import { voidOpenTerms } from "../terms/terms.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -86,8 +87,12 @@ export interface ApplicationService {
     projectId: bigint,
   ): Promise<ProjectApplicationListResponse>;
   listMine(user: AuthUser, input: unknown): Promise<MyApplicationListResponse>;
-  accept(user: AuthUser, applicationId: bigint): Promise<Application>;
+  requestDiscussion(
+    user: AuthUser,
+    applicationId: bigint,
+  ): Promise<Application>;
   decline(user: AuthUser, applicationId: bigint): Promise<Application>;
+  withdraw(user: AuthUser, applicationId: bigint): Promise<Application>;
 }
 
 export function createApplicationService({
@@ -122,26 +127,28 @@ export function createApplicationService({
     return { project, application };
   }
 
-  function requirePending(status: string) {
-    if (status !== "PENDING") {
+  function requireStatus(status: string, allowed: readonly string[]) {
+    if (!allowed.includes(status)) {
       throw new AppError(409, "CONFLICT", "이미 처리된 지원입니다.");
     }
   }
 
-  // 지원자를 선정·거절할 수 있는 단계인지: 모집 중(OPEN)이거나 직접 마감(CLOSED + MANUAL)이어야 한다.
-  // 선정 후(MATCHED)·계약(CONTRACTED)·무선정 종료(CLOSED + NO_SELECTION)·기한 종료(CLOSED + EXPIRED)에는 처리할 수 없다.
-  function requireSelectable(project: {
+  // 지원을 처리(협의 요청·거절)할 수 있는 프로젝트인지: 모집 중(OPEN)이거나 마감(CLOSED + MANUAL·EXPIRED)이어야 한다.
+  // 마감은 신규 지원만 막고 이미 들어온 지원은 계속 처리할 수 있다(CAMP-05).
+  // 계약(CONTRACTED)·무선정 종료(CLOSED + NO_SELECTION)·삭제된 프로젝트는 처리할 수 없다.
+  function requireDecidable(project: {
     status: string;
     closeReason: string | null;
   }) {
     const status = projectStatusSchema.parse(project.status);
-    const manuallyClosed =
-      status === "CLOSED" && project.closeReason === "MANUAL";
-    if (status !== "OPEN" && !manuallyClosed) {
+    const closedButOpenForDecision =
+      status === "CLOSED" &&
+      (project.closeReason === "MANUAL" || project.closeReason === "EXPIRED");
+    if (status !== "OPEN" && !closedButOpenForDecision) {
       throw new AppError(
         409,
         "CONFLICT",
-        "이미 지원자를 선정했거나 종료된 프로젝트입니다.",
+        "계약이 확정됐거나 종료된 프로젝트입니다.",
       );
     }
   }
@@ -256,9 +263,10 @@ export function createApplicationService({
       };
     },
 
-    // APPLY-02 수락: 선정 지원은 협의 단계(DISCUSSING)로, 프로젝트는 거래 단계(MATCHED)로,
-    // 나머지 대기 지원은 자동 거절(NOT_SELECTED)로 한 트랜잭션에서 바꾼다.
-    async accept(user, applicationId) {
+    // APPLY-02 협의 요청: 그 지원만 협의 중(DISCUSSING)으로 바꾼다. 선정이 아니다.
+    // 프로젝트 상태와 다른 지원은 그대로이고, 여러 후보와 동시에 협의할 수 있다(기능명세서 P07).
+    // 선정은 같은 조건서 버전에 양측이 서명할 때 일어난다(결정 기록 13장).
+    async requestDiscussion(user, applicationId) {
       const clientId = requireRole(user, "CLIENT");
       return inTransaction(async (tx) => {
         const { project, application } = await lockOwnApplication(
@@ -266,61 +274,29 @@ export function createApplicationService({
           clientId,
           applicationId,
         );
-        requireSelectable(project);
-        requirePending(application.status);
-        const respondedAt = now();
-
-        const others = await tx.workRequest.findMany({
-          where: {
-            projectId: project.id,
-            status: "PENDING",
-            id: { not: applicationId },
-          },
-          select: { id: true, creatorId: true },
-        });
-        await tx.workRequest.updateMany({
-          where: { id: { in: others.map((other) => other.id) } },
-          data: {
-            status: "NOT_SELECTED",
-            closedReason: "OTHER_SELECTED",
-            respondedAt,
-          },
-        });
-        const accepted = await tx.workRequest.update({
+        requireDecidable(project);
+        requireStatus(application.status, ["PENDING"]);
+        const discussing = await tx.workRequest.update({
           where: { id: applicationId },
-          data: { status: "DISCUSSING", respondedAt },
+          data: { status: "DISCUSSING", respondedAt: now() },
           include: includeCreator,
-        });
-        // 직접 마감한 프로젝트에서 선정하면 마감 사유를 지운다(MATCHED에는 사유가 없다, projects_close_state_check).
-        await tx.project.update({
-          where: { id: project.id },
-          data: { status: "MATCHED", closeReason: null },
         });
         await notify(tx, [
           {
-            recipientUserId: accepted.creatorId,
-            type: "APPLICATION_ACCEPTED",
-            eventKey: `application:${accepted.id}:accepted`,
-            title: "지원이 선정되었습니다",
-            body: `'${project.title}' 프로젝트에 선정되었습니다. 조건 협의를 진행해주세요.`,
+            recipientUserId: discussing.creatorId,
+            type: "DISCUSSION_REQUESTED",
+            eventKey: `application:${discussing.id}:discussion-requested`,
+            title: "의뢰인이 협의를 요청했습니다",
+            body: `'${project.title}' 프로젝트의 의뢰인이 조건 협의를 요청했습니다.`,
             projectId: project.id,
-            workRequestId: accepted.id,
+            workRequestId: discussing.id,
           },
-          ...others.map((other) => ({
-            recipientUserId: other.creatorId,
-            type: "APPLICATION_AUTO_REJECTED" as const,
-            eventKey: `application:${other.id}:auto-rejected`,
-            title: "다른 지원자가 선정되었습니다",
-            body: `'${project.title}' 프로젝트는 다른 지원자가 선정되어 모집이 종료되었습니다.`,
-            projectId: project.id,
-            workRequestId: other.id,
-          })),
         ]);
-        return toApplication(accepted);
+        return toApplication(discussing);
       });
     },
 
-    // APPLY-02 거절: 대기 중인 지원만 직접 거절한다. 프로젝트 상태는 바꾸지 않는다.
+    // APPLY-03 거절: 대기·협의 중인 지원을 거절한다. 프로젝트 상태는 바꾸지 않는다. 미확정 조건서는 무효가 된다.
     async decline(user, applicationId) {
       const clientId = requireRole(user, "CLIENT");
       return inTransaction(async (tx) => {
@@ -329,8 +305,9 @@ export function createApplicationService({
           clientId,
           applicationId,
         );
-        requireSelectable(project);
-        requirePending(application.status);
+        requireDecidable(project);
+        requireStatus(application.status, ["PENDING", "DISCUSSING"]);
+        await voidOpenTerms(tx, [applicationId]);
         const declined = await tx.workRequest.update({
           where: { id: applicationId },
           data: { status: "DECLINED", respondedAt: now() },
@@ -348,6 +325,44 @@ export function createApplicationService({
           },
         ]);
         return toApplication(declined);
+      });
+    },
+
+    // APPLY-03 철회: 크리에이터가 계약 전(대기·협의 중) 본인 지원을 거둔다. 의뢰인에게 알린다.
+    async withdraw(user, applicationId) {
+      const creatorId = requireRole(user, "CREATOR");
+      return inTransaction(async (tx) => {
+        const found = await tx.workRequest.findUnique({
+          where: { id: applicationId },
+          select: { projectId: true, creatorId: true },
+        });
+        if (!found?.projectId || found.creatorId !== creatorId) {
+          throw notFound("지원");
+        }
+        const project = await lockProject(tx, found.projectId);
+        if (!project) throw notFound("지원");
+        const application = await tx.workRequest.findUniqueOrThrow({
+          where: { id: applicationId },
+        });
+        requireStatus(application.status, ["PENDING", "DISCUSSING"]);
+        await voidOpenTerms(tx, [applicationId]);
+        const withdrawn = await tx.workRequest.update({
+          where: { id: applicationId },
+          data: { status: "WITHDRAWN", respondedAt: now() },
+          include: includeCreator,
+        });
+        await notify(tx, [
+          {
+            recipientUserId: withdrawn.clientId,
+            type: "APPLICATION_WITHDRAWN",
+            eventKey: `application:${withdrawn.id}:withdrawn`,
+            title: "지원이 철회되었습니다",
+            body: `'${project.title}' 프로젝트의 지원 하나가 철회되었습니다.`,
+            projectId: project.id,
+            workRequestId: withdrawn.id,
+          },
+        ]);
+        return toApplication(withdrawn);
       });
     },
   };
