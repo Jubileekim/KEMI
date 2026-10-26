@@ -38,5 +38,13 @@
     "errors": ["5000ms timeout", "ECONNRESET"],
     "outsideSandbox": "75 passed, 12 failed",
     "changedApiSharedFiles": 0
+  },
+  "fullRegression": {
+    "exitCode": 0,
+    "mobile": 148,
+    "desktop": 148,
+    "passed": 296,
+    "summary": "296 passed (47.3m)",
+    "failed": 0
   }
 }

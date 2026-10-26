@@ -777,3 +777,11 @@
 
 - 기존 관련 [Draft PR #65](https://github.com/Jubileekim/KEMI/pull/65)는 open·미병합·base main, head `a492cf0`였다. 접근 개선을 다루는 열린 PR은 없어 해당 선행 코드 위에 `feat/frontend-screen-access`를 생성했다. 새 PR은 선행4-D와 접근 보완의 diff를 분리하도록 #65 브랜치를 base로 한다. 선행 병합 후 base main 변경 검토가 필요하다.
 - 기능/접근 검사 [4574df1](https://github.com/Jubileekim/KEMI/commit/4574df1)을 커밋·푸시했다. 전체 검증·문서/QA 전달과 Draft PR 상태는 아래 최종 기록에 추가한다. 병합·자동 병합·명시적 배포/재배포·다음 작업 자동 착수는 하지 않는다.
+
+### 접근 개선 최종 회귀·전달
+
+- **고정 기능 SHA `4574df1` 전체 회귀:** Edge 데스크톱148+모바일148 = **296/296·실패0·exit0·47.3분**을 단일 실행으로 통과했다. 기존288개와 신규 접근8개를 포함하며 앞선 부분/중단 실행과 합산하지 않았다. 빌드를 모두 끝내고 새 Vite 서버에서 실행해 중단 실행의 세션 fixture 실패 없이 완료했다. 모든 결과를 확인한 후 Windows 종료 대기 중인 이번 전용5192 Vite만 정리해 러너 exit0과 `status: passed / failedTests: []`를 회수했다. 전용4197 preview와5193 접근 검사 서버도 정리했다.
+- [최종 전체 회귀 근거](../qa/frontend-access/full-e2e.json), [단위·운영·이전 실패 구분](../qa/frontend-access/verification.json)에 명령·고정 소스·역할·집계·제한을 보존했다. 기본/두 flag build:web·193개 단위·신규8개 집중 검사·운영 auth 미설정1/독립HTTP4역할·변경 파일 형식/diff·토큰 결과는 위와 같다. 기존 MSW favicon/React DevTools 경고는 남아 전체 콘솔 경고0으로 표시하지 않는다. 실제 서버/API/DB/외부 제공자 검증은 아니다.
+- 기능 [4574df1](https://github.com/Jubileekim/KEMI/commit/4574df1), 경로표/운영 QA/진행 기록 [cd0dd15](https://github.com/Jubileekim/KEMI/commit/cd0dd15)을 커밋·푸시하고 [Draft PR #66](https://github.com/Jubileekim/KEMI/pull/66)을 생성·이 채팅에 연결했다. open·Draft·미병합이며 base는 선행 `feat/frontend-4d-final-receipt`의 `a492cf0`다. 기능 소스는 추가 변경 없이 최종 회귀 결과만 문서/QA 커밋으로 전달한다. 최신 전달 커밋은 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/66/commits)에서 확인한다.
+- 현재 PR base는 기존 Web CI pull_request 필터에 없어 자동 Web CI 대상이 아니다. 로컬 전체 회귀와 원격 CI는 구분하며 최신 원격 실행/상태는 [Checks](https://github.com/Jubileekim/KEMI/pull/66/checks)에서 확인한다. CI 설정·수동 재실행/배포 설정을 바꾸지 않는다. 선행 #65가 병합되면 base main 조정 검토가 남는다. API 단위 timeout/ECONNRESET, 기존 미추적6개 포맷, 운영 API/미구현·정책 경계도 남으며 전체 저장소 검사 통과로 표시하지 않는다.
+- 종료 범위는 기존 화면 접근 안내·연결 보완이다. 추적 소스 변경 없이 마지막 결과 기록을 커밋·푸시하고 로컬/원격 추적/PR head 일치를 확인한다. 기존 `outputs/`, `tools/`는 보존·전달 제외하며 병합·자동 병합·명시적 배포/재배포·다음 작업 자동 착수는 하지 않는다.
