@@ -593,6 +593,8 @@ export function createCancelService({
               cancellationId,
               paymentId: payment.id,
               amountKrw: target.refundKrw,
+              // 조회 대기 판정(REFUND_SYNC_GRACE_MS)은 서버 시계로 한다(DB 시계와 섞지 않는다).
+              updatedAt: now(),
             },
           });
           return refund.id;
@@ -618,7 +620,11 @@ export function createCancelService({
         // 1단계: 새 시도 번호(새 멱등 키)를 먼저 커밋한다.
         await tx.refund.update({
           where: { id: refund.id },
-          data: { status: "REQUESTED", attempt: refund.attempt + 1 },
+          data: {
+            status: "REQUESTED",
+            attempt: refund.attempt + 1,
+            updatedAt: now(),
+          },
         });
         return refund.id;
       });
