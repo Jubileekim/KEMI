@@ -185,6 +185,7 @@ describe("직접 의뢰 (DIRECT-01~03)", () => {
         status: "CONFIRMED",
         confirmedAt: new Date(),
         submittedBy: client.userId,
+        commandId: randomUUID(),
       },
     });
     await post(creator.token, `/api/contracts/${contractId}/production/start`);
