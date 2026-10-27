@@ -49,6 +49,12 @@ export default function createProjectRouter(
     res.json(await projectService.close(user, projectId));
   });
 
+  router.post("/:projectId/end-without-selection", async (req, res) => {
+    const user = await authService.authenticate(readBearerToken(req));
+    const projectId = projectIdSchema.parse(req.params.projectId);
+    res.json(await projectService.endWithoutSelection(user, projectId));
+  });
+
   router.delete("/:projectId", async (req, res) => {
     const user = await authService.authenticate(readBearerToken(req));
     const projectId = projectIdSchema.parse(req.params.projectId);

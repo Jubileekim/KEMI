@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { VIDEO_PURPOSES, VIDEO_STYLES } from "@kemi/shared";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -75,9 +76,19 @@ function apply(token: string, projectId: bigint, body: object = APPLICATION) {
     .send(body);
 }
 
-const accept = (token: string, applicationId: string) =>
+const discuss = (token: string, applicationId: string) =>
   request(app)
-    .post(`/api/applications/${applicationId}/accept`)
+    .post(`/api/applications/${applicationId}/discuss`)
+    .set(auth(token));
+
+const withdraw = (token: string, applicationId: string) =>
+  request(app)
+    .post(`/api/applications/${applicationId}/withdraw`)
+    .set(auth(token));
+
+const endWithoutSelection = (token: string, projectId: bigint) =>
+  request(app)
+    .post(`/api/projects/${projectId}/end-without-selection`)
     .set(auth(token));
 
 const decline = (token: string, applicationId: string) =>
@@ -258,138 +269,214 @@ describe("지원 내역 조회", () => {
   });
 });
 
-describe("선정·거절 (APPLY-02, STATE-01)", () => {
-  it("선정하면 프로젝트는 거래 단계, 나머지 대기 지원은 자동 거절되고 각자 알림을 받는다", async () => {
+// 조건서를 하나 저장해 둔다(협의가 끝나면 무효가 되는지 보려고).
+async function saveTerms(token: string, applicationId: string) {
+  const res = await request(app)
+    .post(`/api/work-requests/${applicationId}/terms/versions`)
+    .set(auth(token))
+    .send({
+      commandId: randomUUID(),
+      baseVersionNo: 0,
+      values: {
+        amountKrw: 45_000,
+        specification: null,
+        scope: null,
+        materials: null,
+        deadline: null,
+        revisions: null,
+        usageRights: null,
+        cancellation: null,
+      },
+    });
+  expect(res.status).toBe(201);
+}
+
+const termsStatusesOf = async (applicationId: string) =>
+  (
+    await prisma.termsVersion.findMany({
+      where: { workRequestId: BigInt(applicationId) },
+    })
+  ).map((row) => row.status);
+
+describe("협의 요청 (APPLY-02)", () => {
+  it("협의 요청은 그 지원만 협의 중으로 바꾼다. 프로젝트와 다른 지원은 그대로다", async () => {
     const { client, project, creators, applicationIds } =
       await projectWithApplicants(3);
-    const [selected, ...rest] = applicationIds;
+    const [first, ...rest] = applicationIds;
 
-    const res = await accept(client.token, selected ?? "");
+    const res = await discuss(client.token, first ?? "");
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: "DISCUSSING" });
     expect(res.body.respondedAt).not.toBeNull();
-    const projectRow = await prisma.project.findUniqueOrThrow({
-      where: { id: project.id },
-    });
-    expect(projectRow.status).toBe("MATCHED");
+    expect(
+      (await prisma.project.findUniqueOrThrow({ where: { id: project.id } }))
+        .status,
+    ).toBe("OPEN");
     const others = await prisma.workRequest.findMany({
       where: { id: { in: rest.map(BigInt) } },
     });
-    expect(
-      others.every(
-        (row) =>
-          row.status === "NOT_SELECTED" &&
-          row.closedReason === "OTHER_SELECTED",
-      ),
-    ).toBe(true);
-    const [first, second, third] = await Promise.all(
+    expect(others.map((row) => row.status)).toEqual(["PENDING", "PENDING"]);
+    const received = await Promise.all(
       creators.map((creator) => notificationsOf(creator.userId)),
     );
-    expect(first?.map((n) => n.eventType)).toEqual(["APPLICATION_ACCEPTED"]);
-    expect(second?.map((n) => n.eventType)).toEqual([
-      "APPLICATION_AUTO_REJECTED",
-    ]);
-    expect(third?.map((n) => n.eventType)).toEqual([
-      "APPLICATION_AUTO_REJECTED",
+    expect(received.map((list) => list.map((n) => n.eventType))).toEqual([
+      ["DISCUSSION_REQUESTED"],
+      [],
+      [],
     ]);
   });
 
-  it("선정 뒤에는 다른 지원 선정·거절, 신규 지원, 마감, 삭제가 모두 막힌다", async () => {
+  it("여러 후보와 동시에 협의할 수 있고, 같은 지원에 다시 요청하면 409", async () => {
+    const { client, applicationIds } = await projectWithApplicants(2);
+    const results = await Promise.all(
+      applicationIds.map((id) => discuss(client.token, id)),
+    );
+    expect(results.map((r) => r.status)).toEqual([200, 200]);
+    expect((await discuss(client.token, applicationIds[0] ?? "")).status).toBe(
+      409,
+    );
+  });
+
+  it("직접 마감·기한 종료 뒤에도 들어온 지원과 협의할 수 있다", async () => {
     const { client, project, applicationIds } = await projectWithApplicants(2);
-    await accept(client.token, applicationIds[0] ?? "");
-    const late = await signup("CREATOR", 9);
-
-    expect((await accept(client.token, applicationIds[1] ?? "")).status).toBe(
-      409,
+    expect((await closeProject(client.token, project.id)).status).toBe(200);
+    expect((await discuss(client.token, applicationIds[0] ?? "")).status).toBe(
+      200,
     );
-    expect((await decline(client.token, applicationIds[0] ?? "")).status).toBe(
-      409,
-    );
-    expect((await apply(late.token, project.id)).status).toBe(409);
-    expect((await closeProject(client.token, project.id)).status).toBe(409);
-    expect(
-      (
-        await request(app)
-          .delete(`/api/projects/${project.id}`)
-          .set(auth(client.token))
-      ).status,
-    ).toBe(409);
-  });
-
-  it.each(["NO_SELECTION", "EXPIRED"])(
-    "%s 사유로 종료된 프로젝트에서는 선정·거절할 수 없다 (직접 마감만 허용)",
-    async (closeReason) => {
-      const { client, project, applicationIds } =
-        await projectWithApplicants(1);
-      await prisma.project.update({
-        where: { id: project.id },
-        data: { status: "CLOSED", closeReason },
-      });
-
-      expect((await accept(client.token, applicationIds[0] ?? "")).status).toBe(
-        409,
-      );
-      expect(
-        (await decline(client.token, applicationIds[0] ?? "")).status,
-      ).toBe(409);
-      const row = await prisma.workRequest.findFirstOrThrow();
-      expect(row.status).toBe("PENDING");
-    },
-  );
-
-  it("직접 거절하면 그 지원만 거절되고 프로젝트는 계속 모집 중이다", async () => {
-    const { client, project, creators, applicationIds } =
-      await projectWithApplicants(2);
-
-    const res = await decline(client.token, applicationIds[0] ?? "");
-
-    expect(res.status).toBe(200);
-    expect(res.body.status).toBe("DECLINED");
-    const projectRow = await prisma.project.findUniqueOrThrow({
+    await prisma.project.update({
       where: { id: project.id },
+      data: { closeReason: "EXPIRED" },
     });
-    expect(projectRow.status).toBe("OPEN");
-    expect(
-      (await notificationsOf(creators[0]?.userId ?? 0n)).map(
-        (n) => n.eventType,
-      ),
-    ).toEqual(["APPLICATION_DECLINED"]);
-    expect(await notificationsOf(creators[1]?.userId ?? 0n)).toHaveLength(0);
-    expect((await decline(client.token, applicationIds[0] ?? "")).status).toBe(
-      409,
+    expect((await discuss(client.token, applicationIds[1] ?? "")).status).toBe(
+      200,
     );
   });
 
-  it("남의 프로젝트 지원은 선정·거절할 수 없다 (404), 크리에이터는 403", async () => {
+  it.each([
+    ["무선정 종료", { status: "CLOSED", closeReason: "NO_SELECTION" }],
+    ["계약", { status: "CONTRACTED", closeReason: null }],
+  ])("%s된 프로젝트에서는 협의 요청·거절할 수 없다", async (_label, data) => {
+    const { client, project, applicationIds } = await projectWithApplicants(1);
+    await prisma.project.update({ where: { id: project.id }, data });
+    expect((await discuss(client.token, applicationIds[0] ?? "")).status).toBe(
+      409,
+    );
+    expect((await decline(client.token, applicationIds[0] ?? "")).status).toBe(
+      409,
+    );
+    expect((await prisma.workRequest.findFirstOrThrow()).status).toBe(
+      "PENDING",
+    );
+  });
+
+  it("남의 프로젝트 지원은 404, 크리에이터는 403", async () => {
     const { creators, applicationIds } = await projectWithApplicants(1);
     const other = await signup("CLIENT", 2);
-
-    expect((await accept(other.token, applicationIds[0] ?? "")).status).toBe(
+    expect((await discuss(other.token, applicationIds[0] ?? "")).status).toBe(
       404,
     );
     expect((await decline(other.token, applicationIds[0] ?? "")).status).toBe(
       404,
     );
     expect(
-      (await accept(creators[0]?.token ?? "", applicationIds[0] ?? "")).status,
+      (await discuss(creators[0]?.token ?? "", applicationIds[0] ?? "")).status,
     ).toBe(403);
-    const row = await prisma.workRequest.findFirstOrThrow();
-    expect(row.status).toBe("PENDING");
+    expect((await prisma.workRequest.findFirstOrThrow()).status).toBe(
+      "PENDING",
+    );
   });
 });
 
-describe("마감·삭제 (일괄 마감)", () => {
-  it("직접 마감하면 신규 지원만 막히고, 대기 지원자에게 마감 알림이 가며 선정은 여전히 가능하다", async () => {
+describe("거절·철회 (APPLY-03)", () => {
+  it("의뢰인은 대기·협의 중인 지원을 거절하고, 협의 중이던 조건서는 무효가 된다", async () => {
+    const { client, project, creators, applicationIds } =
+      await projectWithApplicants(2);
+    const [pendingId, discussingId] = applicationIds;
+    await discuss(client.token, discussingId ?? "");
+    await saveTerms(client.token, discussingId ?? "");
+
+    expect((await decline(client.token, pendingId ?? "")).body.status).toBe(
+      "DECLINED",
+    );
+    expect((await decline(client.token, discussingId ?? "")).body.status).toBe(
+      "DECLINED",
+    );
+    expect(await termsStatusesOf(discussingId ?? "")).toEqual(["VOID"]);
+    expect(
+      (await prisma.project.findUniqueOrThrow({ where: { id: project.id } }))
+        .status,
+    ).toBe("OPEN");
+    expect(
+      (await notificationsOf(creators[0]?.userId ?? 0n)).map(
+        (n) => n.eventType,
+      ),
+    ).toEqual(["APPLICATION_DECLINED"]);
+    expect((await decline(client.token, pendingId ?? "")).status).toBe(409);
+  });
+
+  it("크리에이터는 계약 전 본인 지원을 철회하고, 의뢰인에게 알림이 간다", async () => {
+    const { client, creators, applicationIds } = await projectWithApplicants(2);
+    const [pendingId, discussingId] = applicationIds;
+    await discuss(client.token, discussingId ?? "");
+    await saveTerms(client.token, discussingId ?? "");
+
+    const first = await withdraw(creators[0]?.token ?? "", pendingId ?? "");
+    expect(first.status).toBe(200);
+    expect(first.body.status).toBe("WITHDRAWN");
+    expect(
+      (await withdraw(creators[1]?.token ?? "", discussingId ?? "")).body
+        .status,
+    ).toBe("WITHDRAWN");
+    expect(await termsStatusesOf(discussingId ?? "")).toEqual(["VOID"]);
+    expect(
+      (await notificationsOf(client.userId))
+        .map((n) => n.eventType)
+        .filter((type) => type === "APPLICATION_WITHDRAWN"),
+    ).toHaveLength(2);
+    expect(
+      (await withdraw(creators[0]?.token ?? "", pendingId ?? "")).status,
+    ).toBe(409);
+  });
+
+  it("남의 지원은 철회할 수 없고(404), 의뢰인은 철회할 수 없으며(403), 계약 뒤에는 409", async () => {
+    const { client, creators, applicationIds } = await projectWithApplicants(2);
+    expect(
+      (await withdraw(creators[1]?.token ?? "", applicationIds[0] ?? ""))
+        .status,
+    ).toBe(404);
+    expect((await withdraw(client.token, applicationIds[0] ?? "")).status).toBe(
+      403,
+    );
+    await prisma.workRequest.update({
+      where: { id: BigInt(applicationIds[0] ?? "0") },
+      data: { status: "CONTRACTED" },
+    });
+    expect(
+      (await withdraw(creators[0]?.token ?? "", applicationIds[0] ?? ""))
+        .status,
+    ).toBe(409);
+    expect((await decline(client.token, applicationIds[0] ?? "")).status).toBe(
+      409,
+    );
+  });
+});
+
+describe("마감·무선정 종료·삭제 (CAMP-05·06)", () => {
+  it("직접 마감하면 신규 지원만 막히고, 대기 지원자에게 마감 알림이 간다", async () => {
     const { client, project, creators, applicationIds } =
       await projectWithApplicants(2);
     await decline(client.token, applicationIds[1] ?? "");
+    const late = await signup("CREATOR", 9);
 
     const closed = await closeProject(client.token, project.id);
 
     expect(closed.status).toBe(200);
-    expect(closed.body.status).toBe("CLOSED");
-    // 대기 중인 지원자(1번)만 마감 알림을 받는다. 이미 거절된 2번은 받지 않는다.
+    expect(closed.body).toMatchObject({
+      status: "CLOSED",
+      closeReason: "MANUAL",
+    });
+    expect((await apply(late.token, project.id)).status).toBe(409);
     expect(
       (await notificationsOf(creators[0]?.userId ?? 0n)).map(
         (n) => n.eventType,
@@ -400,13 +487,70 @@ describe("마감·삭제 (일괄 마감)", () => {
         (n) => n.eventType,
       ),
     ).toEqual(["APPLICATION_DECLINED"]);
-    expect((await accept(client.token, applicationIds[0] ?? "")).status).toBe(
-      200,
+  });
+
+  it("무선정 종료하면 대기·협의 중인 지원은 미선정(NO_SELECTION), 조건서는 무효가 되고 알림이 간다", async () => {
+    const { client, project, creators, applicationIds } =
+      await projectWithApplicants(3);
+    const [, discussingId, declinedId] = applicationIds;
+    await discuss(client.token, discussingId ?? "");
+    await saveTerms(client.token, discussingId ?? "");
+    await decline(client.token, declinedId ?? "");
+
+    const res = await endWithoutSelection(client.token, project.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: "CLOSED",
+      closeReason: "NO_SELECTION",
+    });
+    const rows = await prisma.workRequest.findMany({ orderBy: { id: "asc" } });
+    expect(rows.map((row) => [row.status, row.closedReason])).toEqual([
+      ["NOT_SELECTED", "NO_SELECTION"],
+      ["NOT_SELECTED", "NO_SELECTION"],
+      ["DECLINED", null],
+    ]);
+    expect(await termsStatusesOf(discussingId ?? "")).toEqual(["VOID"]);
+    const received = await Promise.all(
+      creators.map((creator) => notificationsOf(creator.userId)),
+    );
+    expect(received.map((list) => list.map((n) => n.eventType))).toEqual([
+      ["PROJECT_ENDED_NO_SELECTION"],
+      ["DISCUSSION_REQUESTED", "PROJECT_ENDED_NO_SELECTION"],
+      ["APPLICATION_DECLINED"],
+    ]);
+    // 무선정 종료 뒤에는 다시 종료·협의 요청할 수 없다.
+    expect((await endWithoutSelection(client.token, project.id)).status).toBe(
+      409,
     );
   });
 
-  it("삭제하면 대기 지원은 자동 거절(PROJECT_DELETED)되고 알림이 간다", async () => {
-    const { client, project, creators } = await projectWithApplicants(2);
+  it("직접 마감한 프로젝트도 무선정 종료할 수 있고, 계약된 프로젝트·남의 프로젝트는 할 수 없다", async () => {
+    const { client, project } = await projectWithApplicants(1);
+    await closeProject(client.token, project.id);
+    expect((await endWithoutSelection(client.token, project.id)).status).toBe(
+      200,
+    );
+
+    const other = await createProject(client.userId);
+    await prisma.project.update({
+      where: { id: other.id },
+      data: { status: "CONTRACTED" },
+    });
+    expect((await endWithoutSelection(client.token, other.id)).status).toBe(
+      409,
+    );
+    const stranger = await signup("CLIENT", 7);
+    const third = await createProject(client.userId);
+    expect((await endWithoutSelection(stranger.token, third.id)).status).toBe(
+      404,
+    );
+  });
+
+  it("삭제하면 대기·협의 중인 지원은 미선정(PROJECT_DELETED)되고 알림이 간다", async () => {
+    const { client, project, creators, applicationIds } =
+      await projectWithApplicants(2);
+    await discuss(client.token, applicationIds[1] ?? "");
 
     const res = await request(app)
       .delete(`/api/projects/${project.id}`)
@@ -424,23 +568,40 @@ describe("마감·삭제 (일괄 마감)", () => {
     const received = await Promise.all(
       creators.map((creator) => notificationsOf(creator.userId)),
     );
-    expect(received.map((list) => list.map((n) => n.eventType))).toEqual([
-      ["APPLICATION_AUTO_REJECTED"],
-      ["APPLICATION_AUTO_REJECTED"],
+    expect(received.map((list) => list.at(-1)?.eventType)).toEqual([
+      "APPLICATION_AUTO_REJECTED",
+      "APPLICATION_AUTO_REJECTED",
     ]);
+  });
+
+  it("계약된 프로젝트는 삭제할 수 없다", async () => {
+    const { client, project } = await projectWithApplicants(1);
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { status: "CONTRACTED" },
+    });
+    expect(
+      (
+        await request(app)
+          .delete(`/api/projects/${project.id}`)
+          .set(auth(client.token))
+      ).status,
+    ).toBe(409);
   });
 });
 
-describe("마감·선정 후 상세 조회 (#19 리뷰 4번)", () => {
+describe("마감·계약 후 상세 조회 (#19 리뷰 4번)", () => {
   const detail = (projectId: bigint, token?: string) => {
     const req = request(app).get(`/api/projects/${projectId}`);
     return token ? req.set(auth(token)) : req;
   };
 
-  it("선정 뒤에는 작성자와 지원자(선정·자동 거절 모두)만 상세를 보고, 다른 사람은 404다", async () => {
-    const { client, project, creators, applicationIds } =
-      await projectWithApplicants(2);
-    await accept(client.token, applicationIds[0] ?? "");
+  it("계약 뒤에는 작성자와 지원자만 상세를 보고, 다른 사람은 404다", async () => {
+    const { client, project, creators } = await projectWithApplicants(2);
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { status: "CONTRACTED" },
+    });
     const stranger = await signup("CREATOR", 9);
     const otherClient = await signup("CLIENT", 9);
 
@@ -448,9 +609,9 @@ describe("마감·선정 후 상세 조회 (#19 리뷰 4번)", () => {
     expect((await detail(project.id, stranger.token)).status).toBe(404);
     expect((await detail(project.id, otherClient.token)).status).toBe(404);
     expect((await detail(project.id, client.token)).status).toBe(200);
-    const selected = await detail(project.id, creators[0]?.token);
-    expect(selected.status).toBe(200);
-    expect(selected.body.status).toBe("MATCHED");
+    const applicant = await detail(project.id, creators[0]?.token);
+    expect(applicant.status).toBe(200);
+    expect(applicant.body.status).toBe("CONTRACTED");
     expect((await detail(project.id, creators[1]?.token)).status).toBe(200);
   });
 
@@ -474,35 +635,7 @@ describe("마감·선정 후 상세 조회 (#19 리뷰 4번)", () => {
 });
 
 describe("동시 요청", () => {
-  // 같은 프로젝트의 지원·선정·거절·마감·삭제는 프로젝트 행 잠금으로 하나씩 처리된다.
-
-  it("두 지원자를 동시에 선정해도 한 명만 선정되고, 나머지는 자동 거절된다", async () => {
-    const { client, project, applicationIds } = await projectWithApplicants(2);
-
-    const results = await Promise.all(
-      applicationIds.map((id) => accept(client.token, id)),
-    );
-
-    expect(results.map((res) => res.status).sort()).toEqual([200, 409]);
-    const rows = await prisma.workRequest.findMany({
-      where: { projectId: project.id },
-    });
-    expect(rows.map((row) => row.status).sort()).toEqual([
-      "DISCUSSING",
-      "NOT_SELECTED",
-    ]);
-    const notifications = await prisma.notification.findMany({
-      where: {
-        eventType: {
-          in: ["APPLICATION_ACCEPTED", "APPLICATION_AUTO_REJECTED"],
-        },
-      },
-    });
-    expect(notifications.map((n) => n.eventType).sort()).toEqual([
-      "APPLICATION_ACCEPTED",
-      "APPLICATION_AUTO_REJECTED",
-    ]);
-  });
+  // 같은 프로젝트의 지원·협의 요청·거절·철회·마감·무선정 종료·삭제는 프로젝트 행 잠금으로 하나씩 처리된다.
 
   it("마감과 지원이 겹쳐도, 마감 뒤에 저장된 지원은 없다 (5회 반복)", async () => {
     await Array.from({ length: 5 }, (_, n) => n).reduce(
@@ -537,21 +670,21 @@ describe("동시 요청", () => {
     );
   });
 
-  it("다른 트랜잭션이 프로젝트를 잠그고 선정하는 동안 들어온 수정은 기다렸다가 409가 된다", async () => {
+  it("다른 트랜잭션이 프로젝트를 잠그고 계약하는 동안 들어온 수정은 기다렸다가 409가 된다", async () => {
     const { client, project } = await projectWithApplicants(1);
     let patch: Promise<request.Response> | undefined;
 
-    // 선정 트랜잭션을 흉내 낸다: 프로젝트 행을 잠근 채 MATCHED로 바꾸고, 그 사이에 수정 요청을 보낸다.
+    // 계약 트랜잭션을 흉내 낸다: 프로젝트 행을 잠근 채 CONTRACTED로 바꾸고, 그 사이에 수정 요청을 보낸다.
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`;
       await tx.project.update({
         where: { id: project.id },
-        data: { status: "MATCHED" },
+        data: { status: "CONTRACTED" },
       });
       patch = request(app)
         .patch(`/api/projects/${project.id}`)
         .set(auth(client.token))
-        .send({ title: "선정 중에 바꾼 제목" })
+        .send({ title: "계약 중에 바꾼 제목" })
         .then((res) => res);
       await new Promise((resolve) => {
         setTimeout(resolve, 300);
@@ -566,29 +699,33 @@ describe("동시 요청", () => {
     expect(row.title).toBe("돌잔치 성장영상");
   });
 
-  it("선정과 다른 지원자 거절이 겹쳐도 상태가 어긋나지 않는다", async () => {
-    const { client, project, applicationIds } = await projectWithApplicants(2);
+  it("협의 요청과 무선정 종료가 겹쳐도 상태가 어긋나지 않는다", async () => {
+    const { client, project, applicationIds } = await projectWithApplicants(1);
 
-    const [accepted, declined] = await Promise.all([
-      accept(client.token, applicationIds[0] ?? ""),
-      decline(client.token, applicationIds[1] ?? ""),
+    const [discussed, ended] = await Promise.all([
+      discuss(client.token, applicationIds[0] ?? ""),
+      endWithoutSelection(client.token, project.id),
     ]);
 
-    expect(accepted.status).toBe(200);
-    const other = await prisma.workRequest.findUniqueOrThrow({
-      where: { id: BigInt(applicationIds[1] ?? "0") },
-    });
-    // 거절이 먼저면 DECLINED, 선정이 먼저면 거절은 409이고 자동 거절(NOT_SELECTED)
-    if (declined.status === 200) {
-      expect(other.status).toBe("DECLINED");
-    } else {
-      expect(declined.status).toBe(409);
-      expect(other.status).toBe("NOT_SELECTED");
-    }
-    const projectRow = await prisma.project.findUniqueOrThrow({
-      where: { id: project.id },
-    });
-    expect(projectRow.status).toBe("MATCHED");
+    expect(ended.status).toBe(200);
+    const row = await prisma.workRequest.findFirstOrThrow();
+    // 어느 쪽이 먼저든 끝 상태는 미선정(NO_SELECTION)이다. 종료가 먼저면 협의 요청은 409다.
+    expect([row.status, row.closedReason]).toEqual([
+      "NOT_SELECTED",
+      "NO_SELECTION",
+    ]);
+    expect([200, 409]).toContain(discussed.status);
+  });
+
+  it("철회와 거절이 겹쳐도 하나만 반영된다", async () => {
+    const { client, creators, applicationIds } = await projectWithApplicants(1);
+    const results = await Promise.all([
+      withdraw(creators[0]?.token ?? "", applicationIds[0] ?? ""),
+      decline(client.token, applicationIds[0] ?? ""),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    const row = await prisma.workRequest.findFirstOrThrow();
+    expect(["WITHDRAWN", "DECLINED"]).toContain(row.status);
   });
 });
 

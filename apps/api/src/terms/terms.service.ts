@@ -162,6 +162,18 @@ const includeContractVersion = {
   termsVersion: { select: { versionNo: true } },
 } satisfies Prisma.ContractInclude;
 
+// 협의가 끝난 요청(거절·철회·미선정)의 미확정 조건서를 무효로 한다. 값과 서명 기록은 남긴다.
+export async function voidOpenTerms(tx: Tx, workRequestIds: bigint[]) {
+  if (workRequestIds.length === 0) return;
+  await tx.termsVersion.updateMany({
+    where: {
+      workRequestId: { in: workRequestIds },
+      status: { in: ["DRAFT", "SIGNING"] },
+    },
+    data: { status: "VOID" },
+  });
+}
+
 export interface TermsService {
   getDocument(user: AuthUser, workRequestId: bigint): Promise<TermsDocument>;
   saveVersion(

@@ -649,12 +649,29 @@ const openApiDocument = {
         },
       },
     },
+    "/api/projects/{projectId}/end-without-selection": {
+      post: {
+        tags: ["projects"],
+        summary: "무선정 종료 (CAMP-06)",
+        description:
+          "아무도 선정하지 않고 모집을 끝낸다(직접 마감과 다름). 프로젝트는 `CLOSED` + `NO_SELECTION`, 대기·협의 중인 지원은 `NOT_SELECTED`(`NO_SELECTION`), 미확정 조건서는 `VOID`가 되고 각 크리에이터에게 `PROJECT_ENDED_NO_SELECTION` 알림이 간다. 모집 중이거나 마감(직접·기한)된 프로젝트에서만 할 수 있고, 계약이 있으면 409다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [projectIdParam],
+        responses: {
+          200: projectResponse,
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 프로젝트가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("계약됐거나 이미 종료됨 (`CONFLICT`)"),
+        },
+      },
+    },
     "/api/projects/{projectId}/close": {
       post: {
         tags: ["projects"],
         summary: "내 프로젝트 모집 마감",
         description:
-          "신규 지원만 막는다. 대기 중인 지원은 그대로 남아 선정·거절할 수 있고, 대기 지원자에게 `PROJECT_CLOSED` 알림이 간다. 마감 시각이 지나도 서버가 자동으로 상태를 바꾸지는 않으며(스케줄러 없음), 지원할 때 마감 시각을 검사해 막는다.",
+          "신규 지원만 막는다. 이미 들어온 지원과는 계속 협의할 수 있고(CAMP-05), 대기 지원자에게 `PROJECT_CLOSED` 알림이 간다. 마감 시각이 지나도 서버가 자동으로 상태를 바꾸지는 않으며(스케줄러 없음), 지원할 때 마감 시각을 검사해 막는다.",
         security: [{ bearerAuth: [] }],
         parameters: [projectIdParam],
         responses: {
@@ -800,21 +817,21 @@ const openApiDocument = {
         },
       },
     },
-    "/api/applications/{applicationId}/accept": {
+    "/api/applications/{applicationId}/discuss": {
       post: {
         tags: ["applications"],
-        summary: "지원자 선정 (APPLY-02)",
+        summary: "협의 요청 (APPLY-02)",
         description:
-          "한 트랜잭션에서 처리한다: 선정 지원 → `DISCUSSING`, 프로젝트 → `MATCHED`(거래 단계), 같은 프로젝트의 나머지 대기 지원 → `NOT_SELECTED`(`OTHER_SELECTED`). 선정자에게 `APPLICATION_ACCEPTED`, 나머지에게 `APPLICATION_AUTO_REJECTED` 알림이 간다. 직접 마감한 프로젝트에서도 선정할 수 있다.",
+          "대기 중인 지원을 협의 중(`DISCUSSING`)으로 바꾼다. **선정이 아니다.** 프로젝트 상태와 다른 지원은 그대로이고, 여러 후보와 동시에 협의할 수 있다. 선정은 같은 조건서 버전에 양측이 서명할 때 일어난다(`/api/work-requests/{id}/terms`). 모집 마감(직접·기한) 뒤에도 들어온 지원과 협의할 수 있다. 크리에이터에게 `DISCUSSION_REQUESTED` 알림이 간다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("applicationId")],
         responses: {
-          200: jsonResponse("선정된 지원", "Application"),
+          200: jsonResponse("협의 중이 된 지원", "Application"),
           ...bearerErrors,
           403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
           404: errorResponse("본인 프로젝트의 지원이 아님 (`NOT_FOUND`)"),
           409: errorResponse(
-            "이미 처리된 지원, 또는 이미 선정했거나 종료된 프로젝트 (`CONFLICT`)",
+            "대기 중이 아닌 지원, 또는 계약·무선정 종료된 프로젝트 (`CONFLICT`)",
           ),
         },
       },
@@ -822,9 +839,9 @@ const openApiDocument = {
     "/api/applications/{applicationId}/decline": {
       post: {
         tags: ["applications"],
-        summary: "지원자 직접 거절 (APPLY-02)",
+        summary: "지원 거절 (APPLY-03)",
         description:
-          "대기 중인 지원만 `DECLINED`로 바꾼다. 프로젝트 상태는 그대로다. 지원자에게 `APPLICATION_DECLINED` 알림이 간다.",
+          "대기·협의 중인 지원을 `DECLINED`로 바꾼다. 협의 중이던 미확정 조건서는 `VOID`가 된다. 프로젝트 상태는 그대로다. 지원자에게 `APPLICATION_DECLINED` 알림이 간다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("applicationId")],
         responses: {
@@ -835,6 +852,23 @@ const openApiDocument = {
           409: errorResponse(
             "이미 처리된 지원, 또는 이미 선정했거나 종료된 프로젝트 (`CONFLICT`)",
           ),
+        },
+      },
+    },
+    "/api/applications/{applicationId}/withdraw": {
+      post: {
+        tags: ["applications"],
+        summary: "지원 철회 (APPLY-03)",
+        description:
+          "크리에이터가 계약 전(대기·협의 중) 본인 지원을 `WITHDRAWN`으로 거둔다. 협의 중이던 미확정 조건서는 `VOID`가 된다. 의뢰인에게 `APPLICATION_WITHDRAWN` 알림이 간다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("applicationId")],
+        responses: {
+          200: jsonResponse("철회된 지원", "Application"),
+          ...bearerErrors,
+          403: errorResponse("크리에이터가 아님 (`FORBIDDEN`)"),
+          404: errorResponse("본인 지원이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("이미 끝난 지원·계약된 지원 (`CONFLICT`)"),
         },
       },
     },

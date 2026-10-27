@@ -15,6 +15,7 @@ import {
 import AppError from "../http/app-error.js";
 import notify from "../notifications/notify.js";
 import lockProject from "./project-lock.js";
+import { voidOpenTerms } from "../terms/terms.service.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 
 interface ProjectRow {
@@ -161,6 +162,10 @@ export interface ProjectService {
   ): Promise<ProjectSummary>;
   close(user: AuthUser, projectId: bigint): Promise<ProjectSummary>;
   remove(user: AuthUser, projectId: bigint): Promise<void>;
+  endWithoutSelection(
+    user: AuthUser,
+    projectId: bigint,
+  ): Promise<ProjectSummary>;
 }
 
 export function createProjectService({
@@ -390,7 +395,7 @@ export function createProjectService({
       });
     },
 
-    // 삭제: 선정 후(거래 단계)에는 삭제할 수 없다. 대기 중인 지원은 자동 거절하고 알린다.
+    // 삭제: 계약 뒤에는 삭제할 수 없다. 대기·협의 중인 지원은 미선정(PROJECT_DELETED)으로 바꾸고 알린다.
     async remove(user, projectId) {
       await getOwned(user, projectId);
       await prisma.$transaction(async (tx) => {
@@ -407,11 +412,13 @@ export function createProjectService({
           );
         }
         const pending = await tx.workRequest.findMany({
-          where: { projectId, status: "PENDING" },
+          where: { projectId, status: { in: ["PENDING", "DISCUSSING"] } },
           select: { id: true, creatorId: true },
         });
+        const pendingIds = pending.map(({ id }) => id);
+        await voidOpenTerms(tx, pendingIds);
         await tx.workRequest.updateMany({
-          where: { id: { in: pending.map(({ id }) => id) } },
+          where: { id: { in: pendingIds } },
           data: {
             status: "NOT_SELECTED",
             closedReason: "PROJECT_DELETED",
@@ -434,6 +441,64 @@ export function createProjectService({
             workRequestId: id,
           })),
         );
+      });
+    },
+
+    // CAMP-06 무선정 종료: 아무도 선정하지 않고 모집을 끝낸다(직접 마감과 다름).
+    // 대기·협의 중인 지원은 미선정(NO_SELECTION), 미확정 조건서는 무효가 되고 각 크리에이터에게 알린다.
+    // 계약이 있으면 할 수 없다.
+    async endWithoutSelection(user, projectId) {
+      await getOwned(user, projectId);
+      return prisma.$transaction(async (tx) => {
+        const locked = await lockProject(tx, projectId);
+        if (!locked || locked.deletedAt) {
+          throw new AppError(404, "NOT_FOUND", "프로젝트를 찾을 수 없습니다.");
+        }
+        const status = projectStatusSchema.parse(locked.status);
+        const endable =
+          status === "OPEN" ||
+          (status === "CLOSED" &&
+            (locked.closeReason === "MANUAL" ||
+              locked.closeReason === "EXPIRED"));
+        if (!endable) {
+          throw new AppError(
+            409,
+            "CONFLICT",
+            "계약이 확정됐거나 이미 종료된 프로젝트입니다.",
+          );
+        }
+        const active = await tx.workRequest.findMany({
+          where: { projectId, status: { in: ["PENDING", "DISCUSSING"] } },
+          select: { id: true, creatorId: true },
+        });
+        const activeIds = active.map(({ id }) => id);
+        await voidOpenTerms(tx, activeIds);
+        await tx.workRequest.updateMany({
+          where: { id: { in: activeIds } },
+          data: {
+            status: "NOT_SELECTED",
+            closedReason: "NO_SELECTION",
+            respondedAt: now(),
+          },
+        });
+        const row = await tx.project.update({
+          where: { id: projectId },
+          data: { status: "CLOSED", closeReason: "NO_SELECTION" },
+          include: includeClient,
+        });
+        await notify(
+          tx,
+          active.map(({ id, creatorId }) => ({
+            recipientUserId: creatorId,
+            type: "PROJECT_ENDED_NO_SELECTION" as const,
+            eventKey: `application:${id}:no-selection`,
+            title: "선정 없이 모집이 종료되었습니다",
+            body: `'${row.title}' 프로젝트가 선정 없이 종료되었습니다.`,
+            projectId,
+            workRequestId: id,
+          })),
+        );
+        return toProject(row);
       });
     },
   };

@@ -148,14 +148,14 @@ const notificationsOf = (userId: bigint, type: string) =>
     where: { recipientUserId: userId, eventType: type },
   });
 
-// 지금 API(accept = 선정)로 협의 중(DISCUSSING)인 요청을 만든다.
+// 협의 요청으로 협의 중(DISCUSSING)인 요청을 만든다.
 async function negotiation() {
   const client = await signup("CLIENT");
   const creator = await signup("CREATOR");
   const project = await createProject(client.userId);
   const workRequestId = await apply(creator.token, project.id);
   const accepted = await request(app)
-    .post(`/api/applications/${workRequestId}/accept`)
+    .post(`/api/applications/${workRequestId}/discuss`)
     .set(auth(client.token));
   expect(accepted.status).toBe(200);
   return { client, creator, project, workRequestId };
@@ -207,7 +207,7 @@ describe("조건서 작성·버전 (TERMS-01·03)", () => {
     expect(doc.status).toBe(200);
     expect(doc.body).toMatchObject({
       workRequestStatus: "DISCUSSING",
-      projectStatus: "MATCHED",
+      projectStatus: "OPEN",
       reference: {
         project: { title: "돌잔치 성장영상", budget: 50_000 },
         request: { proposedAmount: 45_000, expectedDays: 3 },

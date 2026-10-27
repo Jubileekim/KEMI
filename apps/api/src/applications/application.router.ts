@@ -10,7 +10,7 @@ const idParamSchema = z
   .regex(/^[1-9]\d*$/, "ID가 올바르지 않습니다.")
   .transform(BigInt);
 
-// 지원(APPLY-01·02)과 알림(NOTI-01). /api 아래에 붙인다.
+// 지원·협의 요청·거절·철회(APPLY-01~03)와 알림(NOTI-01). /api 아래에 붙인다.
 export default function createApplicationRouter(
   authService: AuthService,
   applicationService: ApplicationService,
@@ -48,10 +48,10 @@ export default function createApplicationRouter(
     res.json(await applicationService.listMine(user, req.query));
   });
 
-  router.post("/applications/:applicationId/accept", async (req, res) => {
+  router.post("/applications/:applicationId/discuss", async (req, res) => {
     const user = await currentUser(req);
     res.json(
-      await applicationService.accept(
+      await applicationService.requestDiscussion(
         user,
         idParamSchema.parse(req.params.applicationId),
       ),
@@ -62,6 +62,16 @@ export default function createApplicationRouter(
     const user = await currentUser(req);
     res.json(
       await applicationService.decline(
+        user,
+        idParamSchema.parse(req.params.applicationId),
+      ),
+    );
+  });
+
+  router.post("/applications/:applicationId/withdraw", async (req, res) => {
+    const user = await currentUser(req);
+    res.json(
+      await applicationService.withdraw(
         user,
         idParamSchema.parse(req.params.applicationId),
       ),

@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { ProjectStatus } from "./project.js";
 
 // 의뢰 요청(work_requests) 상태. ERD v0.6·결정 기록 3장 값 그대로 둔다.
-// 페이즈 2 공개 지원에서 쓰는 값: PENDING → DISCUSSING(선정) / DECLINED(직접 거절) / NOT_SELECTED(자동 거절)
+// 공개 지원: PENDING → DISCUSSING(협의 요청) → CONTRACTED(양측 서명). 끝나는 길: DECLINED(의뢰인 거절),
+// WITHDRAWN(크리에이터 철회), NOT_SELECTED(다른 후보 계약·무선정 종료·프로젝트 삭제)
 export const WORK_REQUEST_STATUSES = [
   "PENDING",
   "DISCUSSING",
@@ -21,10 +22,11 @@ export const WORK_REQUEST_TYPES = [
 ] as const;
 export const workRequestTypeSchema = z.enum(WORK_REQUEST_TYPES);
 
-// 자동 거절(NOT_SELECTED) 사유
+// 미선정(NOT_SELECTED) 사유
 export const WORK_REQUEST_CLOSED_REASONS = [
   "OTHER_SELECTED",
   "PROJECT_DELETED",
+  "NO_SELECTION",
 ] as const;
 export const workRequestClosedReasonSchema = z.enum(
   WORK_REQUEST_CLOSED_REASONS,

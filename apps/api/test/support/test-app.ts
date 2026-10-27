@@ -88,6 +88,12 @@ const unusedProjectService: ProjectService = {
       closeReason: "MANUAL",
     }),
   remove: () => Promise.resolve(),
+  endWithoutSelection: () =>
+    Promise.resolve({
+      ...EMPTY_PROJECT,
+      status: "CLOSED" as const,
+      closeReason: "NO_SELECTION" as const,
+    }),
 };
 
 const unusedProjectDiscoveryService: ProjectDiscoveryService = {
