@@ -1,0 +1,187 @@
+{
+  "scope": "5-A/5-B subset of the same final run; not an additional execution",
+  "baseCommit": "3e8c98cbf99d5249467fab8fee266e08cca0a3d9",
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+    "test",
+    "--config",
+    "../../qa/frontend-5/playwright.edge.config.ts",
+    "cancellation.spec.ts",
+    "refunds-disputes.spec.ts",
+    "public-recruitment.spec.ts",
+    "signatures.spec.ts",
+    "production.spec.ts",
+    "delivery.spec.ts",
+    "revisions.spec.ts",
+    "final.spec.ts",
+    "settlement.spec.ts",
+    "--workers=1"
+  ],
+  "stats": {
+    "startTime": "2026-10-27T00:28:41.193Z",
+    "duration": 1670071.4440000001,
+    "expected": 76,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "errors": [],
+  "workers": 1,
+  "retries": [
+    {
+      "name": "chromium",
+      "retries": 0
+    },
+    {
+      "name": "mobile-chromium",
+      "retries": 0
+    }
+  ],
+  "sources": {
+    "apps/web/e2e/cancellation-helpers.ts": "d71014a7a601f0c4421bf2e56d1324978eab284c2b8d45c0dbf73b9e302ca7f8",
+    "apps/web/e2e/payments-helpers.ts": "cc03508d96facd76d0208a2dc4298191e9170d84ae36eda38b59ea1f646678d8",
+    "apps/web/src/app/App.tsx": "83413e39f3f26b77dc94dcfeb02adf50e866c26b95d78791bb5a31a432100213",
+    "apps/web/src/app/layouts/Shell.tsx": "f1a7598099159efc993799af67fc85650351747a8e321afdc8513e018c739482",
+    "apps/web/src/features/resolution/CancellationAgreement.tsx": "b9581e03ede6d4be66fd82d9d19eb557377e72076d38502f83e0544c8a7fbf6b",
+    "apps/web/src/mocks/CancellationMock.tsx": "486231508561081692726e9f7bf28a8706b53587583114a2eb23dc5ba6566f69",
+    "apps/web/src/mocks/DevTools.tsx": "069aeb1849ac74a60d37d5628e0ef4a20021cdaa589e80e8ded87b3b077325ee",
+    "apps/web/src/mocks/auth-handlers.ts": "0904b98181b0f041a43bf0d0b3075336974d1b2068fdca255b18fa07b3b4fe15",
+    "apps/web/src/mocks/resolution-api.ts": "1f07f069a4cdca7cc6701e08a2517b5406d056bc1991275489e04bf6af94f539",
+    "apps/web/src/mocks/resolution-handlers.ts": "053f0e2618de70a6da6f909d907f42a0c5c867b9661c18147beaa13f0348eaa2",
+    "apps/web/src/mocks/resolution-model.ts": "6ec9d8032d042dc4bb54086f22b61505640039f4e67cf0e6aff29c460fdb6878",
+    "apps/web/src/mocks/resolution-store.ts": "7dd3817d5e8f5fb911590b056d969068daa28c3ad78420c45a631375abcd3ffa",
+    "apps/web/e2e/public-recruitment.spec.ts": "560a3b0cfa22c663fecd9f6176939b268db9de4a060b7b1800d08007e8511e13",
+    "apps/web/e2e/refunds-disputes.spec.ts": "389a692d274d26d1917ecc5fe2275d350f613260adeef893fd799e69f3769e35",
+    "apps/web/src/features/operations/ReviewPage.tsx": "e296249049c8a9d688ede652343fe71d0ce612dd02de23e8e13f27ca295e044c",
+    "apps/web/src/features/resolution/DisputePage.tsx": "fc8fa522684abd5908c9bbfa9fd505eb1723bb74e4f9330aa166ee52f7f3a6b1",
+    "apps/web/src/features/resolution/DisputePanel.tsx": "cbd862675a45d6464ed39f5b8071567bcfa8fe3c1a20acdadd592703f6e62afd",
+    "apps/web/src/features/resolution/RefundStatusPanel.tsx": "04edef1cf1cf4f9313d53560da4ac886f6f6cc27f35c6e2ec6f043665f2b02b7",
+    "apps/web/src/mocks/DisputeMock.tsx": "81e82d14766a203b57b86bbabb797aa688b59c46c72ecdb5231b5eb61b3fdefa",
+    "apps/web/src/mocks/ResolutionWorkflowMock.tsx": "7ba52d5e95b3ff21cdc50ea324890e5258d0d5ae7543b4c6b521f823fa0e6adf",
+    "apps/web/src/mocks/ReviewMock.tsx": "281bbff3a7180ce8f72fdc4886aea03611dc90fc9149230a59fead30197bf99d",
+    "apps/web/src/mocks/resolution-workflow-model.ts": "9ff2d1975fdbee3059d15f8b8b2eb199fcf4de6bfe28ae4573298a0b392bdcfb"
+  },
+  "tests": [
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+      "project": "chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27043,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+      "project": "chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24816,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+      "project": "mobile-chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26495,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24475,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25893,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 전액 환불·미확정·확정 실패·유실 복구·역할 거부·파일 없는 인도와 근거 해제",
+      "project": "chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22672,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "mobile-chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27255,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 전액 환불·미확정·확정 실패·유실 복구·역할 거부·파일 없는 인도와 근거 해제",
+      "project": "mobile-chromium",
+      "ok": true,
+      "expectedStatus": "passed",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22635,
+          "errors": []
+        }
+      ]
+    }
+  ]
+}

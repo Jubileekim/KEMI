@@ -1,0 +1,21 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": false,
+  "results": [
+    {
+      "role": "UNCONFIGURED",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/cancellation",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/disputes/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/ops/disputes",
+      "passed": true
+    }
+  ]
+}

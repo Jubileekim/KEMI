@@ -45,7 +45,7 @@ export default function CancellationAgreement({
       <p role="status">
         양측 확인 {version.confirmations.length}/2 ·{" "}
         {version.confirmations.length === 2
-          ? "취소 합의 확인 · 환불·정산 미실행"
+          ? "취소 합의 확인 · 환불·정산 결과 별도"
           : "취소 협의 중 · 정산 보류"}
       </p>
       {!version.confirmations.includes(userId) && (

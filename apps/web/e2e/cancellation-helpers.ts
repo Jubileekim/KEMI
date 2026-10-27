@@ -15,8 +15,8 @@ export async function resolutionScenario(page: Page, value: string) {
     await fetch("/__mock__/resolution/scenario", { method: "POST", body });
   }, value);
 }
-export async function setupCancellation(page: Page) {
-  const result = await setupPayment(page);
+export async function setupCancellation(page: Page, amount = 100000) {
+  const result = await setupPayment(page, amount);
   await confirm(page, "테스트 주문 만들기");
   await expect(
     page.getByRole("button", { name: "Mock 테스트 결제 진행", exact: true }),
@@ -41,16 +41,16 @@ export async function proposeCancellation(page: Page, compensation = "40000") {
     .fill("편집 일부 완료");
   await page
     .getByLabel("인도할 파일 목록·규격", { exact: true })
-    .fill("현재 작업본 ZIP 1개");
+    .fill(compensation === "0" ? "인도 파일 없음" : "현재 작업본 ZIP 1개");
   await page
     .getByLabel("미완성 작업 처리", { exact: true })
     .fill("잔여 작업 중단");
   await page
     .getByLabel("촬영 원본·프로젝트 인도 조건", { exact: true })
-    .fill("ZIP에 포함");
+    .fill(compensation === "0" ? "인도 대상 없음" : "ZIP에 포함");
   await page
     .getByLabel("사용권·이용 범위", { exact: true })
-    .fill("광고 1회 사용");
+    .fill(compensation === "0" ? "사용권 부여 없음" : "광고 1회 사용");
   await page
     .getByLabel("희망 완료 대가 (원)", { exact: true })
     .fill(compensation);
