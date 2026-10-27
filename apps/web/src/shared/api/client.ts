@@ -62,10 +62,10 @@ function publicReadPath(url = "", method = "get") {
   return (
     path === "/api/feed" ||
     path === "/api/projects" ||
-    /^\\/api\\/projects\\/[1-9]\\d*$/.test(path) ||
-    /^\\/api\\/creators\\/[1-9]\\d*$/.test(path) ||
-    /^\\/api\\/packages\\/[1-9]\\d*$/.test(path) ||
-    /^\\/api\\/portfolios\\/[1-9]\\d*(\\/media)?$/.test(path)
+    new RegExp("^/api/projects/[1-9][0-9]*$").test(path) ||
+    new RegExp("^/api/creators/[1-9][0-9]*$").test(path) ||
+    new RegExp("^/api/packages/[1-9][0-9]*$").test(path) ||
+    new RegExp("^/api/portfolios/[1-9][0-9]*(/media)?$").test(path)
   );
 }
 api.interceptors.request.use(async (input) => {
