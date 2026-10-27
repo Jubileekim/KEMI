@@ -25,6 +25,7 @@ export default function sendDirect(
       prior.clientId === user.id &&
       prior.creatorId === cmd.creatorId &&
       prior.direct &&
+      prior.direct.snapshot.id === cmd.packageId &&
       prior.title === cmd.values.title &&
       prior.direction === cmd.values.brief &&
       prior.direct.conditions === cmd.values.conditions &&
