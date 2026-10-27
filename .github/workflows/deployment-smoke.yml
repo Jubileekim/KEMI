@@ -1,0 +1,35 @@
+name: Deployment public smoke (not transaction acceptance)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: "Production or explicitly selected Preview URL"
+        required: true
+        default: "https://kemi-web-sigma.vercel.app"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  public-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KEMI_DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm exec -w @kemi/web -- playwright install --with-deps chromium
+      - run: npm exec -w @kemi/web -- playwright test --config ../../qa/deployment-smoke/playwright.config.ts
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: deployment-public-smoke
+          path: test-results/deployment-smoke/
+          retention-days: 7

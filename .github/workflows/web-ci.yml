@@ -53,7 +53,7 @@ jobs:
       - run: npm run build:web
       - name: Chromium 설치
         run: npm exec -w @kemi/web -- playwright install --with-deps chromium
-      - name: 데스크톱·모바일 브라우저 테스트
+      - name: Mock UI 회귀 (실제 API 검증은 Web Live API CI)
         run: npm run test:web:e2e
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

@@ -11,7 +11,11 @@ const ExtrasMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/ProfileExtrasMock"))
   : null;
 
-export default function ProfilePage() {
+export default function ProfilePage({
+  onboarding = false,
+}: {
+  onboarding?: boolean;
+}) {
   const { user } = useSession();
   const role = user?.role === "CREATOR" ? "CREATOR" : "CLIENT";
   const key = ["my-profile", user?.id, role, session.epoch()] as const;
@@ -56,12 +60,27 @@ export default function ProfilePage() {
     <section className="mx-auto grid w-full max-w-3xl gap-6">
       <div className="grid gap-2">
         <p className="type-label-sm text-primary">MY PROFILE</p>
-        <h1 className="type-heading-lg">내 프로필</h1>
+        <h1 className="type-heading-lg">
+          {onboarding ? "프로필 완성하기" : "내 프로필"}
+        </h1>
         <p className="text-muted-foreground">
           {role === "CLIENT" ? "의뢰인" : "크리에이터"} · 함께할 사람에게 나를
           소개해요.
         </p>
       </div>
+      {onboarding && (
+        <div className="showcase-card grid gap-3">
+          <p>
+            가입할 때 선택한 역할과 이름이 저장되어 있어요. 아래에서 프로필을
+            보완하거나 바로 시작할 수 있어요.
+          </p>
+          <Button asChild>
+            <Link to={role === "CLIENT" ? "/campaigns/new" : "/campaigns"}>
+              {role === "CLIENT" ? "첫 모집 작성하기" : "모집 둘러보기"}
+            </Link>
+          </Button>
+        </div>
+      )}
       {role === "CREATOR" && (
         <nav aria-label="제작 관리" className="flex flex-wrap gap-4">
           <Button asChild variant="outline">

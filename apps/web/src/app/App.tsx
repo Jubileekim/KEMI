@@ -101,6 +101,9 @@ export default function App() {
                         <GoogleCallback />
                       )}
                       {screen.path === "/me/profile" && <ProfilePage />}
+                      {screen.path === "/onboarding" && (
+                        <ProfilePage onboarding />
+                      )}
                       {screen.path === "/creators/:creatorId" && (
                         <CreatorDetailPage />
                       )}
@@ -191,6 +194,7 @@ export default function App() {
                         "/signup",
                         "/auth/social/callback",
                         "/me/profile",
+                        "/onboarding",
                         "/studio/packages",
                         "/studio/portfolio",
                         "/campaigns",

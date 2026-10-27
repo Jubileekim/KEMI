@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import {
   Link,
   Navigate,
@@ -21,7 +21,19 @@ export function Guard({
 }) {
   const { role, status } = useSession();
   const location = useLocation();
-  if (!screen.roles) return children;
+  if (!screen.roles) {
+    // Session reset clears Query cache and cancels in-flight reads. Remount
+    // public query observers for the new epoch so they cannot stay pending
+    // on a removed query. Auth forms own their in-flight state and must stay mounted.
+    const authPage = ["/login", "/signup", "/auth/social/callback"].includes(
+      screen.path,
+    );
+    return authPage ? (
+      children
+    ) : (
+      <Fragment key={session.epoch()}>{children}</Fragment>
+    );
+  }
   if (!authEnabled)
     return (
       <section role="status">
