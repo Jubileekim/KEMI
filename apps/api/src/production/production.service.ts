@@ -10,6 +10,7 @@ import {
   materialKindSchema,
   materialStatusSchema,
   productionStatusSchema,
+  revisionLimitFrom,
 } from "@kemi/shared";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
@@ -125,12 +126,23 @@ const notFound = (what: string) =>
   new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
 
 // 계약 체결 때 제작을 만든다(조건서 서비스가 부른다). 작업 일수는 지원 때 제안한 기간이다.
+// 일반 수정 회차는 서명한 조건서의 "수정 횟수"에서 읽는다 [제안, D11].
 export async function createProductionForContract(
   tx: Tx,
   contractId: bigint,
   workingDays: number,
 ) {
-  await tx.production.create({ data: { contractId, workingDays } });
+  const { termsVersion } = await tx.contract.findUniqueOrThrow({
+    where: { id: contractId },
+    select: { termsVersion: { select: { revisions: true } } },
+  });
+  await tx.production.create({
+    data: {
+      contractId,
+      workingDays,
+      revisionLimit: revisionLimitFrom(termsVersion.revisions),
+    },
+  });
 }
 
 export interface ProductionService {

@@ -52,6 +52,10 @@ model User {
   materials        ProductionMaterial[]
   deadlineChanges  DeadlineChange[]     @relation("DeadlineChangeRequester")
   deadlineAnswers  DeadlineChange[]     @relation("DeadlineChangeResponder")
+  deliverables     Deliverable[]        @relation("DeliverableSubmitter")
+  revisionRequests RevisionRequest[]    @relation("RevisionRequester")
+  reviewsWritten   Review[]             @relation("ReviewAuthor")
+  reviewsReceived  Review[]             @relation("ReviewSubject")
   chatReads        ChatRead[]
 
   @@map("users")
@@ -313,6 +317,8 @@ model Contract {
   clientId       BigInt   @map("client_id")
   creatorId      BigInt   @map("creator_id")
   amountKrw      BigInt   @map("amount_krw")
+  // 계약 당시 모의 정산 수수료율(만분율). 1000 = 10%
+  feeRateBps     Int      @default(1000) @map("fee_rate_bps")
   termsHash      String   @map("terms_hash")
   status         String   @default("SIGNED")
   signedAt       DateTime @map("signed_at") @db.Timestamptz(3)
@@ -326,6 +332,8 @@ model Contract {
   creator      User         @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   payments     Payment[]
   production   Production?
+  settlement   Settlement?
+  reviews      Review[]
 
   @@map("contracts")
 }
@@ -422,10 +430,12 @@ model File {
   completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  owner           User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  workRequest     WorkRequest?         @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
-  chatAttachments ChatAttachment[]
-  materials       ProductionMaterial[]
+  owner            User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workRequest      WorkRequest?         @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  chatAttachments  ChatAttachment[]
+  materials        ProductionMaterial[]
+  deliverableFiles DeliverableFile[]
+  revisionFiles    RevisionFile[]
 
   @@index([ownerId, createdAt])
   @@index([workRequestId])
@@ -446,18 +456,22 @@ model ChatAttachment {
 // ─── 제작 준비·시작·납기 (READY-01·02, WORK-01·02) ─────────────
 // 계약 하나에 제작 하나. 계약 체결 때 PREPARING으로 만들고, 조건이 갖춰지면 크리에이터가 시작한다.
 model Production {
-  contractId  BigInt    @id @map("contract_id")
-  status      String    @default("PREPARING")
-  workingDays Int       @map("working_days")
-  startedAt   DateTime? @map("started_at") @db.Timestamptz(3)
+  contractId    BigInt    @id @map("contract_id")
+  status        String    @default("PREPARING")
+  workingDays   Int       @map("working_days")
+  // 일반 수정 회차(조건서 수정 횟수에서 읽음, [제안, D11])
+  revisionLimit Int       @default(2) @map("revision_limit")
+  startedAt     DateTime? @map("started_at") @db.Timestamptz(3)
   // 실제 마감일(KST 날짜). 시작할 때 한 번 계산하고, 승인된 납기 변경으로만 바뀐다.
-  dueDate     DateTime? @map("due_date") @db.Date
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  dueDate       DateTime? @map("due_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  contract        Contract             @relation(fields: [contractId], references: [id], onDelete: Restrict)
-  materials       ProductionMaterial[]
-  deadlineChanges DeadlineChange[]
+  contract         Contract             @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  materials        ProductionMaterial[]
+  deadlineChanges  DeadlineChange[]
+  deliverables     Deliverable[]
+  revisionRequests RevisionRequest[]
 
   @@map("productions")
 }
@@ -508,4 +522,115 @@ model DeadlineChange {
 
   @@index([contractId, createdAt])
   @@map("deadline_changes")
+}
+
+// ─── 검토·수정·최종 수령 (DEL-01~05, REV-01~02) ────────────────
+// 납품 버전. 파일 업로드와 별개로 크리에이터가 정식 제출한 것만 버전이 된다. 계약마다 1부터 번호를 매긴다.
+model Deliverable {
+  id                        BigInt    @id @default(autoincrement())
+  contractId                BigInt    @map("contract_id")
+  versionNo                 Int       @map("version_no")
+  kind                      String
+  status                    String    @default("SUBMITTED")
+  note                      String?
+  // 이 버전으로 끝난 수정 요청(수정본). 요청 하나에 수정본 하나.
+  resolvesRevisionRequestId BigInt?   @unique @map("resolves_revision_request_id")
+  commandId                 String    @unique @map("command_id") @db.Uuid
+  submittedBy               BigInt    @map("submitted_by")
+  approvedAt                DateTime? @map("approved_at") @db.Timestamptz(3)
+  receivedAt                DateTime? @map("received_at") @db.Timestamptz(3)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  production       Production        @relation(fields: [contractId], references: [contractId], onDelete: Restrict)
+  submitter        User              @relation("DeliverableSubmitter", fields: [submittedBy], references: [id], onDelete: Restrict)
+  resolves         RevisionRequest?  @relation("RevisionResolution", fields: [resolvesRevisionRequestId], references: [id], onDelete: Restrict)
+  files            DeliverableFile[]
+  revisionRequests RevisionRequest[] @relation("RevisionTarget")
+
+  @@unique([contractId, versionNo])
+  @@map("deliverables")
+}
+
+model DeliverableFile {
+  deliverableId BigInt @map("deliverable_id")
+  fileId        BigInt @map("file_id")
+
+  deliverable Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Restrict)
+  file        File        @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@id([deliverableId, fileId])
+  @@map("deliverable_files")
+}
+
+// 수정 요청. 대상 버전과 연결하고, 수정본이 제출되면 RESOLVED가 된다(일반 회차는 그때 한 번 차감).
+model RevisionRequest {
+  id            BigInt    @id @default(autoincrement())
+  contractId    BigInt    @map("contract_id")
+  deliverableId BigInt    @map("deliverable_id")
+  type          String
+  status        String    @default("OPEN")
+  // 체크리스트 [{ position?, problem, desired }]
+  items         Json
+  note          String?
+  commandId     String    @unique @map("command_id") @db.Uuid
+  requestedBy   BigInt    @map("requested_by")
+  resolvedAt    DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  production Production     @relation(fields: [contractId], references: [contractId], onDelete: Restrict)
+  target     Deliverable    @relation("RevisionTarget", fields: [deliverableId], references: [id], onDelete: Restrict)
+  requester  User           @relation("RevisionRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  resolution Deliverable?   @relation("RevisionResolution")
+  files      RevisionFile[]
+
+  @@index([contractId, createdAt])
+  @@map("revision_requests")
+}
+
+model RevisionFile {
+  revisionRequestId BigInt @map("revision_request_id")
+  fileId            BigInt @map("file_id")
+
+  revisionRequest RevisionRequest @relation(fields: [revisionRequestId], references: [id], onDelete: Restrict)
+  file            File            @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@id([revisionRequestId, fileId])
+  @@map("revision_files")
+}
+
+// ─── 모의 정산 (SETTLE-01) ────────────────────────────────────
+// 결제 완료·최종 수령·보류 없음일 때 계약당 한 번. 실제 송금이 아니다.
+model Settlement {
+  contractId BigInt   @id @map("contract_id")
+  status     String   @default("SIMULATED")
+  grossKrw   BigInt   @map("gross_krw")
+  feeRateBps Int      @map("fee_rate_bps")
+  feeKrw     BigInt   @map("fee_krw")
+  payoutKrw  BigInt   @map("payout_krw")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  @@map("settlements")
+}
+
+// ─── 리뷰 (REVIEW-01) ─────────────────────────────────────────
+// 정상 완료 거래의 당사자가 상대방을 한 번씩 평가한다.
+model Review {
+  id         BigInt   @id @default(autoincrement())
+  contractId BigInt   @map("contract_id")
+  reviewerId BigInt   @map("reviewer_id")
+  revieweeId BigInt   @map("reviewee_id")
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  reviewer User     @relation("ReviewAuthor", fields: [reviewerId], references: [id], onDelete: Restrict)
+  reviewee User     @relation("ReviewSubject", fields: [revieweeId], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, reviewerId])
+  @@index([revieweeId, createdAt])
+  @@map("reviews")
 }

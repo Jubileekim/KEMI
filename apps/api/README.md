@@ -327,6 +327,26 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - 마감일 = 시작일(KST) + 작업 일수(지원 때 제안한 기간, 달력일) [제안, D09]. 시작할 때 한 번 계산하고, 승인된 납기 변경으로만 바뀐다.
 - 문제 신고·제작 시작·납기 변경은 대화방에 시스템 안내로 남는다.
 
+## 검토·수정·최종 수령·정산·리뷰 API (DEL-01~05, REV-01~02, SETTLE-01, REVIEW-01)
+
+제작 중(`IN_PROGRESS`)에 크리에이터가 버전을 제출하고 의뢰인이 답한다. 파일 업로드(`purpose: DELIVERABLE`)만으로는 납품이 아니다.
+
+| 메서드·경로                                               | 누가       | 하는 일                                                              |
+| --------------------------------------------------------- | ---------- | -------------------------------------------------------------------- |
+| `GET /api/contracts/{id}/delivery`                        | 당사자     | 버전·수정 요청·일반 수정 회차·모의 정산·리뷰                         |
+| `POST /api/contracts/{id}/deliverables`                   | 크리에이터 | 버전 제출 `{ commandId, kind: DRAFT·REVIEW·FINAL, fileIds }`         |
+| `POST .../deliverables/{deliverableId}/revision-requests` | 의뢰인     | 수정 요청(체크리스트·첨부, 유형 GENERAL·DRAFT_FEEDBACK·CONTRACT_FIX) |
+| `POST .../deliverables/{deliverableId}/approve`           | 의뢰인     | 최신 검토본 승인(정산 아님)                                          |
+| `POST .../deliverables/{deliverableId}/receive`           | 의뢰인     | 최신 최종본 수령 확인 → 모의 정산·거래 완료                          |
+| `POST /api/contracts/{id}/reviews`                        | 당사자     | 완료 거래 리뷰 1회(평점 1~5)                                         |
+| `GET /api/settlements/me`                                 | 로그인     | 내 모의 정산 내역                                                    |
+| `GET /api/users/{userId}/reviews`                         | 누구나     | 받은 리뷰(평균·개수·최근 50개)                                       |
+
+- 순서: (초안 →) 검토본 → 수정 요청 ↔ 수정본 → 검토본 승인 → 최종본 → 수령 확인 → 정산·완료 → 리뷰.
+- 일반 수정 회차는 조건서 "수정 횟수"의 숫자(없으면 2회) [제안, D11]. 일반 수정만 차감하고, **수정본을 제출할 때 한 번** 완료 처리한다. 같은 `commandId` 재전송은 다시 차감하지 않는다.
+- 모의 정산 = 결제 완료·최종 수령·보류 없음일 때 계약 당시 요율(`contracts.fee_rate_bps`, 10%)로 계산하고 원 단위 내림 [제안, D12]. 20만원 → 수수료 2만원·지급 예정 18만원. **실제 송금이 아니다.**
+- 제출·수정 요청·승인·수령은 알림과 대화방 시스템 안내로 남는다. 채팅의 "좋아요"나 다운로드는 승인·수령을 대신하지 않는다.
+
 ## 테스트 결제 API (PAY-01·02, Toss Sandbox)
 
 자세한 규칙은 [결제 설계](../../docs/decisions/2026-10-26-payments.md)에 있다. 모두 `Authorization: Bearer <accessToken>`이 필요하다. **실제 돈은 움직이지 않는다.** 서버는 Toss 테스트 시크릿 키(`test_sk_`·`test_gsk_`)만 받고, `live_` 키는 서버가 시작하지 않는다.
