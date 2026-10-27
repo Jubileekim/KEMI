@@ -93,6 +93,9 @@ export default function SettlementMock({ contractId }: { contractId: string }) {
         <>
           <p>고정 계약 금액: {money(data.amount)} · KRW</p>
           <div className="flex flex-wrap gap-4">
+            <Link to={`/contracts/${contractId}/cancellation`}>
+              취소 요청·합의 (Mock)
+            </Link>
             <Link to={`/workspace/${data.requestId}`}>
               같은 작업 공간으로 돌아가기
             </Link>

@@ -819,3 +819,13 @@
 - 사용자 요청으로 미커밋 4-E 화면/라우트/검사를 이어서 사용했다. 변경 내용을 검토하고 웹 단위 200/200 exit0, build:web(타입·ESLint·운영 빌드) exit0, 전달 파일 Prettier/diff PASS를 새로 확인했다.
 - 전용5195·Edge·worker1·retry0에서 정산 E2E 데스크톱4+모바일4 **8/8·exit0·5.0분**. 공개 제안→서명·결제·준비·승인·최종 전달·수령→정산, 보류/실패/미확정·유실/중복·권한을 검증했다. 8개 완료 뒤 이번 전용5195 프로세스만 종료해 러너 종료를 확인했다. 근거: `qa/frontend-4e/final-settlement-e2e.json`. 이전 진행 중 60개 회귀의 결과는 이 실행으로 대체하거나 통과로 주장하지 않는다.
 - 실제 API/DB/PG/송금/스토리지 미검증, 기존 outputs/tools 포맷 실패 및 API timeout은 기존 경계다. 4단계 전체 완료 아님. 선행 화면 변경을 별도 전달한 뒤 사용자 지정 5단계 범위로 진행한다.
+
+## 5-A 취소 요청·양측 합의 (2026-10-27)
+
+- 선행 4-E 화면/검사를 `e0c4b11`로 커밋·푸시하고 [Draft PR #67](https://github.com/Jubileekim/KEMI/pull/67)을 생성했다. 모델 선행 `f91fa24`를 포함한다. 원격 CI는 이 기록 시 미확인이다.
+- 관련 기존 프론트5단계 PR/브랜치 없음 확인 후 `feat/frontend-5a-cancellation` 생성. CANCEL-01/02의 사유·진행 내역·희망 완료 대가·환불 차액·파일·미완성·원본·사용권 원문, 버전별 양측 확인을 구현했다. 새 제안은 이전 확인을 승계하지 않는다. 요청만으로 환불/정산하지 않는다.
+- `/contracts/:contractId/cancellation`을 실제 보호 라우트에 연결하고 기존 서명 확정 계약·준비·영상·정산 화면에서 링크로 접근한다. 요청이 있으면 정상 정산과 전용 최종 수령/승인 처리를 보류하며 대화·영상 조회는 유지한다. API/shared에는 해당 계약이 없어 `/__mock__/resolution/:contractId` DEV/MSW로 분리했다.
+- 변경: `features/resolution/Cancellation{Page,Form,Agreement}.tsx`, `mocks/CancellationMock.tsx`, `resolution-{model,store,api,handlers}.ts`, `browser.ts`, `settlement-handlers.ts`, `delivery-handlers.ts`, `app/App.tsx`, `features/terms/SignaturePanel.tsx`, `mocks/{ProductionMock,DeliveryMock,SettlementMock}.tsx`, `test/cancellation.test.ts`, `e2e/cancellation{.spec,-helpers}.ts`, `qa/frontend-5/`, `docs/frontend-resolution-5.md`.
+- 웹 단위205/205 exit0, build:web(타입·기존ESLint·운영빌드) exit0. Edge 데스크톱2+모바일2 **4/4 exit0**: 기존 링크 진입→요청→역할 전환→같은 최신 버전 양측 확인, 정산 보류, 구버전/미동의/다른 계약 차단, 응답 유실 재조회·조회 오류 때 이전 합의 숨김. 근거 `qa/frontend-5/5a-e2e.json`. 초기 타입 검사는 테스트의 배열/unknown 접근, 초기 lint는 라벨 연결·export 규칙에서 실패해 수정 후 통과했다. 기존 검사 강도/권한 정책은 변경하지 않았다.
+- 명세와 코드 품질을 분리 검토했고, 처리기 당사자/Bearer·epoch, 입력 검증, 중복/변조/구버전, 비밀/외부URL 없음, 조회 실패 시 완료 금지를 확인했다. 실제 서버 보안·PG·DB·다중 탭·영구복원 검증 아님. 운영 인증 미설정/미연결 제한은 유지한다.
+- D12 절사/세금, D13 완료 후 취소·회신 기한·증빙/해제 권한, D18 운영 권한은 미결정. 기존 정산 처리 중/성공 이후 취소는 Mock 보호 차단한다. 5-A 클라이언트/명시적 Mock만 검증했으며 5-B·5-C와 5단계 전체 완료는 아니다. 다음 작업 하나: 사용자 지정5-B 환불·분쟁·보류·운영 검토. Git/원격CI 링크는 후속 기록에 추가한다.

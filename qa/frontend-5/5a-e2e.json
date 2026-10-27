@@ -1,0 +1,322 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config",
+      "../../qa/frontend-5/playwright.edge.config.ts",
+      "cancellation.spec.ts",
+      "--workers=1"
+    ],
+    "configFile": "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\qa\\frontend-5\\playwright.edge.config.ts",
+    "rootDir": "C:/Users/Cho/Desktop/teamproject 3-5/KEMI/apps/web/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Cho/AppData/Local/Temp/kemi-5-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/Cho/Desktop/teamproject 3-5/KEMI/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/Cho/AppData/Local/Temp/kemi-5-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-chromium",
+        "name": "mobile-chromium",
+        "testDir": "C:/Users/Cho/Desktop/teamproject 3-5/KEMI/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "C:\\Users\\Cho\\AppData\\Local\\Temp\\kemi-5-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "chromium",
+        "testDir": "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\apps\\web\\e2e",
+        "snapshotDir": "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\apps\\web\\e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://127.0.0.1:5195",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "channel": "msedge",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "C:\\Users\\Cho\\AppData\\Local\\Temp\\kemi-5-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "mobile-chromium",
+        "testDir": "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\apps\\web\\e2e",
+        "snapshotDir": "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\apps\\web\\e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://127.0.0.1:5195",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "channel": "msedge",
+          "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Mobile Safari/537.36",
+          "viewport": {
+            "width": 412,
+            "height": 839
+          },
+          "screen": {
+            "width": 412,
+            "height": 915
+          },
+          "deviceScaleFactor": 2.625,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "mobile-chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      ["list", null],
+      [
+        "json",
+        {
+          "outputFile": "C:\\Users\\Cho\\AppData\\Local\\Temp\\kemi-5-report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm exec -w @kemi/web vite -- --host 127.0.0.1 --port 5195 --strictPort",
+      "url": "http://127.0.0.1:5195",
+      "reuseExistingServer": false,
+      "timeout": 60000,
+      "env": {
+        "VITE_ENABLE_MOCKS": "true"
+      },
+      "stdout": "ignore",
+      "stderr": "ignore"
+    }
+  },
+  "suites": [
+    {
+      "title": "cancellation.spec.ts",
+      "file": "cancellation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 26970,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-27T00:09:12.617Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "64561075f5a2a62f395c-cba4c24ace387ef08105",
+          "file": "cancellation.spec.ts",
+          "line": 14,
+          "column": 1
+        },
+        {
+          "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 25175,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-27T00:09:40.029Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "64561075f5a2a62f395c-1fc79fd7c23888a6de5e",
+          "file": "cancellation.spec.ts",
+          "line": 51,
+          "column": 1
+        },
+        {
+          "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 26803,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-27T00:10:06.152Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "64561075f5a2a62f395c-8d2fd97c18443861847b",
+          "file": "cancellation.spec.ts",
+          "line": 14,
+          "column": 1
+        },
+        {
+          "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chromium",
+              "projectName": "mobile-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 25090,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-27T00:10:33.339Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "64561075f5a2a62f395c-0c57abb99acd68583683",
+          "file": "cancellation.spec.ts",
+          "line": 51,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-27T00:09:09.737Z",
+    "duration": 137402.154,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

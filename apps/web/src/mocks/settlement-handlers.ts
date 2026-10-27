@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from "msw";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
+import { resolutionHeld } from "./resolution-store";
 import {
   readMockSignedContract,
   readMockSignatureRounds,
@@ -19,6 +20,7 @@ import {
 } from "./settlement-model";
 
 const records = new Map<string, SettlementRecord[]>();
+export const readMockSettlement = (id: string) => records.get(id)?.at(-1);
 let scenario = "success";
 const fail = (status: number) =>
   HttpResponse.json({ message: "모의 정산 확인 실패" }, { status });
@@ -110,7 +112,7 @@ export default [
       currency: contract.currency,
       paidAmount: order?.currency === contract.currency ? order.amount : null,
       prepared: Boolean(production.startedAt && allPrepared(production)),
-      held: selected === "held",
+      held: selected === "held" || resolutionHeld(contract.id),
     };
     // A mismatch fixture changes evidence, never the signed contract.
     if (selected === "mismatch") context.paidAmount = contract.amount + 1;

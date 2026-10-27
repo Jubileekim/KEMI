@@ -27,6 +27,9 @@ const DeliveryVersions = lazy(
 const SettlementSummary = lazy(
   () => import("../features/resolution/SettlementSummary"),
 );
+const CancellationPage = lazy(
+  () => import("../features/resolution/CancellationPage"),
+);
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -95,6 +98,10 @@ export default function App() {
                       {screen.path === "/contracts/:contractId/settlement" && (
                         <SettlementSummary />
                       )}
+                      {screen.path ===
+                        "/contracts/:contractId/cancellation" && (
+                        <CancellationPage />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -110,6 +117,7 @@ export default function App() {
                         "/contracts/:contractId/production",
                         "/contracts/:contractId/deliveries",
                         "/contracts/:contractId/settlement",
+                        "/contracts/:contractId/cancellation",
                         "/login",
                         "/signup",
                         "/auth/social/callback",
