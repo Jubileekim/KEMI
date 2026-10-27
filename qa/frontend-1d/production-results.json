@@ -1,0 +1,11 @@
+{
+  "source": "production bundle with independent HTTP auth fixtures; NOT live API",
+  "results": [
+    "production assets: studio Mock code/endpoints/worker excluded",
+    "CREATOR/packages: protected production route, no studio Mock/product writes",
+    "CREATOR/portfolio: protected production route, no studio Mock/product writes",
+    "CLIENT/packages: protected production route, no studio Mock/product writes",
+    "CLIENT/portfolio: protected production route, no studio Mock/product writes"
+  ],
+  "pageErrors": []
+}

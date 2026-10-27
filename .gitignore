@@ -16,3 +16,6 @@ apps/api/src/generated/
 
 .DS_Store
 Thumbs.db
+
+# Local frontend evidence scratch space
+tmp/

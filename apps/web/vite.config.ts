@@ -7,7 +7,23 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const target = env.API_PROXY_TARGET || "http://localhost:4000";
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: "exclude-dev-worker",
+        apply: "build",
+        async writeBundle() {
+          const { rm } = await import("node:fs/promises");
+          await rm(
+            fileURLToPath(
+              new URL("./dist/mockServiceWorker.js", import.meta.url),
+            ),
+            { force: true },
+          );
+        },
+      },
+    ],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     },

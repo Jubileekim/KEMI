@@ -1,0 +1,6 @@
+{
+  "source": "local production bundle; independent HTTP fixtures, NOT live API",
+  "results": [
+    "GUEST: navigation, responsive layout, auth/API boundary, no Mock or page errors"
+  ]
+}

@@ -527,16 +527,25 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 - 마이그레이션을 다른 주소로 돌려야 할 때만 `MIGRATION_DATABASE_URL`을 추가한다.
 - Session pooler는 동시 연결 수 한도가 있으므로 `DATABASE_POOL_MAX`를 작게 유지한다.
 
-## Render 배포 설정 (예정)
+## Render 배포 설정
+
+아래는 **목표 설정**이다. 현재 `kemi-api`는 수동으로 만든 서비스라 [`render.yaml`](../../render.yaml)(Blueprint)과 연결돼 있지 않고, 기존 서비스는 대시보드에서 이 값에 맞춘다. 현재 상태와 변경 체크리스트는 [배포 절차서](../../docs/runbooks/auth-deploy-verification.md) 2단계에 있다. Blueprint는 새 환경을 처음 만들 때만 쓴다.
 
 | 항목              | 값                                                                                                                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Root Directory    | (비움, 저장소 루트)                                                                                                                      |
 | Build Command     | `npm ci --include=dev && npm run build:api` (린트·Prisma CLI·TypeScript가 devDependencies라서 `NODE_ENV=production`이어도 설치되게 한다) |
 | Start Command     | `npm start -w @kemi/api`                                                                                                                 |
-| Environment       | `TRUST_PROXY_HOPS`는 배포 후 실제 `X-Forwarded-For`를 확인한 값으로 넣는다. 확인 전에는 요청 제한이 모든 사용자를 같은 IP로 볼 수 있다   |
 | Health Check Path | `/health`                                                                                                                                |
-| Environment       | `NODE_ENV=production`, `DATABASE_URL` 등                                                                                                 |
+| 플랜·리전         | `free`, `singapore`                                                                                                                      |
+| 자동 배포         | `checksPass` (`main`의 CI를 통과한 커밋만)                                                                                               |
+| Environment       | `NODE_ENV=production`, `DATABASE_URL`·`APP_ORIGIN`(생성 시 입력), `JWT_ACCESS_SECRET`(Render 생성), `TRUST_PROXY_HOPS=0`(4단계에서 확정) |
+
+마이그레이션은 배포 때 자동으로 돌리지 않는다. 팀 DB 적용 절차를 따로 거친다.
+
+Render 계정은 희년님이 관리한다(무료 워크스페이스는 팀원 초대 불가). 팀원은 대시보드 대신 PR로 바꾸고, 배포 결과는 이슈 #27에서 공유한다. 자세한 역할은 절차서 2-0.
+
+**운영 DB 마이그레이션은 배포·서버 시작에 자동으로 묶지 않는다.** `npm start -w @kemi/api`는 앱만 시작한다. `main`에 DB 변경이 들어오기 전에 백업 및 기존 데이터 보존 여부를 확인하고, 별도 개발용 DB에서 해당 커밋의 마이그레이션과 API/DB 테스트를 검증한 다음 담당자 승인 후 `npm run db:deploy -w @kemi/api`로 명시적으로 적용한다. Render 무료 플랜은 pre-deploy command를 제공하지 않으므로 새 코드 배포 전에 이 절차를 별도 수행한다. `prisma migrate status`와 `/health/ready`를 확인하고, 병합·자동 배포 뒤에는 실제 `/api/projects` 조회와 Render 오류 로그를 점검한다. 앱 롤백이 DB 마이그레이션을 되돌리지는 않으므로, 문제가 생겨도 `migrate reset`이나 레거시 테이블 삭제를 운영 DB에 실행하지 않는다. 이미 적용된 7개 이력과 기존 테이블 보존 상태는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)에 기록되어 있다.
 
 헬스 체크는 DB를 보지 않는 `/health`를 쓴다. DB 장애 때문에 Render가 서버를 계속 재시작하지 않게 하기 위해서다. DB까지 확인하려면 `/health/ready`를 사용한다.
 

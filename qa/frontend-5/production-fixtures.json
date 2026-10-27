@@ -1,0 +1,66 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": true,
+  "results": [
+    {
+      "role": "GUEST",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/cancellation",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/disputes/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/ops/disputes",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/cancellation",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/disputes/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/ops/disputes",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/cancellation",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/disputes/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/ops/disputes",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/cancellation",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/disputes/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/ops/disputes",
+      "passed": true
+    }
+  ]
+}

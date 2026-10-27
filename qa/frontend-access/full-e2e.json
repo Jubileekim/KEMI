@@ -1,0 +1,24 @@
+{
+  "sourceCommit": "4574df1f75e31dda959921ab82c705364ab51c3c",
+  "sourceCommitNote": "See exact sourceCommit in verification.json; later commits contain documentation/QA only",
+  "command": "npm exec -w @kemi/web -- playwright test --config ../../qa/frontend-4d/playwright.edge.config.ts --workers=1",
+  "actualBrowser": "Microsoft Edge; projects chromium and mobile-chromium",
+  "expected": 296,
+  "passed": 296,
+  "failed": 0,
+  "desktop": 148,
+  "mobile": 148,
+  "retries": 0,
+  "exitCode": 0,
+  "summary": "296 passed (47.3m)",
+  "lastRun": {
+    "status": "passed",
+    "failedTests": []
+  },
+  "notes": [
+    "Fresh Vite server after builds; no source/shared build during this run",
+    "Only owned QA Vite process stopped after all 296 results to finish Windows runner cleanup",
+    "Existing favicon MSW and React DevTools warnings remain; no claim of zero console warnings",
+    "Explicit single-tab DEV/MSW and independent HTTP fixtures, not live API/DB verification"
+  ]
+}

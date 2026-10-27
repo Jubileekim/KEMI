@@ -1,0 +1,16 @@
+{
+  "source": "production bundle + simulated HTTP; not live API/DB",
+  "passed": 9,
+  "results": [
+    "CLIENT: validated bearer / role-specific partial PATCH / response reset / keyboard",
+    "CLIENT: independent HTTP fixture retains saved profile across reload",
+    "CLIENT: save failure preserves input / explicit read restores server value",
+    "CREATOR: validated bearer / role-specific partial PATCH / response reset / keyboard",
+    "PUBLIC stays PUBLIC after editing (no serviceStatus in PATCH)",
+    "CREATOR: independent HTTP fixture retains saved profile across reload",
+    "CREATOR: save failure preserves input / explicit read restores server value",
+    "production: no Mock UI / service worker / private email rendering / page errors",
+    "production: Mock profile fixture / extras / worker absent in bundle"
+  ],
+  "pageErrors": []
+}

@@ -1,0 +1,155 @@
+import axios from "axios";
+import { z } from "zod";
+import { api } from "../shared/api/client";
+import { session } from "../app/session";
+import {
+  finalAssetSchema,
+  finalStateSchema,
+  type FinalCommand,
+  type FinalAsset,
+} from "./final-model";
+import { revisionRequestSchema, type RevisionCommand } from "./revision-model";
+import {
+  assetSchema,
+  deliveryVersionSchema,
+  deliveryViewSchema,
+  videoTypes,
+  type DeliveryCommand,
+} from "./delivery-model";
+
+async function request(
+  path: string,
+  signal?: AbortSignal,
+  data?: DeliveryCommand | RevisionCommand | FinalCommand | FormData,
+  media = false,
+) {
+  const epoch = session.epoch();
+  const token = await session.getToken();
+  if (epoch !== session.epoch()) throw new axios.CanceledError();
+  const response = await api.request<unknown>({
+    baseURL: "/",
+    url: path,
+    method: data ? "POST" : "GET",
+    data,
+    signal,
+    responseType: media ? "blob" : "json",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (epoch !== session.epoch()) throw new axios.CanceledError();
+  return response.data;
+}
+const path = (id: string) => `/__mock__/deliveries/${encodeURIComponent(id)}`;
+export async function loadDeliveries(id: string, signal?: AbortSignal) {
+  const view = deliveryViewSchema.parse(await request(path(id), signal));
+  if (view.contractId !== id) throw new Error("Invalid Mock delivery identity");
+  return view;
+}
+export async function uploadDelivery(id: string, file: File) {
+  const form = new FormData();
+  form.set("id", crypto.randomUUID());
+  form.set("file", file);
+  return assetSchema.parse(
+    await request(`${path(id)}/assets`, undefined, form),
+  );
+}
+export async function saveDelivery(id: string, command: DeliveryCommand) {
+  return z
+    .strictObject({ ok: z.literal(true) })
+    .parse(await request(path(id), undefined, command));
+}
+export async function saveRevision(id: string, command: RevisionCommand) {
+  return z
+    .strictObject({ ok: z.literal(true) })
+    .parse(await request(`${path(id)}/requests`, undefined, command));
+}
+export async function saveFinal(id: string, command: FinalCommand) {
+  return z
+    .strictObject({ ok: z.literal(true) })
+    .parse(await request(`${path(id)}/final`, undefined, command));
+}
+export async function uploadFinal(id: string, file: File) {
+  const form = new FormData();
+  form.set("id", crypto.randomUUID());
+  form.set("file", file);
+  return finalAssetSchema.parse(
+    await request(`${path(id)}/final-assets`, undefined, form),
+  );
+}
+export async function downloadFinal(id: string, asset: FinalAsset) {
+  return z
+    .instanceof(Blob)
+    .refine((value) => value.size === asset.size && value.type === asset.mime)
+    .parse(
+      await request(
+        `${path(id)}/final-files/${encodeURIComponent(asset.id)}`,
+        undefined,
+        undefined,
+        true,
+      ),
+    );
+}
+export async function loadFinalEvents(roomId: string, signal?: AbortSignal) {
+  return z
+    .array(
+      z.strictObject({
+        contractId: z.string().uuid(),
+        final: finalStateSchema,
+      }),
+    )
+    .parse(
+      await request(
+        `/__mock__/final-events/${encodeURIComponent(roomId)}`,
+        signal,
+      ),
+    );
+}
+export async function loadRevisionEvents(roomId: string, signal?: AbortSignal) {
+  return z
+    .array(
+      z.strictObject({
+        contractId: z.string().uuid(),
+        revision: revisionRequestSchema,
+      }),
+    )
+    .parse(
+      await request(
+        `/__mock__/revision-events/${encodeURIComponent(roomId)}`,
+        signal,
+      ),
+    );
+}
+export async function loadDeliveryMedia(
+  id: string,
+  versionId: string,
+  signal?: AbortSignal,
+) {
+  return z
+    .instanceof(Blob)
+    .refine(
+      (value) =>
+        value.size > 0 && videoTypes.some((type) => value.type === type),
+    )
+    .parse(
+      await request(
+        `${path(id)}/media/${encodeURIComponent(versionId)}`,
+        signal,
+        undefined,
+        true,
+      ),
+    );
+}
+export async function loadDeliveryEvents(roomId: string, signal?: AbortSignal) {
+  return z
+    .array(
+      z.strictObject({
+        contractId: z.string().uuid(),
+        version: deliveryVersionSchema,
+      }),
+    )
+    .parse(
+      await request(
+        `/__mock__/delivery-events/${encodeURIComponent(roomId)}`,
+        signal,
+      ),
+    );
+}

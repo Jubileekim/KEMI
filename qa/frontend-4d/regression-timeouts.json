@@ -1,0 +1,81 @@
+{
+  "source": "c1a3f9d",
+  "command": "playwright test --config ../../qa/frontend-4d/playwright.edge.config.ts delivery.spec.ts production.spec.ts --workers=1",
+  "passed": 20,
+  "failed": 2,
+  "exitCode": 1,
+  "duration": "9.9m",
+  "failures": [
+    {
+      "test": "delivery-4-B-입력·업로드-실패-복구·형식-HTTP-오류·미확정-실패는-안내-없음-mobile-chromium",
+      "error": "Test timeout of 30000ms exceeded",
+      "lastCalls": [
+        {
+          "method": "click",
+          "title": null,
+          "selector": "internal:role=button[name=\"영상 버전 재조회\"s]"
+        },
+        {
+          "method": "expect",
+          "title": "Expect \"toBeEnabled\"",
+          "selector": "internal:role=button[name=\"재조회 상태로 다시 작성\"s]"
+        },
+        {
+          "method": "click",
+          "title": null,
+          "selector": "internal:role=button[name=\"재조회 상태로 다시 작성\"s]"
+        },
+        {
+          "method": "expect",
+          "title": "Expect \"toHaveValue\"",
+          "selector": "internal:label=\"영상 설명\"s"
+        },
+        {
+          "method": "evaluateExpression",
+          "title": null,
+          "selector": null
+        }
+      ]
+    },
+    {
+      "test": "delivery-4-B-지연-제출-로그아웃·새로고침은-메모리-복원하지-않음-mobile-chromium",
+      "error": "Test timeout of 30000ms exceeded",
+      "lastCalls": [
+        {
+          "method": "evaluateExpression",
+          "title": null,
+          "selector": null
+        },
+        {
+          "method": "reload",
+          "title": null,
+          "selector": null
+        },
+        {
+          "method": "expect",
+          "title": "Expect \"toContainText\"",
+          "selector": "internal:role=alert >> internal:has-text=\"제출 결과를 확인하지 못했어요\"i"
+        },
+        {
+          "method": "expect",
+          "title": "Expect \"toHaveCount\"",
+          "selector": "internal:label=\"선택한 영상 버전\"i"
+        },
+        {
+          "method": "evaluateExpression",
+          "title": null,
+          "selector": null
+        }
+      ]
+    }
+  ],
+  "isolatedRecheck": {
+    "command": "playwright test --config ../../qa/frontend-4d/playwright.edge.config.ts delivery.spec.ts --project mobile-chromium --workers=1 --grep \"4-B 입력|4-B 지연\"",
+    "passed": 2,
+    "failed": 0,
+    "exitCode": 0,
+    "duration": "1.6m",
+    "timeoutsAndAssertionsChanged": false,
+    "note": "This does not turn the preceding 20/22 grouped run into a passing grouped run. Timing sensitivity remains; root cause not isolated."
+  }
+}

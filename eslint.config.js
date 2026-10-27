@@ -26,6 +26,9 @@ export default [
       "apps/api/src/generated/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "KEMI-Design-System/**",
+      "qa/**",
+      "apps/web/public/mockServiceWorker.js",
     ],
   },
   js.configs.recommended,
@@ -79,7 +82,12 @@ export default [
       "import-x/no-extraneous-dependencies": [
         "error",
         {
-          devDependencies: ["**/test/**", "**/e2e/**", "**/*.config.{js,ts}"],
+          devDependencies: [
+            "**/test/**",
+            "**/e2e/**",
+            "**/*.config.{js,ts}",
+            "**/src/mocks/**",
+          ],
         },
       ],
     },
