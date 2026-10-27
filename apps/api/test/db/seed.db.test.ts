@@ -131,9 +131,7 @@ describe("시연 데이터 (단계 8)", () => {
     const summary = await seedDemo(prisma, { password: PASSWORD });
     expect(summary.users).toHaveLength(4);
     expect(await prisma.user.count()).toBe(5);
-    const preserved = await prisma.user.findUnique({
-      where: { id: real.id },
-    });
+    const preserved = await prisma.user.findUnique({ where: { id: real.id } });
     expect(preserved?.email).toBe(real.email);
     expect(preserved?.name).toBe(real.name);
     expect(preserved?.role).toBe(real.role);
