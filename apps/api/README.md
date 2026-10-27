@@ -450,12 +450,20 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 
 ## 시연 데이터 (단계 8)
 
-개발·시연 DB에 시연 데이터를 넣는다. **운영(`NODE_ENV=production`)에서는 실행하지 않는다.**
+**전용 개발·시연 DB에만** 시연 데이터를 넣는다. 운영 DB에는 넣지 않는다.
 
 ```bash
-SEED_PASSWORD=<12자 이상> npm run db:seed -w @kemi/api
+SEED_PASSWORD=<12자 이상> \
+SEED_ALLOWED_TARGETS=<시드를 허용한 DB 신원> \
+SEED_CONFIRM_TARGET=<이번 대상 DB 신원> \
+npm run db:seed -w @kemi/api
 ```
 
+- **대상 확인(fail-closed):** 실행자의 `NODE_ENV`만으로는 DB를 알 수 없어서, 접속 주소에서 DB 신원을 뽑아 확인한다.
+  - DB 신원: Supabase는 `supabase:<프로젝트 ref>`, 그 밖은 `host:port/dbname`
+  - `SEED_ALLOWED_TARGETS`(쉼표 구분)에 있고 `SEED_CONFIRM_TARGET`과 같아야 실행한다. 다르면 DB에 접속하지 않고 멈춘다.
+  - `NODE_ENV=production`이면 거부한다.
+  - 시연 계정(`@kemi.test`)이 아닌 사용자가 한 명이라도 있는 DB는 실제 서비스 DB로 보고 거부한다.
 - `DATABASE_URL`은 `apps/api/.env`에서 읽는다. 마이그레이션(`npm run db:deploy`)이 먼저 적용돼 있어야 한다.
 - 계정 4개(`demo-client`·`demo-client2`·`demo-creator`·`demo-creator2` `@kemi.test`, 이름에 `[시연]`). 비밀번호는 `SEED_PASSWORD`이며 저장소에 두지 않는다.
 - 만드는 것:
@@ -463,9 +471,9 @@ SEED_PASSWORD=<12자 이상> npm run db:seed -w @kemi/api
   - 모집 중 공고와 대기 중 지원
   - 처음부터 끝까지 끝난 공개 모집 거래(수정 1회, 정산 18만원, 리뷰 2개)
   - 답을 기다리는 직접 의뢰
-- 거래는 실제 서비스 함수로 만든다. 결제만 "시연 결제" 성공 기록이고 Toss는 부르지 않는다.
-- 작업물·납품 파일은 DB 행만 있고 저장소에 실제 파일이 없다. 재생·다운로드 주소는 열리지 않는다.
-- 이미 `@kemi.test` 계정이 있으면 아무것도 바꾸지 않고 끝난다(지우지 않는다).
+- 거래는 실제 서비스 함수로 만든다. **결제만 "시연 결제" 성공 기록이고 Toss는 부르지 않는다.** 실제 결제 흐름을 검증한 데이터가 아니다.
+- 작업물·납품 파일은 DB 행만 있고 저장소에 실제 바이트가 없다. 재생·다운로드 주소는 열리지 않는다(실제 업로드·다운로드 검증은 배포 점검 절차에서 따로 한다).
+- **재실행:** 단계마다 "있으면 그대로, 없으면 만든다"로 진행한다. 중간에 실패해도 다시 실행하면 남은 단계만 이어서 만들고, 다 만든 뒤 다시 실행하면 아무것도 바꾸지 않는다. 아무것도 지우지 않는다.
 - 시연 계정은 운영 지표(`GET /api/admin/metrics`)에서 빠진다.
 
 ## API 경로 규칙
