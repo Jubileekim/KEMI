@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { AuthUser } from "@kemi/shared";
+import SettlementNoticesMock from "./SettlementNoticesMock";
+import WorkNoticesMock from "./WorkNoticesMock";
 import Button from "../components/ui/button";
 import Textarea from "../components/ui/textarea";
 import Label from "../components/ui/label";
@@ -58,9 +60,11 @@ export default function ChatPanelMock({
         ))}
       </ol>
       {!messages.length && <p>아직 대화가 없어요.</p>}
+      <WorkNoticesMock roomId={item.id} />
       {item.contracted && <DeliveryNoticesMock roomId={item.id} />}
       {item.contracted && <RevisionNoticesMock requestId={item.id} />}
       {item.contracted && <FinalNoticesMock roomId={item.id} />}
+      {item.contracted && <SettlementNoticesMock roomId={item.id} />}
       {last && (
         <Button
           variant="outline"

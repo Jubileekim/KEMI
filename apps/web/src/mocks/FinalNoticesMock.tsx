@@ -44,7 +44,7 @@ export default function FinalNoticesMock({ roomId }: { roomId: string }) {
             },
             final.receipt && {
               event: final.receipt,
-              label: "최종 수령 확인·정산 미실행",
+              label: "최종 수령 확인·정산 결과 별도",
               version: final.approval?.versionId,
             },
             final.problem && {

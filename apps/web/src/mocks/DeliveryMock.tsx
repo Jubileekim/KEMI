@@ -130,7 +130,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
   if (query.data?.state.final.approval) finalStatus = "최종 파일 전달 대기";
   if (query.data?.state.final.delivery) finalStatus = "최종 수령 확인 대기";
   if (query.data?.state.final.receipt)
-    finalStatus = "수령 확인 기록·정산 미실행";
+    finalStatus = "수령 확인 기록·정산 결과 별도";
   if (query.data?.state.final.problem) finalStatus = "파일 문제 보류";
   const openRequest = query.data?.state.requests.find(
     (r) => !r.resultVersionId,
@@ -283,6 +283,9 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
             </Link>
             <Link to={`/contracts/${contractId}/production`}>
               준비·납기 확인
+            </Link>
+            <Link to={`/contracts/${contractId}/settlement`}>
+              모의 정산 결과 확인
             </Link>
           </div>
           {user?.id === query.data.creatorId && (

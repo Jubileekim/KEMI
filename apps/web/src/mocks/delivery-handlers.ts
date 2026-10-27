@@ -25,6 +25,8 @@ import {
 } from "./delivery-model";
 
 const records = new Map<string, DeliveryState>();
+export const readMockDelivery = (id: string) =>
+  records.get(id) ?? emptyDelivery();
 const assets = new Map<
   string,
   { contractId: string; authorId: string; asset: DeliveryAsset; file: File }

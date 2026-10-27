@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { session, useSession } from "../app/session";
@@ -138,6 +138,7 @@ function Requirement({
   );
 }
 export default function ProductionMock({ contractId }: { contractId: string }) {
+  const { hash } = useLocation();
   const { user } = useSession();
   const [days, setDays] = useState("7");
   const [required, setRequired] = useState({
@@ -378,10 +379,10 @@ export default function ProductionMock({ contractId }: { contractId: string }) {
               send({ type: "respond", changeId, accept })
             }
           />
-          <details>
+          <details open={hash.startsWith("#production-") || undefined}>
             <summary>준비·정정·납기 이력 ({state.history.length})</summary>
             {state.history.map((h) => (
-              <p key={h.id}>
+              <p key={h.id} id={`production-${h.id}`}>
                 {deadlineTime(h.at)} ·{" "}
                 {h.actorId === user?.id ? "본인" : "상대방"} · {h.message}
               </p>
@@ -393,7 +394,9 @@ export default function ProductionMock({ contractId }: { contractId: string }) {
           <Link to={`/contracts/${contractId}/deliveries`}>
             초안·완성 검토본과 영상 버전 (Mock)
           </Link>
-          <p>수정 요청·승인·최종 수령·정산은 후속 범위예요.</p>
+          <Link to={`/contracts/${contractId}/settlement`}>
+            모의 정산 결과 확인
+          </Link>
         </>
       )}
       {notice && <p role="status">{notice}</p>}
