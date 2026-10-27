@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, matchRoutes, useLocation } from "react-router";
 import Brand from "@/components/kemi/brand";
+import NotificationLink from "../../features/activity/NotificationLink";
 import { screens } from "../routes";
 import { session, useSession } from "../session";
 import Button from "../../components/ui/button";
@@ -40,7 +41,10 @@ export default function Shell() {
             )}
             <NavLink to="/me/activity">내 활동</NavLink>
             {(role === "client" || role === "creator") && (
-              <NavLink to="/me/profile">내 프로필</NavLink>
+              <>
+                <NotificationLink />
+                <NavLink to="/me/profile">내 프로필</NavLink>
+              </>
             )}
             {(role === "client" || role === "creator") && (
               <NavLink to="/requests">내 제안·협의</NavLink>

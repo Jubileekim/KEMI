@@ -91,6 +91,9 @@ export default function SettlementMock({ contractId }: { contractId: string }) {
       )}
       {data && !query.error && !busy && !pending && (
         <>
+          <Link to={`/contracts/${contractId}/review`}>
+            완료 거래 리뷰 작성
+          </Link>
           <p>고정 계약 금액: {money(data.amount)} · KRW</p>
           <div className="flex flex-wrap gap-4">
             <Link to={`/contracts/${contractId}/cancellation`}>
