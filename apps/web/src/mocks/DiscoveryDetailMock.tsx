@@ -97,7 +97,7 @@ export default function DiscoveryDetailMock({ id }: { id: string }) {
           {closed ? (
             <Button disabled>신규 제안 종료</Button>
           ) : (
-            !own && (
+            (!user || user.role === "CREATOR") && (
               <Button asChild>
                 <Link to={`/campaigns/${id}/apply`}>제안 제출하기</Link>
               </Button>

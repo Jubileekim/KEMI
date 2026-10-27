@@ -744,3 +744,44 @@
 - **Git/PR 전달:** 검사/기록 [33b148e](https://github.com/Jubileekim/KEMI/commit/33b148e)를 푸시하고 [Draft PR #65](https://github.com/Jubileekim/KEMI/pull/65)를 생성·이 채팅에 연결했다. 확인 시open/Draft·미병합, head33b148e·base4-C89222e1이었다. 승인→파일→수령은 하나의 검증 가능한 흐름이므로 PR1개이며 모델/화면/초안 UI보완/검사로 나눠 커밋했다. 마지막 전달은 이 Git/CI 기록만 추가하고 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/65/commits)에서 최종 전달 SHA까지 확인한다.
 - **원격 CI:** 검사 SHA33b148e의 [Web CI run40291883209](https://github.com/Jubileekim/KEMI/actions/runs/40291883209), job121468627364는 확인 시in_progress였다. 원격 전체 통과가 아니다. 마지막 문서 전달은 새 CI 대상이며 **최신 전달 SHA의 최종 원격 CI는 미검증**이다. [최신 Checks](https://github.com/Jubileekim/KEMI/pull/65/checks)에서 확인한다. 수동 재실행·검사 강도/timeout 변경은 없다. 기존 Vercel GitHub 연결 status도 확인 시pending(자동 배포 진행 설명)이었고 별도 Preview Comments success는 배포 완료 증거가 아니다. 명시적 배포/재배포·Vercel 권한/연결 설정 변경은 실행하지 않았다.
 - **종료 경계:** 클라이언트/명시적 Mock의4-D만 완료다. 실제 API/DB/스토리지/외부 제공자/파일 검사·D11/D13/D17/D20·정산·4단계 전체는 남는다. 연관 묶음20/22와 분리2/2의 시간 민감성도 기록했다. 다음 작업 하나는 위4-D API/보류 정책 조율이며 자동 착수하지 않는다. 전용 QA 서버만 종료했고 기존 미추적 outputs/tools는 보존·미포함이다. 마지막 커밋·푸시 후 로컬/원격/PR head 일치와 추적 파일 변경 없음을 확인한다. PR 병합·자동 병합·명시적 배포 없음.
+
+## 기존 화면 접근 개선 (2026-10-26)
+
+### 조사·수정 전후
+
+- 기준은 이 Git 저장소 `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`다. 먼저 이 진행 문서를 읽고 `routes.ts`, `App.tsx`, `Shell.tsx`, Guard/session/auth와 기능/Mock의 Link·상태 조건을 추적했다. [전체 34개 경로와 중첩 기능 접근표](frontend-screen-access.md)를 추가했다. **기능 컴포넌트 19개 / Placeholder 15개**이며, 기능 화면 중 완전히 고립된 경로는 없었다. 운영 API 연동/미구현 때문에 사용할 수 없는 화면을 라우팅 누락으로 분류하지 않았다.
+- **수정 전:** 홈·의뢰인의 기본 로그인 복귀점 `/me/activity`가 다음 행동 없는 Placeholder였다. 크리에이터 프로필에서 패키지/작업물 관리로 바로 연결되지 않았고, 의뢰인이 타인 모집 상세의 creator 전용 제안 CTA를 눌러 권한 거부로 끝날 수 있었다.
+- **수정 후:** 홈·내 활동에서 역할별 기존 화면을 안내한다. 비회원은 공개 모집·로그인·회원가입, 의뢰인은 공개 모집·캠페인 작성/저장한 초안·프로필·제안/협의, 크리에이터는 공개 모집·프로필·패키지/제작 서비스·작업물·제안/협의로 이동한다. ops에는 공개 모집 안내만 표시하며 회원 권한으로 바꾸지 않는다. 크리에이터 프로필에서 제작 관리 두 화면으로 연결하고 의뢰인에게 creator 전용 제안 CTA를 숨긴다.
+- 상세는 기존 **목록→상세→협의→조건서/서명→확정 계약→결제/준비/영상→수정/승인/최종 전달/수령** 흐름에 유지한다. 계약 ID나 데이터 없는 임의 상세 링크·전역 메뉴를 추가하지 않았다. 실제 거래 상태에 따른 행동·당사자 검증도 유지한다. 홈/활동의 데이터 기능은 여전히 미구현이며 이를 화면에 명시한다.
+
+### 변경 파일
+
+- `apps/web/src/app/ScreenLinks.tsx`: 기존 화면으로 가는 역할별 안내 카드. KEMI 색상/간격/카드·기존 Link 사용, API 호출 없음.
+- `apps/web/src/app/route-pages.tsx`: 홈·내 활동 Placeholder에만 안내 연결. Guard와 다른 Placeholder/404 유지.
+- `apps/web/src/features/profiles/ProfilePage.tsx`: 크리에이터 제작 관리 링크.
+- `apps/web/src/mocks/DiscoveryDetailMock.tsx`: 기존 역할 정책에 맞춘 제안 CTA 노출.
+- `apps/web/e2e/screen-access.spec.ts`: 4개 시나리오 × 데스크톱/모바일, 실제 클릭으로 로그인 복귀·초안 재진입·프로필/제작 관리/협의·역할 거부 검증.
+- `docs/frontend-screen-access.md`, 이 진행 문서, `qa/frontend-access/`: 전체 경로표·운영 HTTP fixture 검증 스크립트/결과·캡처·재현용 Edge 설정·검증 기록.
+- `routes.ts`/`App.tsx`는 조사 기준으로 사용했으며 경로/렌더링 매핑은 변경하지 않았다. `Shell.tsx`의 메뉴와 인증·session/API/shared/의존성/CI 설정도 변경하지 않았다. 시작부터 있던 미추적 `outputs/`, `tools/`는 보존·커밋 제외한다.
+
+### 검증과 미해결 사항
+
+- 고정 기능 커밋 `4574df1`에서 **웹 단위 193/193**, 수정한 접근 E2E **8/8·실패0·exit0**(Edge 데스크톱/모바일, worker1, retry0), 기본 및 두 flag 운영 `build:web`의 타입 검사·ESLint·빌드 exit0, 토큰 검사 PASS. 전체 회귀 최종 결과는 아래에 별도 추가한다.
+- 운영 기본(auth 미설정) 1역할, 두 flag 빌드에서 독립 HTTP fixture 4역할(GUEST/CLIENT/CREATOR/ADMIN) 검증 PASS. 새 안내의 역할별 링크 수와 기존 캠페인/제안/영상 미연결 안내·권한 차단을 확인했다. 320/390/600/768/1024/1280px 가로 넘침 없음. Mock 코드/worker/요청 없음·페이지 오류0. 역할별390/1280px 캡처 보존, 의뢰인 모바일·크리에이터 데스크톱 시각 확인. **실제 인증/API/DB/외부 제공자·운영 배포 검증이 아니다.**
+- 전체 `format:check`는 작업 전 미추적 `outputs/share/KEMI-interactive.html`, `tools/share-html/{build.mjs,main.tsx,serve.mjs,share.css,ShareGuide.tsx}` 6개에서 실패했다. 이 작업의 소스/검사/문서는 별도 Prettier·diff 검사로 검증하며 원본 미추적 파일을 포맷하지 않는다.
+- 추가 실행한 API 단위는 최초 **74/87 통과·13실패**, 샌드박스 밖 동일 명령도 **75/87 통과·12실패**였다. timeout5000ms/ECONNRESET이며 원인 미해결이다. API/shared 변경은0이다. 이 접근 개선에서 API 검사나 인증 코드를 수정하지 않았으며 전체 저장소 검사 통과로 표시하지 않는다.
+- 첫 접근 검사는 Mock 화면 링크 이름을 잘못 지정해6/8이었고, 실제 `내 프로필 확인`으로 검사 locator만 고쳐8/8을 확인했다. 첫 전체 회귀는 shared 빌드를 병행한 후 Vite 모듈 timestamp가 갱신되고 token fixture 오류가 발생해30통과·6실패에서 중단했다. 이후 빌드를 모두 마치고 새 서버에서 같은 소스/검사 조건으로 전체를 재실행한다. 중단 실행은 전체 회귀 통과 근거로 사용하지 않는다.
+- 운영의 인증 미설정, 캠페인/협의/결제/제작/파일 API 미연결, 15개 Placeholder와 기존 정책(D05/D08/D09/D10/D11/D13/D17/D18/D20 등)은 남는다. 이를 해결하려고 Mock을 운영에 활성화하거나 권한·당사자·서명/결제/제작 상태를 우회하지 않는다. 별도 백엔드 PR의 미병합 기능을 임의 통합하지 않았다.
+
+### Git 전달 상태
+
+- 기존 관련 [Draft PR #65](https://github.com/Jubileekim/KEMI/pull/65)는 open·미병합·base main, head `a492cf0`였다. 접근 개선을 다루는 열린 PR은 없어 해당 선행 코드 위에 `feat/frontend-screen-access`를 생성했다. 새 PR은 선행4-D와 접근 보완의 diff를 분리하도록 #65 브랜치를 base로 한다. 선행 병합 후 base main 변경 검토가 필요하다.
+- 기능/접근 검사 [4574df1](https://github.com/Jubileekim/KEMI/commit/4574df1)을 커밋·푸시했다. 전체 검증·문서/QA 전달과 Draft PR 상태는 아래 최종 기록에 추가한다. 병합·자동 병합·명시적 배포/재배포·다음 작업 자동 착수는 하지 않는다.
+
+### 접근 개선 최종 회귀·전달
+
+- **고정 기능 SHA `4574df1` 전체 회귀:** Edge 데스크톱148+모바일148 = **296/296·실패0·exit0·47.3분**을 단일 실행으로 통과했다. 기존288개와 신규 접근8개를 포함하며 앞선 부분/중단 실행과 합산하지 않았다. 빌드를 모두 끝내고 새 Vite 서버에서 실행해 중단 실행의 세션 fixture 실패 없이 완료했다. 모든 결과를 확인한 후 Windows 종료 대기 중인 이번 전용5192 Vite만 정리해 러너 exit0과 `status: passed / failedTests: []`를 회수했다. 전용4197 preview와5193 접근 검사 서버도 정리했다.
+- [최종 전체 회귀 근거](../qa/frontend-access/full-e2e.json), [단위·운영·이전 실패 구분](../qa/frontend-access/verification.json)에 명령·고정 소스·역할·집계·제한을 보존했다. 기본/두 flag build:web·193개 단위·신규8개 집중 검사·운영 auth 미설정1/독립HTTP4역할·변경 파일 형식/diff·토큰 결과는 위와 같다. 기존 MSW favicon/React DevTools 경고는 남아 전체 콘솔 경고0으로 표시하지 않는다. 실제 서버/API/DB/외부 제공자 검증은 아니다.
+- 기능 [4574df1](https://github.com/Jubileekim/KEMI/commit/4574df1), 경로표/운영 QA/진행 기록 [cd0dd15](https://github.com/Jubileekim/KEMI/commit/cd0dd15)을 커밋·푸시하고 [Draft PR #66](https://github.com/Jubileekim/KEMI/pull/66)을 생성·이 채팅에 연결했다. open·Draft·미병합이며 base는 선행 `feat/frontend-4d-final-receipt`의 `a492cf0`다. 기능 소스는 추가 변경 없이 최종 회귀 결과만 문서/QA 커밋으로 전달한다. 최신 전달 커밋은 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/66/commits)에서 확인한다.
+- 현재 PR base는 기존 Web CI pull_request 필터에 없어 자동 Web CI 대상이 아니다. 로컬 전체 회귀와 원격 CI는 구분하며 최신 원격 실행/상태는 [Checks](https://github.com/Jubileekim/KEMI/pull/66/checks)에서 확인한다. CI 설정·수동 재실행/배포 설정을 바꾸지 않는다. 선행 #65가 병합되면 base main 조정 검토가 남는다. API 단위 timeout/ECONNRESET, 기존 미추적6개 포맷, 운영 API/미구현·정책 경계도 남으며 전체 저장소 검사 통과로 표시하지 않는다.
+- 종료 범위는 기존 화면 접근 안내·연결 보완이다. 추적 소스 변경 없이 마지막 결과 기록을 커밋·푸시하고 로컬/원격 추적/PR head 일치를 확인한다. 기존 `outputs/`, `tools/`는 보존·전달 제외하며 병합·자동 병합·명시적 배포/재배포·다음 작업 자동 착수는 하지 않는다.
