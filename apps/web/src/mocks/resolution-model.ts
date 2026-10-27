@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { ProposalError } from "./proposal-model";
+import {
+  emptyWorkflow,
+  workflowStateSchema,
+  workflowCommandSchema,
+} from "./resolution-workflow-model";
 
 const text = z.string().trim().min(1).max(2000);
 const money = z.number().int().nonnegative().safe();
@@ -22,6 +27,7 @@ export const cancellationVersionSchema = z.strictObject({
   confirmations: z.array(z.string()),
 });
 export const resolutionStateSchema = z.strictObject({
+  workflow: workflowStateSchema,
   revision: z.number().int().nonnegative(),
   versions: z.array(cancellationVersionSchema),
   commands: z.array(
@@ -49,18 +55,72 @@ export const cancellationCommandSchema = z.discriminatedUnion("type", [
   }),
 ]);
 export type CancellationCommand = z.infer<typeof cancellationCommandSchema>;
-export const resolutionViewSchema = z.strictObject({
-  contractId: z.string().uuid(),
-  requestId: z.string().uuid(),
-  clientId: z.string(),
-  creatorId: z.string(),
-  amount: money,
-  paidAmount: money.nullable(),
-  blocked: z.string(),
-  state: resolutionStateSchema,
-});
+export const resolutionCommandSchema = z.union([
+  cancellationCommandSchema,
+  workflowCommandSchema,
+]);
+export type ResolutionCommand = z.infer<typeof resolutionCommandSchema>;
+export const resolutionViewSchema = z
+  .strictObject({
+    contractId: z.string().uuid(),
+    requestId: z.string().uuid(),
+    clientId: z.string(),
+    creatorId: z.string(),
+    amount: money,
+    paidAmount: money.nullable(),
+    orderId: z.string().uuid().nullable(),
+    blocked: z.string(),
+    state: resolutionStateSchema,
+  })
+  .superRefine((view, ctx) => {
+    const { workflow, versions } = view.state;
+    const latest = versions.at(-1);
+    const validVersions = versions.every(
+      (v) =>
+        v.values.compensation + v.refund === view.amount &&
+        new Set(v.confirmations).size === v.confirmations.length &&
+        v.confirmations.every(
+          (id) => id === view.clientId || id === view.creatorId,
+        ),
+    );
+    const validRefunds =
+      workflow.refunds.filter((r) => r.status === "SUCCEEDED").length <= 1 &&
+      workflow.refunds.every(
+        (r) =>
+          versions.some((v) => v.id === r.versionId && r.amount === v.refund) &&
+          r.orderId === view.orderId &&
+          view.paidAmount === view.amount,
+      );
+    const { settlement } = workflow;
+    const completionEvidence =
+      latest &&
+      latest.confirmations.length === 2 &&
+      workflow.release?.versionId === latest.id &&
+      workflow.receipt?.versionId === latest.id &&
+      workflow.receipt.handoverId === workflow.handover?.id &&
+      !workflow.disputes.some((d) => !d.released) &&
+      workflow.refunds.some(
+        (r) => r.status === "SUCCEEDED" && r.versionId === latest.id,
+      );
+    const validSettlement =
+      !settlement ||
+      Boolean(
+        latest &&
+        latest.id === settlement.versionId &&
+        settlement.compensation === latest.values.compensation &&
+        settlement.compensation % 10 === 0 &&
+        settlement.fee === settlement.compensation / 10 &&
+        settlement.net + settlement.fee === settlement.compensation &&
+        (settlement.status !== "SUCCEEDED" || completionEvidence),
+      );
+    if (!validVersions || !validRefunds || !validSettlement)
+      ctx.addIssue({
+        code: "custom",
+        message: "Invalid resolution money/version evidence",
+      });
+  });
 export function emptyResolution(): ResolutionState {
-  return { revision: 0, versions: [], commands: [] };
+  return { revision: 0, versions: [], commands: [], workflow: emptyWorkflow() };
 }
 export function changeCancellation(
   state: ResolutionState,
@@ -87,6 +147,7 @@ export function changeCancellation(
     if (cmd.values.compensation > amount)
       throw new ProposalError("완료 대가는 계약 금액을 넘을 수 없어요.");
     return {
+      ...state,
       revision: state.revision + 1,
       commands: [...state.commands, { id: cmd.id, actorId, fingerprint }],
       versions: [
@@ -109,6 +170,7 @@ export function changeCancellation(
   if (latest.confirmations.includes(actorId))
     throw new ProposalError("이미 확인한 버전이에요.");
   return {
+    ...state,
     revision: state.revision + 1,
     commands: [...state.commands, { id: cmd.id, actorId, fingerprint }],
     versions: state.versions.map((v) =>

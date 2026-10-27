@@ -96,6 +96,39 @@ export default function DevTools() {
               ))}
             </select>
           </label>
+          <p>
+            5단계 운영 검토는 개발용 ops@example.test / Kemi1234 이메일 로그인을
+            사용해요. 운영 역할 선택만으로는 인증되지 않아요.
+          </p>
+          <label htmlFor="mock-resolution">
+            Mock 취소·환불 응답
+            <select
+              id="mock-resolution"
+              onChange={(e) => {
+                api.post("/__mock__/resolution/scenario", e.target.value, {
+                  baseURL: "/",
+                  headers: { "Content-Type": "text/plain" },
+                });
+              }}
+            >
+              {[
+                "success",
+                "processing",
+                "unknown",
+                "failed",
+                "lost-response",
+                "delay",
+                "401",
+                "403",
+                "409",
+                "500",
+                "network",
+                "malformed",
+              ].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </label>
           <label htmlFor="mock-role">
             Mock 역할{" "}
             <select

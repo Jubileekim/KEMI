@@ -14,7 +14,7 @@ export async function confirm(page: Page, label: string) {
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
-export async function setupPayment(page: Page) {
+export async function setupPayment(page: Page, amount = 100000) {
   await page.goto("/campaigns");
   const campaignId = await publish(page);
   await submitProposal(page, campaignId);
@@ -24,6 +24,7 @@ export async function setupPayment(page: Page) {
     .getByRole("button", { name: "패키지 값 불러오기", exact: true })
     .click();
   await page.getByLabel("취소 조건", { exact: true }).fill("제작 전 상호 협의");
+  await page.getByLabel("최종 금액 (원)", { exact: true }).fill(String(amount));
   await page
     .getByRole("button", { name: "새 작성본 저장", exact: true })
     .click();
@@ -57,7 +58,10 @@ export async function setupPayment(page: Page) {
     .getByRole("link", { name: "전액 테스트 결제 확인 (Mock)", exact: true })
     .click();
   await expect(
-    page.getByText("고정 계약 금액: 100,000원 · KRW · 전액", { exact: true }),
+    page.getByText(
+      `고정 계약 금액: ${amount.toLocaleString("ko-KR")}원 · KRW · 전액`,
+      { exact: true },
+    ),
   ).toBeVisible();
   const contractId = new URL(page.url()).pathname.split("/").at(-2) ?? "";
   return { room, contractId, campaignId };

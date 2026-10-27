@@ -20,6 +20,9 @@ on:
         feat/frontend-3c-payments,
         feat/frontend-4a-production,
         feat/frontend-screen-access,
+        feat/frontend-4e-settlement,
+        feat/frontend-5a-cancellation,
+        feat/frontend-5b-refunds-disputes,
       ]
   push:
     branches: [main]

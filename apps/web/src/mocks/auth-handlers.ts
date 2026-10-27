@@ -5,6 +5,13 @@ import { signupFormSchema } from "../features/auth/contracts";
 
 // UI fixtures only: no credentials or tokens are persisted. This marker is not authentication.
 const users: Record<string, AuthUser> = {
+  ops: {
+    id: "mock-ops",
+    email: "ops@example.test",
+    name: "개발용 운영 검토",
+    role: "ADMIN",
+    status: "ACTIVE",
+  },
   client: {
     id: "mock-client",
     email: "client@example.test",

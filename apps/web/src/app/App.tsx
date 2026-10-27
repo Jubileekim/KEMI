@@ -30,6 +30,8 @@ const SettlementSummary = lazy(
 const CancellationPage = lazy(
   () => import("../features/resolution/CancellationPage"),
 );
+const DisputePage = lazy(() => import("../features/resolution/DisputePage"));
+const ReviewPage = lazy(() => import("../features/operations/ReviewPage"));
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -102,6 +104,10 @@ export default function App() {
                         "/contracts/:contractId/cancellation" && (
                         <CancellationPage />
                       )}
+                      {screen.path === "/disputes/:disputeId" && (
+                        <DisputePage />
+                      )}
+                      {screen.path === "/ops/disputes" && <ReviewPage />}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -118,6 +124,8 @@ export default function App() {
                         "/contracts/:contractId/deliveries",
                         "/contracts/:contractId/settlement",
                         "/contracts/:contractId/cancellation",
+                        "/disputes/:disputeId",
+                        "/ops/disputes",
                         "/login",
                         "/signup",
                         "/auth/social/callback",

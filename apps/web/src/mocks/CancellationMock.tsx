@@ -7,7 +7,8 @@ import CancellationForm from "../features/resolution/CancellationForm";
 import CancellationAgreement from "../features/resolution/CancellationAgreement";
 import Button from "../components/ui/button";
 import loadResolution from "./resolution-api";
-import type { CancellationCommand } from "./resolution-model";
+import type { ResolutionCommand } from "./resolution-model";
+import ResolutionWorkflowMock from "./ResolutionWorkflowMock";
 
 export default function CancellationMock({
   contractId,
@@ -15,7 +16,7 @@ export default function CancellationMock({
   contractId: string;
 }) {
   const { user } = useSession();
-  const [pending, setPending] = useState<CancellationCommand | null>(null);
+  const [pending, setPending] = useState<ResolutionCommand | null>(null);
   const valid = z.string().uuid().safeParse(contractId).success;
   const query = useQuery({
     queryKey: ["mock-resolution", session.epoch(), user?.id, contractId],
@@ -24,7 +25,7 @@ export default function CancellationMock({
     refetchOnReconnect: false,
   });
   const mutation = useMutation({
-    mutationFn: (cmd: CancellationCommand) =>
+    mutationFn: (cmd: ResolutionCommand) =>
       loadResolution(contractId, undefined, cmd),
   });
   const busy = query.isFetching || mutation.isPending;
@@ -34,15 +35,13 @@ export default function CancellationMock({
     if (epoch !== session.epoch() || result.isError) return;
     if (
       pending &&
-      result.data?.state.commands.some(
-        (c) => c.id === pending.id && c.actorId === user?.id,
-      )
+      result.data?.state.commands.some((c) => c.id === pending.id)
     ) {
       setPending(null);
       mutation.reset();
     }
   };
-  const run = (cmd: CancellationCommand) => {
+  const run = (cmd: ResolutionCommand) => {
     if (busy) return;
     const epoch = session.epoch();
     setPending(cmd);
@@ -185,6 +184,20 @@ export default function CancellationMock({
             }}
           />
         )}
+      {query.data && (
+        <ResolutionWorkflowMock
+          view={query.data}
+          disabled={
+            busy ||
+            Boolean(pending) ||
+            Boolean(query.error) ||
+            Boolean(query.data.blocked)
+          }
+          hideRecords={busy || Boolean(pending) || Boolean(query.error)}
+          run={run}
+          refresh={refresh}
+        />
+      )}
     </section>
   );
 }

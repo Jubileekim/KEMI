@@ -32,6 +32,9 @@ export default function Shell() {
               작품
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
+            {role === "ops" && (
+              <NavLink to="/ops/disputes">분쟁·보류 검토</NavLink>
+            )}
             {role === "client" && (
               <NavLink to="/campaigns/new">캠페인 작성</NavLink>
             )}
