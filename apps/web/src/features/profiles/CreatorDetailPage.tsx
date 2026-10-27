@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { mockEnabled } from "../auth/config";
+import { CreatorDetailLive } from "../portfolio/CatalogLive";
 
 const CreatorMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/CreatorMock"))
@@ -11,10 +12,5 @@ export default function CreatorDetailPage() {
         <CreatorMock />
       </Suspense>
     );
-  return (
-    <section className="showcase-card grid gap-4">
-      <h1 className="type-heading-lg">제작자·공개 패키지</h1>
-      <p>공개 프로필·패키지 API 계약 조율 후 연결해요.</p>
-    </section>
-  );
+  return <CreatorDetailLive />;
 }

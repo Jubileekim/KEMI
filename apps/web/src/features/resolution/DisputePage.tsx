@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useParams } from "react-router";
 import { mockEnabled } from "../auth/config";
+import { DisputeLive } from "../operations/OpsLive";
 
 const DisputeMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/DisputeMock"))
@@ -13,10 +14,5 @@ export default function DisputePage() {
         <DisputeMock key={disputeId} disputeId={disputeId} />
       </Suspense>
     );
-  return (
-    <section className="showcase-card grid gap-4">
-      <h1 className="type-heading-lg">분쟁 현황 연결 준비 중</h1>
-      <p>실제 분쟁 API와 증빙·보류 해제 정책 조율 후 연결해요.</p>
-    </section>
-  );
+  return <DisputeLive />;
 }

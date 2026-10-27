@@ -68,7 +68,6 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
   });
   const blocked =
     !authEnabled ||
-    (signup && !mockEnabled) ||
     ["checking", "logging-out", "logout-error"].includes(status);
   const busy = form.formState.isSubmitting || mutation.isPending;
   const { errors } = form.formState;
@@ -100,12 +99,6 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
       {!authEnabled && (
         <p role="status">
           인증 API 설정이 필요해요. 현재 실제 계정 연결은 꺼져 있어요.
-        </p>
-      )}
-      {signup && !mockEnabled && (
-        <p role="alert">
-          가입 비밀번호 정책이 API와 달라 실제 가입을 연결하지 않았어요. 정책
-          조율 후 이용할 수 있어요.
         </p>
       )}
       {notice && <p role="status">{notice}</p>}

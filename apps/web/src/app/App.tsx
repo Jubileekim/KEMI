@@ -42,6 +42,12 @@ const CancellationPage = lazy(
 );
 const DisputePage = lazy(() => import("../features/resolution/DisputePage"));
 const ReviewPage = lazy(() => import("../features/operations/ReviewPage"));
+const ActivityLive = lazy(() => import("../features/activity/ActivityLive"));
+const NotificationsLive = lazy(() =>
+  import("../features/activity/ActivityLive").then((m) => ({
+    default: m.NotificationsLive,
+  })),
+);
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -126,6 +132,10 @@ export default function App() {
                         <DisputePage />
                       )}
                       {screen.path === "/ops/disputes" && <ReviewPage />}
+                      {screen.path === "/me/activity" && <ActivityLive />}
+                      {screen.path === "/notifications" && (
+                        <NotificationsLive />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -148,6 +158,8 @@ export default function App() {
                         "/contracts/:contractId/cancellation",
                         "/disputes/:disputeId",
                         "/ops/disputes",
+                        "/me/activity",
+                        "/notifications",
                         "/login",
                         "/signup",
                         "/auth/social/callback",
