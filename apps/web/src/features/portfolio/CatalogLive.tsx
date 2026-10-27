@@ -21,7 +21,7 @@ import {
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
 import track from "../../shared/analytics/track";
-import feedMediaMode from "./feed-media";
+import feedMediaMode, { shouldRefreshMedia } from "./feed-media";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -103,7 +103,11 @@ function Thumbnail({
         src={media.data.video.url}
         poster={media.data.thumbnail?.url}
         title={portfolio.title}
-        onFail={() => setVideoFailed(true)}
+        onFail={() => {
+          if (shouldRefreshMedia(media.dataUpdatedAt, Date.now()))
+            media.refetch().catch(() => setVideoFailed(true));
+          else setVideoFailed(true);
+        }}
       />
     );
   if (mode === "empty" || !media.data?.thumbnail)

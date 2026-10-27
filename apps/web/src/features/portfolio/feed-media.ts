@@ -8,3 +8,9 @@ export default function feedMediaMode(
   if (media?.thumbnail) return "image";
   return "empty";
 }
+
+// 서명 주소(10분)가 만료돼 재생이 끊기면 새 주소를 받아 다시 재생한다.
+// 직전 갱신 후 1분 안에 또 실패하면 만료가 아니라 저장소 문제로 보고 대표 이미지로 돌아간다.
+export const MEDIA_REFRESH_GAP_MS = 60_000;
+export const shouldRefreshMedia = (lastRefreshAt: number, now: number) =>
+  now - lastRefreshAt >= MEDIA_REFRESH_GAP_MS;

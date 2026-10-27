@@ -466,8 +466,12 @@ test("4-C 입력 보존·영상 시간/혼합 보류·조회 오류·없는 요�
       await page
         .getByRole("button", { name: "영상 버전 재조회", exact: true })
         .click();
+      // 같은 영역에 혼합 작업 보류·영상 접근 알림이 함께 뜰 수 있어 재조회 실패 알림만 고른다.
       await expect(
-        page.getByLabel("영상 제출과 버전").getByRole("alert"),
+        page
+          .getByLabel("영상 제출과 버전")
+          .getByRole("alert")
+          .filter({ hasText: "제출 결과를 확인하지 못했어요." }),
       ).toBeVisible();
       await deliveryScenario(page, "success");
       await page

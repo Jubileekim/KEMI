@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import feedMediaMode from "../src/features/portfolio/feed-media";
+import feedMediaMode, {
+  MEDIA_REFRESH_GAP_MS,
+  shouldRefreshMedia,
+} from "../src/features/portfolio/feed-media";
 
 const url = { url: "https://storage.test/signed" };
 
@@ -17,5 +20,15 @@ describe("피드 카드 영상 자동재생", () => {
       "empty",
     );
     expect(feedMediaMode(undefined, false)).toBe("empty");
+  });
+});
+
+describe("만료된 영상 주소 갱신", () => {
+  it("받은 지 1분이 지난 주소가 끊기면 새 주소를 받는다", () => {
+    expect(shouldRefreshMedia(0, 10 * 60_000)).toBe(true);
+    expect(shouldRefreshMedia(0, MEDIA_REFRESH_GAP_MS)).toBe(true);
+  });
+  it("방금 받은 주소도 실패하면 갱신을 반복하지 않는다", () => {
+    expect(shouldRefreshMedia(0, MEDIA_REFRESH_GAP_MS - 1)).toBe(false);
   });
 });
