@@ -16,6 +16,7 @@ import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { postSystemMessage } from "../chat/chat.service.js";
 import { requireReadyFiles } from "../files/file.service.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -123,7 +124,11 @@ function toProduction(row: ProductionRow): Production {
 
 const conflict = (message: string) => new AppError(409, "CONFLICT", message);
 const notFound = (what: string) =>
-  new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 
 // 계약 체결 때 제작을 만든다(조건서 서비스가 부른다). 작업 일수는 지원 때 제안한 기간이다.
 // 일반 수정 회차는 서명한 조건서의 "수정 횟수"에서 읽는다 [제안, D11].

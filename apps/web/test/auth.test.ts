@@ -98,6 +98,24 @@ describe("세션 수명과 실패", () => {
     expect(controller.snapshot().user).toBeNull();
     await expect(controller.getToken()).rejects.toThrow();
   });
+  it("비로그인 첫 방문의 갱신 401은 공개 조회 캐시를 지우지 않고, 로그인·만료에서는 지운다", async () => {
+    const clear = vi.fn();
+    const controller = createSessionController(true, clear);
+    const post = vi
+      .spyOn(api, "post")
+      .mockRejectedValueOnce(new ApiError(401, "UNAUTHENTICATED", "로그인"));
+    await controller.bootstrap();
+    expect(controller.snapshot().status).toBe("guest");
+    // 지울 개인 데이터가 없으면 진행 중인 공개 조회(작품 피드 등)를 취소하지 않는다.
+    expect(clear).not.toHaveBeenCalled();
+    post.mockResolvedValue({ data: result });
+    await controller.authenticate(input);
+    const cleared = clear.mock.calls.length;
+    post.mockRejectedValueOnce(new ApiError(401, "UNAUTHENTICATED", "만료"));
+    await expect(controller.recover(result.accessToken)).rejects.toThrow();
+    expect(clear.mock.calls.length).toBeGreaterThan(cleared);
+    expect(controller.snapshot().user).toBeNull();
+  });
   it("초기 갱신을 하나로 모으고 me까지 확인 전 보호 화면을 열지 않는다", async () => {
     const controller = createSessionController(true, vi.fn());
     const post = vi.spyOn(api, "post").mockResolvedValue({ data: result });

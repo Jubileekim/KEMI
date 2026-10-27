@@ -71,14 +71,15 @@ function publicPath(url = "", method = "get") {
 api.interceptors.request.use(async (input) => {
   const config = input;
   if (session && protectedPath(config.url)) {
-    config.sessionEpoch ??= session.epoch();
-    if (config.sessionEpoch !== session.epoch())
-      throw new axios.CanceledError();
+    // 비로그인 공개 조회는 세션과 무관하다. 세션 번호에 묶지 않아, 확인 중 세션이 바뀌어도 취소되지 않는다.
     if (
       session.isAuthenticated?.() === false &&
       publicPath(config.url, config.method)
     )
       return config;
+    config.sessionEpoch ??= session.epoch();
+    if (config.sessionEpoch !== session.epoch())
+      throw new axios.CanceledError();
     const token = await session.token();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();

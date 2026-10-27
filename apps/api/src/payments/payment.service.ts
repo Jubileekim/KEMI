@@ -14,6 +14,7 @@ import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
 import { postSystemMessage } from "../chat/chat.service.js";
 import type { TossClient, TossOutcome, TossPayment } from "./toss.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 type PaymentRow = Prisma.PaymentGetPayload<object>;
@@ -46,7 +47,11 @@ function toOrder(row: PaymentRow): PaymentOrder {
 }
 
 function notFound(what: "계약" | "결제 주문"): AppError {
-  return new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  return new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 }
 
 function unavailable(): AppError {

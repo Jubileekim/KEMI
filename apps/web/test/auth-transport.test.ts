@@ -58,6 +58,29 @@ describe("인증 Axios 경계", () => {
     expect(token).toHaveBeenCalledTimes(2);
   });
 
+  it("비로그인 공개 조회는 응답 전에 세션 번호가 바뀌어도 취소되지 않는다", async () => {
+    let epoch = 1;
+    connectSession({
+      token: vi.fn(async () => "unused"),
+      recover: vi.fn(),
+      epoch: () => epoch,
+      isAuthenticated: () => false,
+    });
+    api.defaults.adapter = async (config) => {
+      // 첫 방문의 로그인 확인이 실패하며 세션이 초기화되는 순간을 흉내 낸다.
+      epoch += 1;
+      return {
+        data: { items: [] },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      };
+    };
+    const response = await api.get("/api/feed?page=1");
+    expect(response.status).toBe(200);
+    expect(epoch).toBe(2);
+  });
   it("로그인된 사용자의 공개 상세 조회는 기존 Bearer 권한을 유지한다", async () => {
     connectSession({
       token: async () => "signed-in-token",

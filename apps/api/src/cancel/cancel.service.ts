@@ -24,6 +24,7 @@ import {
   type TossClient,
   type TossOutcome,
 } from "../payments/toss.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -39,7 +40,11 @@ const CONFIG_ERROR_CODES = new Set([
 
 const conflict = (message: string) => new AppError(409, "CONFLICT", message);
 const notFound = (what: string) =>
-  new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 const tossUnavailable = () =>
   new AppError(
     503,

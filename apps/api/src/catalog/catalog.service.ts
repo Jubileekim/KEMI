@@ -14,6 +14,7 @@ import {
 import AppError from "../http/app-error.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { type FileStorage, StorageUnavailableError } from "../files/storage.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 type PackageRow = Prisma.ServicePackageGetPayload<object>;
@@ -23,7 +24,11 @@ const MEDIA_URL_SECONDS = 10 * 60;
 
 const conflict = (message: string) => new AppError(409, "CONFLICT", message);
 const notFound = (what: string) =>
-  new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 
 export function toPackage(row: PackageRow): ServicePackage {
   return {
