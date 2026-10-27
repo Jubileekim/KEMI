@@ -1,4 +1,6 @@
 import {
+  CATALOG_STATUSES,
+  PORTFOLIO_SOURCES,
   CHAT_MESSAGE_KINDS,
   CONTRACT_STATUSES,
   DEADLINE_CHANGE_STATUSES,
@@ -86,6 +88,13 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["revision_requests_type_check", REVISION_TYPES],
     ["revision_requests_status_check", REVISION_STATUSES],
     ["settlements_status_check", SETTLEMENT_STATUSES],
+    ["service_packages_status_check", CATALOG_STATUSES],
+    ["portfolios_status_check", CATALOG_STATUSES],
+    ["portfolios_source_check", PORTFOLIO_SOURCES],
+    ["service_packages_purpose_check", VIDEO_PURPOSES],
+    ["portfolios_purpose_check", VIDEO_PURPOSES],
+    ["portfolios_styles_check", VIDEO_STYLES],
+    ["portfolios_roles_check", PRODUCTION_ROLES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

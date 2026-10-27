@@ -36,7 +36,14 @@ import {
   termsVersionCreateSchema,
   USER_ROLES,
   USER_STATUSES,
+  CATALOG_STATUSES,
   CONTRACT_STATUSES,
+  packageCreateSchema,
+  packageUpdateSchema,
+  PORTFOLIO_SOURCES,
+  portfolioCreateSchema,
+  portfolioUpdateSchema,
+  projectDraftValuesSchema,
   DELIVERABLE_KINDS,
   DELIVERABLE_STATUSES,
   deliverableCreateSchema,
@@ -257,6 +264,16 @@ const openApiDocument = {
       name: "chat",
       description:
         "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
+    },
+    {
+      name: "catalog",
+      description:
+        "제작 패키지·작업물·제작 서비스 공개 (PACK-01~03, PORT-01~02). 공개 조회는 서비스가 공개된 크리에이터만",
+    },
+    {
+      name: "project-drafts",
+      description:
+        "공고 임시 저장·공개 (CAMP-01·02). 마감 = 공개 시각 + 모집 기간(3·7·14일, 기본 7일)",
     },
     {
       name: "delivery",
@@ -1136,6 +1153,430 @@ const openApiDocument = {
           400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
           ...bearerErrors,
           404: errorResponse("방·메시지가 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/creator/packages": {
+      get: {
+        tags: ["catalog"],
+        summary: "내 패키지 목록",
+        description: "크리에이터 본인의 모든 패키지(초안·공개·비공개).",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("내 패키지 목록", "ServicePackageList"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+      post: {
+        tags: ["catalog"],
+        summary: "패키지 초안 저장 (PACK-01)",
+        description:
+          "제목만 있어도 저장한다. 가격·납기·수정 횟수·제공 내용 등은 공개할 때 모두 있어야 한다.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(packageCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/creator/packages/{packageId}": {
+      patch: {
+        tags: ["catalog"],
+        summary: "패키지 수정",
+        description:
+          "보낸 항목만 바꾼다(null은 지움). 공개·비공개 패키지의 필수 항목은 비울 수 없다(400).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(packageUpdateSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/creator/packages/{packageId}/publish": {
+      post: {
+        tags: ["catalog"],
+        summary: "패키지 공개 (PACK-02)",
+        description: "필수 항목이 모두 있어야 한다(빠진 항목은 `details`).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        responses: {
+          200: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/packages/{packageId}/hide": {
+      post: {
+        tags: ["catalog"],
+        summary: "패키지 내리기",
+        description:
+          "대표 지정도 풀린다. 공개 중인 서비스의 대표 패키지는 다른 대표를 정하기 전에는 내릴 수 없다(409).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        responses: {
+          200: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/packages/{packageId}/representative": {
+      post: {
+        tags: ["catalog"],
+        summary: "대표 패키지 지정 (PACK-03)",
+        description:
+          "공개된 패키지만. 크리에이터당 하나이며 이전 대표는 해제된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("packageId")],
+        responses: {
+          200: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/portfolios": {
+      get: {
+        tags: ["catalog"],
+        summary: "내 작업물 목록",
+        description: "크리에이터 본인의 모든 작업물.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("내 작업물 목록", "PortfolioList"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+      post: {
+        tags: ["catalog"],
+        summary: "작업물 초안 저장 (PORT-01)",
+        description:
+          "영상·대표 이미지는 본인이 올려 확인이 끝난 PORTFOLIO 파일(영상 video/*, 이미지 image/*). 연결 패키지는 본인 것만.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(portfolioCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("작업물", "Portfolio"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/creator/portfolios/{portfolioId}": {
+      patch: {
+        tags: ["catalog"],
+        summary: "작업물 수정",
+        description:
+          "보낸 항목만 바꾼다. 공개 중인 작업물의 공개 조건(영상·목적·역할·고객 동의)은 깰 수 없다(400).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(portfolioUpdateSchema),
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse("작업물", "Portfolio"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/creator/portfolios/{portfolioId}/publish": {
+      post: {
+        tags: ["catalog"],
+        summary: "작업물 공개 (PORT-02)",
+        description:
+          "영상·목적·본인 역할(1개 이상)이 있어야 한다. 고객 의뢰 작업(CLIENT_WORK)은 고객 동의 확인 기능이 준비될 때까지 공개할 수 없다(409, DB CHECK로도 막음) [D16]. 고객 납품물은 자동으로 공개되지 않는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: jsonResponse("작업물", "Portfolio"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/portfolios/{portfolioId}/hide": {
+      post: {
+        tags: ["catalog"],
+        summary: "작업물 내리기",
+        description: "공개 조회에서 빠진다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: jsonResponse("작업물", "Portfolio"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/service/publish": {
+      post: {
+        tags: ["catalog"],
+        summary: "제작 서비스 공개",
+        description:
+          "공개된 대표 패키지가 있어야 한다(409). 공개해야 제작자 페이지·패키지·작업물이 공개 조회된다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("서비스 상태", "CreatorServiceStatus"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creator/service/hide": {
+      post: {
+        tags: ["catalog"],
+        summary: "제작 서비스 내리기",
+        description: "공개 조회가 모두 막힌다.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("서비스 상태", "CreatorServiceStatus"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/creators/{userId}": {
+      get: {
+        tags: ["catalog"],
+        summary: "제작자 공개 페이지 (PORT-01, PACK-01)",
+        description:
+          "대표 패키지·대표 외 공개 패키지·공개 작업물·받은 리뷰 요약.",
+        parameters: [idParam("userId")],
+        responses: {
+          200: jsonResponse("제작자", "CreatorPublicProfile"),
+          400: errorResponse("ID 오류 (`VALIDATION_FAILED`)"),
+          404: errorResponse("공개되지 않았거나 없음 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/packages/{packageId}": {
+      get: {
+        tags: ["catalog"],
+        summary: "공개 패키지 상세",
+        description: "가격·납기·수정 횟수·제공 내용.",
+        parameters: [idParam("packageId")],
+        responses: {
+          200: jsonResponse("패키지", "ServicePackage"),
+          400: errorResponse("ID 오류 (`VALIDATION_FAILED`)"),
+          404: errorResponse("공개되지 않았거나 없음 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/portfolios/{portfolioId}": {
+      get: {
+        tags: ["catalog"],
+        summary: "공개 작업물 상세",
+        description: "본인 역할·출처·제작자·연결 패키지.",
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: jsonResponse("작업물", "Portfolio"),
+          400: errorResponse("ID 오류 (`VALIDATION_FAILED`)"),
+          404: errorResponse("공개되지 않았거나 없음 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/portfolios/{portfolioId}/media": {
+      get: {
+        tags: ["catalog"],
+        summary: "공개 작업물 재생 주소",
+        description: "영상·대표 이미지의 10분짜리 서명 주소.",
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: jsonResponse("재생 주소", "PortfolioMedia"),
+          400: errorResponse("ID 오류 (`VALIDATION_FAILED`)"),
+          404: errorResponse("공개되지 않았거나 없음 (`NOT_FOUND`)"),
+          503: errorResponse("파일 저장소 미설정 (`SERVICE_UNAVAILABLE`)"),
+        },
+      },
+    },
+    "/api/project-drafts": {
+      get: {
+        tags: ["project-drafts"],
+        summary: "내 임시 저장 공고",
+        description: "공개하지 않은 초안만, 최근 수정순.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("초안 목록", "ProjectDraftList"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+      post: {
+        tags: ["project-drafts"],
+        summary: "공고 임시 저장 (CAMP-01)",
+        description:
+          "모든 항목이 비어 있어도 저장한다. 모집 기간 `recruitmentDays`는 3·7·14(기본 7).",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(projectDraftValuesSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("임시 저장 공고", "ProjectDraft"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/project-drafts/{draftId}": {
+      patch: {
+        tags: ["project-drafts"],
+        summary: "임시 저장 공고 수정",
+        description:
+          "보낸 항목만 덮어쓴다(null은 지움). 공개한 초안은 고칠 수 없다(409).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("draftId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(projectDraftValuesSchema),
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse("임시 저장 공고", "ProjectDraft"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+      delete: {
+        tags: ["project-drafts"],
+        summary: "임시 저장 공고 삭제",
+        description: "공개하지 않은 초안만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("draftId")],
+        responses: {
+          204: { description: "삭제함" },
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("이미 공개함 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/project-drafts/{draftId}/publish": {
+      post: {
+        tags: ["project-drafts"],
+        summary: "공고 공개 (CAMP-02)",
+        description:
+          "바로 등록(`POST /api/projects`)과 같은 검사를 한다. 마감 = 공개 시각 + 모집 기간. 같은 초안은 한 번만 공개한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("draftId")],
+        responses: {
+          201: jsonResponse("공개 결과", "ProjectDraftPublishResult"),
+          400: errorResponse(
+            "입력값 오류·공개 필수 항목 누락 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
         },
       },
     },
@@ -2170,6 +2611,221 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/ChatMessage" },
           },
           hasMore: { type: "boolean" },
+        },
+      },
+      ServicePackage: {
+        type: "object",
+        required: [
+          "id",
+          "creatorId",
+          "title",
+          "description",
+          "purpose",
+          "priceKrw",
+          "deliveryDays",
+          "revisionCount",
+          "includes",
+          "status",
+          "isRepresentative",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          creatorId: { type: "string" },
+          title: { type: "string" },
+          description: { type: ["string", "null"] },
+          purpose: { type: ["string", "null"] },
+          priceKrw: { type: ["integer", "null"] },
+          deliveryDays: { type: ["integer", "null"] },
+          revisionCount: { type: ["integer", "null"] },
+          includes: { type: "array", items: { type: "string" } },
+          status: { type: "string", enum: [...CATALOG_STATUSES] },
+          isRepresentative: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      ServicePackageList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ServicePackage" },
+          },
+        },
+      },
+      Portfolio: {
+        type: "object",
+        required: [
+          "id",
+          "creatorId",
+          "title",
+          "description",
+          "purpose",
+          "styles",
+          "roles",
+          "source",
+          "clientConsent",
+          "videoFileId",
+          "thumbnailFileId",
+          "packageId",
+          "status",
+          "publishedAt",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          creatorId: { type: "string" },
+          title: { type: "string" },
+          description: { type: ["string", "null"] },
+          purpose: { type: ["string", "null"] },
+          styles: { type: "array", items: { type: "string" } },
+          roles: { type: "array", items: { type: "string" } },
+          source: { type: "string", enum: [...PORTFOLIO_SOURCES] },
+          clientConsent: { type: "boolean" },
+          videoFileId: { type: ["string", "null"] },
+          thumbnailFileId: { type: ["string", "null"] },
+          packageId: { type: ["string", "null"] },
+          status: { type: "string", enum: [...CATALOG_STATUSES] },
+          publishedAt: { type: ["string", "null"], format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      PortfolioList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Portfolio" },
+          },
+        },
+      },
+      PortfolioMedia: {
+        type: "object",
+        required: ["video", "thumbnail"],
+        properties: {
+          video: {
+            oneOf: [
+              {
+                type: "object",
+                required: ["url", "expiresAt"],
+                properties: {
+                  url: { type: "string" },
+                  expiresAt: { type: "string", format: "date-time" },
+                },
+              },
+              { type: "null" },
+            ],
+          },
+          thumbnail: {
+            oneOf: [
+              {
+                type: "object",
+                required: ["url", "expiresAt"],
+                properties: {
+                  url: { type: "string" },
+                  expiresAt: { type: "string", format: "date-time" },
+                },
+              },
+              { type: "null" },
+            ],
+          },
+        },
+      },
+      CreatorPublicProfile: {
+        type: "object",
+        required: [
+          "userId",
+          "name",
+          "introduction",
+          "niche",
+          "contentStyles",
+          "productionRoles",
+          "isAvailable",
+          "representativePackage",
+          "packages",
+          "portfolios",
+          "review",
+        ],
+        properties: {
+          userId: { type: "string" },
+          name: { type: "string" },
+          introduction: { type: ["string", "null"] },
+          niche: { type: ["string", "null"] },
+          contentStyles: { type: "array", items: { type: "string" } },
+          productionRoles: { type: "array", items: { type: "string" } },
+          isAvailable: { type: "boolean" },
+          representativePackage: {
+            $ref: "#/components/schemas/ServicePackage",
+          },
+          packages: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ServicePackage" },
+          },
+          portfolios: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Portfolio" },
+          },
+          review: {
+            type: "object",
+            required: ["averageRating", "count"],
+            properties: {
+              averageRating: { type: ["number", "null"] },
+              count: { type: "integer" },
+            },
+          },
+        },
+      },
+      CreatorServiceStatus: {
+        type: "object",
+        required: ["serviceStatus"],
+        properties: {
+          serviceStatus: { type: "string", enum: [...CATALOG_STATUSES] },
+        },
+      },
+      ProjectDraft: {
+        type: "object",
+        required: [
+          "id",
+          "values",
+          "recruitmentDays",
+          "publishedProjectId",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          values: {
+            type: "object",
+            description: "작성 중인 값(공고 항목과 recruitmentDays)",
+          },
+          recruitmentDays: { type: "integer", enum: [3, 7, 14] },
+          publishedProjectId: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      ProjectDraftList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ProjectDraft" },
+          },
+        },
+      },
+      ProjectDraftPublishResult: {
+        type: "object",
+        required: ["draft", "project"],
+        properties: {
+          draft: { $ref: "#/components/schemas/ProjectDraft" },
+          project: { $ref: "#/components/schemas/Project" },
         },
       },
       Deliverable: {

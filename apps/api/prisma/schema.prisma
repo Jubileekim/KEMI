@@ -56,6 +56,9 @@ model User {
   revisionRequests RevisionRequest[]    @relation("RevisionRequester")
   reviewsWritten   Review[]             @relation("ReviewAuthor")
   reviewsReceived  Review[]             @relation("ReviewSubject")
+  servicePackages  ServicePackage[]
+  portfolios       Portfolio[]
+  projectDrafts    ProjectDraft[]
   chatReads        ChatRead[]
 
   @@map("users")
@@ -178,6 +181,7 @@ model Project {
   notifications Notification[]
   bookmarks     ProjectBookmark[]
   contract      Contract?
+  draft         ProjectDraft?
 
   @@index([status, recruitmentEndAt])
   @@index([purpose])
@@ -436,6 +440,8 @@ model File {
   materials        ProductionMaterial[]
   deliverableFiles DeliverableFile[]
   revisionFiles    RevisionFile[]
+  portfolioVideos  Portfolio[]          @relation("PortfolioVideo")
+  portfolioThumbs  Portfolio[]          @relation("PortfolioThumbnail")
 
   @@index([ownerId, createdAt])
   @@index([workRequestId])
@@ -633,4 +639,75 @@ model Review {
   @@unique([contractId, reviewerId])
   @@index([revieweeId, createdAt])
   @@map("reviews")
+}
+
+// ─── 제작 패키지·작업물 (PACK-01~03, PORT-01~02) ─────────────────
+// 초안은 제목만 있어도 저장한다. 공개(PUBLIC)하려면 필수 항목이 모두 있어야 한다(CHECK, 마이그레이션).
+// 크리에이터당 대표 패키지는 하나뿐이고 공개 상태여야 한다(부분 UNIQUE).
+model ServicePackage {
+  id               BigInt   @id @default(autoincrement())
+  creatorId        BigInt   @map("creator_id")
+  title            String   @db.VarChar(100)
+  description      String?
+  purpose          String?
+  priceKrw         BigInt?  @map("price_krw")
+  deliveryDays     Int?     @map("delivery_days")
+  revisionCount    Int?     @map("revision_count")
+  includes         String[] @default([])
+  status           String   @default("DRAFT")
+  isRepresentative Boolean  @default(false) @map("is_representative")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator    User        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  portfolios Portfolio[]
+
+  @@index([creatorId, createdAt])
+  @@map("service_packages")
+}
+
+model Portfolio {
+  id              BigInt    @id @default(autoincrement())
+  creatorId       BigInt    @map("creator_id")
+  title           String    @db.VarChar(100)
+  description     String?
+  purpose         String?
+  styles          String[]  @default([])
+  roles           String[]  @default([])
+  source          String    @default("OWN_WORK")
+  clientConsent   Boolean   @default(false) @map("client_consent")
+  videoFileId     BigInt?   @map("video_file_id")
+  thumbnailFileId BigInt?   @map("thumbnail_file_id")
+  packageId       BigInt?   @map("package_id")
+  status          String    @default("DRAFT")
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator   User            @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  video     File?           @relation("PortfolioVideo", fields: [videoFileId], references: [id], onDelete: Restrict)
+  thumbnail File?           @relation("PortfolioThumbnail", fields: [thumbnailFileId], references: [id], onDelete: Restrict)
+  package   ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@index([creatorId, createdAt])
+  @@index([status, publishedAt])
+  @@map("portfolios")
+}
+
+// ─── 공고 임시 저장 (CAMP-01·02) ────────────────────────────────
+// 작성 중인 값을 그대로 저장한다. 공개하면 검사를 통과한 값으로 projects 행을 만들고 연결한다.
+model ProjectDraft {
+  id                 BigInt   @id @default(autoincrement())
+  clientId           BigInt   @map("client_id")
+  values             Json
+  recruitmentDays    Int      @default(7) @map("recruitment_days")
+  publishedProjectId BigInt?  @unique @map("published_project_id")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  client           User     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  publishedProject Project? @relation(fields: [publishedProjectId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, updatedAt])
+  @@map("project_drafts")
 }

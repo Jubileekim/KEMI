@@ -168,6 +168,35 @@ export interface ProjectService {
   ): Promise<ProjectSummary>;
 }
 
+// 공개 프로젝트를 만든다. 바로 등록(POST /api/projects)과 임시 저장본 공개가 같은 검사를 쓴다.
+export async function insertProject(
+  db: Prisma.TransactionClient | PrismaClient,
+  user: AuthUser,
+  input: unknown,
+  now: Date,
+): Promise<ProjectSummary> {
+  requireClient(user);
+  const parsed = projectCreateSchema.parse(input);
+  const recruitmentEndAt = new Date(parsed.recruitmentEndAt);
+  const deliveryDueDate = dateOnly(parsed.deliveryDueDate);
+  validateSchedule(recruitmentEndAt, deliveryDueDate, now);
+  const row = await db.project.create({
+    data: {
+      clientId: BigInt(user.id),
+      title: parsed.title,
+      description: parsed.description,
+      purpose: parsed.purpose,
+      styles: parsed.styles,
+      budget: BigInt(parsed.budget),
+      expectedDurationSeconds: parsed.expectedDurationSeconds ?? null,
+      recruitmentEndAt,
+      deliveryDueDate,
+    },
+    include: includeClient,
+  });
+  return toProject(row);
+}
+
 export function createProjectService({
   prisma,
   now = () => new Date(),
@@ -269,26 +298,7 @@ export function createProjectService({
     },
 
     async create(user, input) {
-      requireClient(user);
-      const parsed = projectCreateSchema.parse(input);
-      const recruitmentEndAt = new Date(parsed.recruitmentEndAt);
-      const deliveryDueDate = dateOnly(parsed.deliveryDueDate);
-      validateSchedule(recruitmentEndAt, deliveryDueDate, now());
-      const row = await prisma.project.create({
-        data: {
-          clientId: BigInt(user.id),
-          title: parsed.title,
-          description: parsed.description,
-          purpose: parsed.purpose,
-          styles: parsed.styles,
-          budget: BigInt(parsed.budget),
-          expectedDurationSeconds: parsed.expectedDurationSeconds ?? null,
-          recruitmentEndAt,
-          deliveryDueDate,
-        },
-        include: includeClient,
-      });
-      return toProject(row);
+      return insertProject(prisma, user, input, now());
     },
 
     // 선정·마감과 겹치지 않도록 같은 프로젝트 행 잠금 안에서 상태를 다시 읽고 수정한다.
