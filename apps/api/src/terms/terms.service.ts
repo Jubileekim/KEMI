@@ -21,6 +21,7 @@ import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
 import { postSystemMessage } from "../chat/chat.service.js";
+import { createProductionForContract } from "../production/production.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -589,6 +590,12 @@ export function createTermsService({
           where: { id: workRequestId },
           data: { status: "CONTRACTED" },
         });
+        // 제작 준비를 연다(READY-01). 작업 일수는 지원 때 제안한 기간이다.
+        await createProductionForContract(
+          tx,
+          contract.id,
+          request.expectedDays,
+        );
 
         const others = request.projectId
           ? await tx.workRequest.findMany({
