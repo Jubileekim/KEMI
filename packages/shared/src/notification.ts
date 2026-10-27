@@ -3,6 +3,7 @@ import type { Pagination } from "./application.js";
 
 // 인앱 알림 종류 (NOTI-01)
 // - APPLICATION_SUBMITTED: 내 프로젝트에 지원이 들어옴 (의뢰인)
+// - APPLICATION_ACCEPTED: (이전 기록 전용) 협의 모델 전 '수락 즉시 선정' 시절의 선정 알림. 새로 만들지 않고 과거 알림을 그대로 보여준다
 // - DISCUSSION_REQUESTED: 의뢰인이 내 지원에 협의를 요청함 (크리에이터)
 // - APPLICATION_AUTO_REJECTED: 다른 지원자와 계약·프로젝트 삭제로 미선정됨 (크리에이터)
 // - APPLICATION_WITHDRAWN: 크리에이터가 지원을 철회함 (의뢰인)
@@ -14,6 +15,7 @@ import type { Pagination } from "./application.js";
 // - PAYMENT_SUCCEEDED: 의뢰인의 테스트 결제가 완료됨 (크리에이터)
 export const NOTIFICATION_TYPES = [
   "APPLICATION_SUBMITTED",
+  "APPLICATION_ACCEPTED",
   "DISCUSSION_REQUESTED",
   "APPLICATION_AUTO_REJECTED",
   "APPLICATION_DECLINED",
