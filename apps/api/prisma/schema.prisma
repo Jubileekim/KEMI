@@ -66,6 +66,10 @@ model User {
   disputesResolved      Dispute[]            @relation("DisputeResolver")
   disputeEvidence       DisputeEvidence[]
   operationRecords      OperationRecord[]
+  reportsFiled          Report[]             @relation("ReportReporter")
+  reportsReceived       Report[]             @relation("ReportSubject")
+  reportEvents          ReportEvent[]
+  analyticsEvents       AnalyticsEvent[]
   chatReads             ChatRead[]
 
   @@map("users")
@@ -878,4 +882,64 @@ model OperationRecord {
 
   @@index([targetType, targetId])
   @@map("operation_records")
+}
+
+// ─── 신고·이용 제한 (OPS-01·02) [제안, D18·D21] ─────────────────────
+// 신고만으로 제재하지 않는다. 운영자 조치(검토·경고·제한·해제)와 본인의 이의 제기가 이력(report_events)으로 남는다.
+// 제한(limited)된 신고가 하나라도 있으면 대상자는 새 공고·지원·직접 의뢰를 할 수 없다.
+model Report {
+  id         BigInt   @id @default(autoincrement())
+  reporterId BigInt   @map("reporter_id")
+  subjectId  BigInt   @map("subject_id")
+  targetType String   @map("target_type")
+  targetId   BigInt   @map("target_id")
+  reason     String
+  evidence   String   @default("")
+  status     String   @default("RECEIVED")
+  limited    Boolean  @default(false)
+  commandId  String   @unique @map("command_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  reporter User          @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  subject  User          @relation("ReportSubject", fields: [subjectId], references: [id], onDelete: Restrict)
+  events   ReportEvent[]
+
+  @@index([subjectId, limited])
+  @@index([reporterId, createdAt])
+  @@index([status, createdAt])
+  @@map("reports")
+}
+
+model ReportEvent {
+  id        BigInt   @id @default(autoincrement())
+  reportId  BigInt   @map("report_id")
+  actorId   BigInt   @map("actor_id")
+  action    String
+  note      String
+  commandId String   @unique @map("command_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  actor  User   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([reportId, createdAt])
+  @@map("report_events")
+}
+
+// ─── 행동 기록 (METRIC-01) [제안, D22] ───────────────────────────
+// 이벤트 이름·공개 대상 ID·발생 시각만 저장한다(개인 입력값 없음). 시연 계정 이벤트는 is_test로 구분해 집계에서 뺀다.
+model AnalyticsEvent {
+  id         BigInt   @id @default(autoincrement())
+  name       String
+  objectId   String   @map("object_id")
+  userId     BigInt?  @map("user_id")
+  isTest     Boolean  @default(false) @map("is_test")
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([name, createdAt])
+  @@map("analytics_events")
 }

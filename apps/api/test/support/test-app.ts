@@ -55,6 +55,9 @@ import {
   type CancelService,
   createCancelService,
 } from "../../src/cancel/cancel.service.js";
+import { createSafetyService } from "../../src/safety/safety.service.js";
+import { createAnalyticsService } from "../../src/safety/analytics.service.js";
+import { createActivityService } from "../../src/safety/activity.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -211,6 +214,9 @@ export function createTestApp({
       directRequestService ?? createDirectRequestService({ prisma: client }),
     feedService: createFeedService({ prisma: client }),
     cancelService: cancelService ?? createCancelService({ prisma: client }),
+    safetyService: createSafetyService({ prisma: client }),
+    analyticsService: createAnalyticsService({ prisma: client }),
+    activityService: createActivityService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

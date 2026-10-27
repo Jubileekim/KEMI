@@ -88,6 +88,11 @@ export default function createApplicationRouter(
     res.json(await notificationService.unreadCount(user));
   });
 
+  router.post("/notifications/read", async (req, res) => {
+    const user = await currentUser(req);
+    res.json(await notificationService.markManyRead(user, req.body));
+  });
+
   router.post("/notifications/read-all", async (req, res) => {
     const user = await currentUser(req);
     res.json(await notificationService.markAllRead(user));

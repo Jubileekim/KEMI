@@ -17,6 +17,7 @@ import notify from "../notifications/notify.js";
 import lockProject from "./project-lock.js";
 import { voidOpenTerms } from "../terms/terms.service.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
+import { requireNotRestricted } from "../safety/safety.service.js";
 
 interface ProjectRow {
   id: bigint;
@@ -177,6 +178,8 @@ export async function insertProject(
 ): Promise<ProjectSummary> {
   requireClient(user);
   const parsed = projectCreateSchema.parse(input);
+  // 이용 제한 중이면 새 공고를 열 수 없다(OPS-02).
+  await requireNotRestricted(db, BigInt(user.id));
   const recruitmentEndAt = new Date(parsed.recruitmentEndAt);
   const deliveryDueDate = dateOnly(parsed.deliveryDueDate);
   validateSchedule(recruitmentEndAt, deliveryDueDate, now);

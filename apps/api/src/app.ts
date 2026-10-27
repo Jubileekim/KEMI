@@ -35,6 +35,10 @@ import type { ProjectService } from "./projects/project.service.js";
 import { createHealthRouter, type DatabaseCheck } from "./routes/health.js";
 import createTermsRouter from "./terms/terms.router.js";
 import type { TermsService } from "./terms/terms.service.js";
+import createSafetyRouter from "./safety/safety.router.js";
+import type { SafetyService } from "./safety/safety.service.js";
+import type { AnalyticsService } from "./safety/analytics.service.js";
+import type { ActivityService } from "./safety/activity.service.js";
 
 export interface AppDependencies {
   checkDatabase: DatabaseCheck;
@@ -56,6 +60,9 @@ export interface AppDependencies {
   directRequestService: DirectRequestService;
   feedService: FeedService;
   cancelService: CancelService;
+  safetyService: SafetyService;
+  analyticsService: AnalyticsService;
+  activityService: ActivityService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -84,6 +91,9 @@ export function createApp({
   directRequestService,
   feedService,
   cancelService,
+  safetyService,
+  analyticsService,
+  activityService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -139,6 +149,16 @@ export function createApp({
   );
   // 취소·부분 환불·분쟁·운영 (CANCEL·REFUND·DISPUTE·OPS)
   app.use("/api", createCancelRouter(authService, cancelService));
+  // ACT-01, OPS-01·02, METRIC-01: 내 활동·신고와 이용 제한·행동 기록
+  app.use(
+    "/api",
+    createSafetyRouter(
+      authService,
+      safetyService,
+      analyticsService,
+      activityService,
+    ),
+  );
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }
