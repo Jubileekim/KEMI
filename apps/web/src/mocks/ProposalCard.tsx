@@ -31,10 +31,30 @@ export default function ProposalCard({
         {user.role === "CLIENT" ? item.creatorName : item.clientName}
       </h2>
       <p>
+        {item.direct && "직접 의뢰 · "}
         {item.contracted ? "선정 완료" : proposalLabels[item.status]}
         {item.contracted ? " · 확정 계약" : " · 계약 미확정"}
       </p>
       <p className="whitespace-pre-wrap">{item.direction}</p>
+      {item.direct && (
+        <div className="grid gap-2">
+          <p>발송 당시 패키지: {item.direct.snapshot.title}</p>
+          <p className="whitespace-pre-wrap">
+            희망 조건: {item.direct.conditions}
+          </p>
+          <p>
+            최초 응답 기한:{" "}
+            <time dateTime={item.direct.respondDueAt}>
+              {new Date(item.direct.respondDueAt).toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+              })}{" "}
+              (한국 시간)
+            </time>{" "}
+            · 48시간
+          </p>
+          <p>수락은 협의 시작이며 계약·결제는 별도예요.</p>
+        </div>
+      )}
       <dl className="grid gap-2">
         <div>
           <dt>제안 견적</dt>
@@ -62,7 +82,7 @@ export default function ProposalCard({
         </>
       )}
       <Link to={`/requests/${item.id}`}>의뢰 상세</Link>
-      {active && (
+      {active && !item.direct && (
         <div className="flex flex-wrap gap-3">
           {user.role === "CLIENT" && item.status === "PENDING" && (
             <ProposalConfirm

@@ -19,8 +19,8 @@ import {
 import { emptyCampaign } from "../src/mocks/campaign-model";
 import { emptyStudio } from "../src/mocks/studio-model";
 
-function required<T>(value: T | undefined): T {
-  if (value === undefined) throw new Error("fixture missing");
+function required<T>(value: T | null | undefined): T {
+  if (value == null) throw new Error("fixture missing");
   return value;
 }
 const client: AuthUser = {
@@ -333,7 +333,7 @@ describe("3-B explicit Mock signatures", () => {
     expect(() =>
       changeProposals(
         selected,
-        { type: "end", campaignId: item.campaignId, reason: "종료" },
+        { type: "end", campaignId: required(item.campaignId), reason: "종료" },
         client,
         [
           {

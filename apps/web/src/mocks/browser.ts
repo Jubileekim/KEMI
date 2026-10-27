@@ -14,6 +14,7 @@ import deliveryHandlers from "./delivery-handlers";
 import settlementHandlers from "./settlement-handlers";
 import resolutionHandlers from "./resolution-handlers";
 import catalogHandlers from "./catalog-handlers";
+import directHandlers from "./direct-handlers";
 
 const worker = setupWorker(
   ...handlers,
@@ -31,6 +32,7 @@ const worker = setupWorker(
   ...settlementHandlers,
   ...resolutionHandlers,
   ...catalogHandlers,
+  ...directHandlers,
 );
 
 export default worker;

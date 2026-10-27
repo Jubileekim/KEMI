@@ -1,5 +1,14 @@
 # KEMI 프론트엔드 진행 기록
 
+## 6-B 제작자·패키지·직접 의뢰 발송 (2026-10-27)
+
+- 공개 제작자 `/creators/:creatorId`와 의뢰인 전용 `/creators/:creatorId/request?packageId=...`를 실제 라우트에 연결했다. 공개 대표 우선·모든 공개 패키지·전체 조건·협의 시작 가격/계약 별도 안내·작품 역방향 동선, 비회원 선택→기존 안전한 로그인 복귀→검토/직접 발송→기존 본인 의뢰 상세를 연결했다. 개인 의뢰인의 브랜드 입력은 요구하지 않는다.
+- 변경: `features/profiles/CreatorDetailPage.tsx`, `features/requests/DirectRequestForm.tsx`, `mocks/{CreatorMock,DirectMock,direct-api,direct-contract,direct-model,direct-handlers}`, `ProposalCard`, 기존 제안의 선택적 direct 사본/nullable campaignId·같은 저장소 삽입·공통 명령 우회 차단, App/browser·CI base 추가, 직접 발송 단위/E2E·기존 서명 fixture의 nullable 타입 검증. API/shared·운영 인증/권한·의존성/lockfile은 변경하지 않았다.
+- 발송 처리기에서 활성 의뢰인/Bearer/epoch·선택 제작자의 공개 패키지와 화면 검토 사본의 동일성을 재검사한다. 사본을 정규화해 키 순서에 따른 오탐을 수정했다. 동일ID/내용 재시도는 같은 의뢰를 반환하고 충돌은 거부한다. 유실 시 입력 보존·목록 확인/같은ID 재시도, 알려진 충돌은 최신 공개 상태 확인 후 재검토한다. 발송/수락으로 자동 결제·계약 생성하지 않는다.
+- 로컬 웹 단위 **218/218**, build:web(타입·기존 ESLint·운영 빌드) exit0. 새5196 프로세스의 Edge 데스크톱2+모바일2 **4/4·실패0·건너뜀0·retry0·exit0·32.8초**. 비회원 전체 클릭/안전한 packageId 복귀·브랜드 없는 발송·캠페인 없는 상세/사본/미계약, 유실 같은ID 복구1건·타 패키지/크리에이터 발송 가드·위조Bearer·지연 로그아웃401을 확인했다. 최초 검사 중 공유 모듈 재빌드/HMR이 겹친 실행은 세션 불일치/timeout으로2/4였고 최종 결과와 합산하지 않는다. 시간/권한 제한은 완화하지 않았다.
+- 검토: 명세, 값 주입/React 이스케이프·선택 소유/공개·개인정보 미노출·세션 변경·중복·오류 후 modal 종료/수동 복구·경로 변경 시 폼 초기화를 점검하고 경계 테스트를 실행했다. 실제 서버 보안 검증은 아니다. 남은 일은6-C 수신자 응답/48시간 만료·공통 거래 통합 검증이며6단계 전체 완료로 표시하지 않는다. 실제 API/DB/스토리지/알림·영구/다중탭 복원, D01/D02/D08/D21과 원격 #62 계약 조율은 남는다.
+- 다음 작업 하나는 사용자 지정6-C. 6-A [aa2558f](https://github.com/Jubileekim/KEMI/commit/aa2558f) 푸시/[Draft #71](https://github.com/Jubileekim/KEMI/pull/71) 생성·채팅 연결. 원격 [Web CI40432246524](https://github.com/Jubileekim/KEMI/actions/runs/40432246524)는 조회 시 in_progress이며 로컬24/24와 구분한다.6-B 전달 링크는 후속 기록에 추가한다. 요청 범위 밖 자동 착수·병합·자동병합·명시적 배포 없음.
+
 ## 6-A 공개 작품 피드·영상 상세 (2026-10-27)
 
 - 사용자 지정6-A~6-C 중6-A 명시적 DEV/MSW 구현. `/`와 `/works/:workId`를 실제 화면으로 연결하고 기존 작품 메뉴·공개 모집/로그인/제작 관리 동선을 유지했다. 가격 없는 썸네일 카드·샘플/고객물·담당역할·출처·스타일/유형 필터·URL 페이지/뒤로가기·빈/오류/재시도·네이티브 합성 영상 재생/실패를 구현했다. 후기 없는 신규 샘플을 허용하며 공개 권한/고객 동의/공개 서비스와 작업물 상태를 처리기에서 재검사한다.
