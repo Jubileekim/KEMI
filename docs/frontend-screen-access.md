@@ -1,6 +1,6 @@
 # 기존 화면 접근 점검 · 2026-10-26
 
-기준 저장소: `C:/Users/Cho/Desktop/teamproject 3-5/KEMI`. 조사 기준은 `apps/web/src/app/routes.ts`, `App.tsx`, `layouts/Shell.tsx`, `route-pages.tsx` 및 아래 기능/Mock 컴포넌트다. 상위 폴더의 독립 앱은 대상이 아니다.
+기준 저장소: `Jubileekim/KEMI`(저장소 루트 기준). 조사 기준은 `apps/web/src/app/routes.ts`, `App.tsx`, `layouts/Shell.tsx`, `route-pages.tsx` 및 아래 기능/Mock 컴포넌트다. 상위 폴더의 독립 앱은 대상이 아니다. 로컬 개발자 절대경로는 공유 문서에 기록하지 않는다.
 
 ## 범위와 검증 계획
 
