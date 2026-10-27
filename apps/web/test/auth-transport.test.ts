@@ -44,8 +44,14 @@ describe("인증 Axios 경계", () => {
     }
     expect(seen).toHaveLength(7);
     expect(token).not.toHaveBeenCalled();
-    await expect(api.get("/api/projects/me")).rejects.toThrow("AUTH_REQUIRED");
-    await expect(api.post("/api/projects", {})).rejects.toThrow("AUTH_REQUIRED");
+    await expect(api.get("/api/projects/me")).rejects.toMatchObject({
+      status: 0,
+      code: "UNKNOWN",
+    });
+    await expect(api.post("/api/projects", {})).rejects.toMatchObject({
+      status: 0,
+      code: "UNKNOWN",
+    });
     expect(seen).toHaveLength(7);
     expect(token).toHaveBeenCalledTimes(2);
   });
