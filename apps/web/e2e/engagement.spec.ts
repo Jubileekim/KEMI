@@ -88,6 +88,7 @@ test("7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양�
     .check();
   await expect(page).toHaveURL(/unread=true/);
   await page.goBack();
+  await expect(page).toHaveURL(/\/notifications$/);
   await expect(
     page.getByRole("checkbox", { name: "미확인만 보기", exact: true }),
   ).not.toBeChecked();

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -21,6 +22,11 @@ function Notices() {
       ? requestedPage
       : 1;
   const unreadOnly = params.get("unread") === "true";
+  const filterRef = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    // Preserve native input/focus during router transitions; sync history changes.
+    if (filterRef.current) filterRef.current.checked = unreadOnly;
+  }, [unreadOnly]);
   const setPage = (value: number) => {
     const next = new URLSearchParams(params);
     next.set("page", String(value));
@@ -80,7 +86,7 @@ function Notices() {
       <Label>
         <input
           type="checkbox"
-          key={unreadOnly ? "unread" : "all"}
+          ref={filterRef}
           defaultChecked={unreadOnly}
           onChange={(e) => {
             setUnreadOnly(e.target.checked);
