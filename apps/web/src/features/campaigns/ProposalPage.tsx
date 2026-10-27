@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { mockEnabled } from "../auth/config";
+import RequestsLive from "../requests/RequestsLive";
 
 const ProposalMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/ProposalMock"))
@@ -11,13 +12,5 @@ export default function ProposalPage() {
         <ProposalMock />
       </Suspense>
     );
-  return (
-    <section className="showcase-card grid gap-4">
-      <h1 className="type-heading-lg">제안·협의 연결 준비 중</h1>
-      <p>
-        협의와 선정 분리·철회·채팅 API 계약 조율 후 연결해요. 실제 제안·대화는
-        아직 저장되지 않아요.
-      </p>
-    </section>
-  );
+  return <RequestsLive />;
 }
