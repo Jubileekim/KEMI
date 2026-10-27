@@ -1,5 +1,8 @@
 import {
+  type AiReportApplyResponse,
   type AuthUser,
+  aiReportApplySchema,
+  projectDraftValuesSchema,
   type PricingAnalysisRequest,
   type PricingAnalysisResponse,
   pricingAnalysisRequestSchema,
@@ -7,6 +10,8 @@ import {
 } from "@kemi/shared";
 import { z } from "zod";
 import AppError from "../http/app-error.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
+import lockProject from "../projects/project-lock.js";
 
 type PriceGenerator = (input: PricingAnalysisRequest) => Promise<unknown>;
 
@@ -147,17 +152,28 @@ export async function requestOpenAIPricing({
 
 export interface PricingService {
   analyze(user: AuthUser, input: unknown): Promise<PricingAnalysisResponse>;
+  apply(
+    user: AuthUser,
+    reportId: bigint,
+    input: unknown,
+  ): Promise<AiReportApplyResponse>;
 }
 
 export function createPricingService({
   apiKey,
   model = "gpt-4o-mini",
   generate,
+  prisma,
+  now = () => new Date(),
 }: {
   apiKey?: string;
   model?: string;
   generate?: PriceGenerator;
+  // 있으면 분석 보고서를 저장하고(AI-01) 예산 반영(AI-02)을 할 수 있다.
+  prisma?: PrismaClient;
+  now?: () => Date;
 } = {}): PricingService {
+  const conflict = (message: string) => new AppError(409, "CONFLICT", message);
   return {
     async analyze(user, raw) {
       if (user.role !== "CLIENT" || user.status !== "ACTIVE") {
@@ -206,7 +222,7 @@ export function createPricingService({
         throw unavailable();
       }
 
-      return {
+      const result = {
         source: "AI_ESTIMATE",
         currency: "KRW",
         summary: parsed.data.summary,
@@ -215,7 +231,110 @@ export function createPricingService({
         assumptions: parsed.data.assumptions,
         notice:
           "AI가 가정으로 산정한 참고용 추정치입니다. 실제 시장 단가·계약 금액을 보장하지 않습니다. 의뢰인이 검토한 후 프로젝트 예산으로 반영해야 합니다.",
-      };
+      } as const;
+      // 분석 기록(AI-01). 입력에는 의뢰 내용만 있고 개인 연락처는 받지 않는다.
+      const report = prisma
+        ? await prisma.aiReport.create({
+            data: {
+              userId: BigInt(user.id),
+              model: generate ? "test" : model,
+              input,
+              output: { ...parsed.data, workUnits, estimatedBudgetKrw },
+              estimatedBudgetKrw: BigInt(estimatedBudgetKrw),
+            },
+            select: { id: true },
+          })
+        : null;
+      return { reportId: report?.id.toString() ?? null, ...result };
+    },
+
+    // AI-02: 의뢰인이 고른 분석 결과를 본인 공고 초안 또는 모집 중 공고 예산에 반영한다(보고서당 한 번).
+    async apply(user, reportId, raw) {
+      if (!prisma) {
+        throw new AppError(
+          503,
+          "SERVICE_UNAVAILABLE",
+          "분석 보고서 저장소가 설정되지 않았습니다.",
+        );
+      }
+      const target = aiReportApplySchema.parse(raw);
+      const userId = BigInt(user.id);
+      return prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM ai_reports WHERE id = ${reportId} FOR UPDATE`;
+        const report = await tx.aiReport.findUnique({
+          where: { id: reportId },
+        });
+        if (!report || report.userId !== userId) {
+          throw new AppError(
+            404,
+            "NOT_FOUND",
+            "분석 보고서를 찾을 수 없습니다.",
+          );
+        }
+        if (report.appliedAt) throw conflict("이미 예산에 반영한 분석입니다.");
+        const budget = report.estimatedBudgetKrw;
+        let draftId: bigint | null = null;
+        let projectId: bigint | null = null;
+        if ("draftId" in target) {
+          draftId = BigInt(target.draftId);
+          await tx.$queryRaw`SELECT id FROM project_drafts WHERE id = ${draftId} FOR UPDATE`;
+          const draft = await tx.projectDraft.findUnique({
+            where: { id: draftId },
+          });
+          if (!draft || draft.clientId !== userId) {
+            throw new AppError(
+              404,
+              "NOT_FOUND",
+              "공고 초안을 찾을 수 없습니다.",
+            );
+          }
+          if (draft.publishedProjectId !== null) {
+            throw conflict("이미 공개한 초안입니다.");
+          }
+          await tx.projectDraft.update({
+            where: { id: draftId },
+            data: {
+              values: {
+                ...projectDraftValuesSchema.parse(draft.values),
+                budget: Number(budget),
+              },
+            },
+          });
+        } else {
+          projectId = BigInt(target.projectId);
+          const project = await lockProject(tx, projectId);
+          if (!project || project.clientId !== userId || project.deletedAt) {
+            throw new AppError(
+              404,
+              "NOT_FOUND",
+              "프로젝트를 찾을 수 없습니다.",
+            );
+          }
+          if (project.status !== "OPEN" || project.recruitmentEndAt <= now()) {
+            throw conflict("모집 중인 공고에만 반영할 수 있습니다.");
+          }
+          await tx.project.update({
+            where: { id: projectId },
+            data: { budget },
+          });
+        }
+        const updated = await tx.aiReport.update({
+          where: { id: reportId },
+          data: {
+            appliedAt: now(),
+            appliedBudgetKrw: budget,
+            appliedDraftId: draftId,
+            appliedProjectId: projectId,
+          },
+        });
+        return {
+          reportId: updated.id.toString(),
+          appliedBudgetKrw: Number(budget),
+          draftId: draftId?.toString() ?? null,
+          projectId: projectId?.toString() ?? null,
+          appliedAt: updated.appliedAt?.toISOString() ?? now().toISOString(),
+        };
+      });
     },
   };
 }

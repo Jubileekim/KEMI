@@ -1,6 +1,7 @@
 import type { AuthUser } from "@kemi/shared";
 import { Router, type Request } from "express";
 import { rateLimit } from "express-rate-limit";
+import { z } from "zod";
 import type { AuthService } from "../auth/auth.service.js";
 import readBearerToken from "../http/bearer-token.js";
 import AppError from "../http/app-error.js";
@@ -51,6 +52,17 @@ export default function createPricingRouter(
       res.json(await pricingService.analyze(pricingUser(req), req.body));
     },
   );
+
+  // AI-02: 분석 결과를 예산에 반영(의뢰인의 명시적 동작)
+  router.post("/reports/:reportId/apply", async (req, res) => {
+    const user = await authService.authenticate(readBearerToken(req));
+    const reportId = z
+      .string()
+      .regex(/^[1-9]\d*$/, "ID가 올바르지 않습니다.")
+      .transform(BigInt)
+      .parse(req.params.reportId);
+    res.json(await pricingService.apply(user, reportId, req.body));
+  });
 
   return router;
 }

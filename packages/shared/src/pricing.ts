@@ -32,6 +32,8 @@ export const pricingModelSchema = z.strictObject({
 export type PricingModelOutput = z.infer<typeof pricingModelSchema>;
 
 export interface PricingAnalysisResponse {
+  // 저장한 분석 보고서(AI-02 반영에 쓴다). 저장소가 없으면 null
+  reportId: string | null;
   source: "AI_ESTIMATE";
   currency: "KRW";
   summary: string;
@@ -41,4 +43,20 @@ export interface PricingAnalysisResponse {
   estimatedBudgetKrw: number;
   assumptions: string[];
   notice: string;
+}
+
+// AI-02: 분석 결과를 예산에 명시적으로 반영한다. 분석만으로 예산이 바뀌지 않는다.
+// 대상은 본인 공고 초안 또는 본인의 모집 중 공고 하나.
+export const aiReportApplySchema = z.union([
+  z.strictObject({ draftId: z.string().regex(/^[1-9]\d*$/) }),
+  z.strictObject({ projectId: z.string().regex(/^[1-9]\d*$/) }),
+]);
+export type AiReportApplyRequest = z.input<typeof aiReportApplySchema>;
+
+export interface AiReportApplyResponse {
+  reportId: string;
+  appliedBudgetKrw: number;
+  draftId: string | null;
+  projectId: string | null;
+  appliedAt: string;
 }

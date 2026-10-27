@@ -30,6 +30,10 @@ export const NOTIFICATION_TYPES = [
   "DELIVERABLE_APPROVED",
   "DELIVERY_RECEIVED",
   "REVIEW_RECEIVED",
+  "DIRECT_REQUEST_RECEIVED",
+  "DIRECT_REQUEST_ACCEPTED",
+  "DIRECT_REQUEST_DECLINED",
+  "DIRECT_REQUEST_EXPIRED",
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;

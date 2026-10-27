@@ -46,6 +46,11 @@ import {
   createCatalogService,
 } from "../../src/catalog/catalog.service.js";
 import { createProjectDraftService } from "../../src/projects/project-draft.service.js";
+import {
+  createDirectRequestService,
+  type DirectRequestService,
+} from "../../src/direct/direct.service.js";
+import { createFeedService } from "../../src/direct/feed.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -71,6 +76,7 @@ interface TestAppOptions {
   productionService?: ProductionService;
   deliveryService?: DeliveryService;
   catalogService?: CatalogService;
+  directRequestService?: DirectRequestService;
 }
 
 const EMPTY_PROJECT = {
@@ -154,6 +160,7 @@ export function createTestApp({
   productionService,
   deliveryService,
   catalogService,
+  directRequestService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
     DATABASE_URL: "postgresql://unused:unused@localhost:1/unused_test",
@@ -194,6 +201,9 @@ export function createTestApp({
       deliveryService ?? createDeliveryService({ prisma: client }),
     catalogService: catalogService ?? createCatalogService({ prisma: client }),
     projectDraftService: createProjectDraftService({ prisma: client }),
+    directRequestService:
+      directRequestService ?? createDirectRequestService({ prisma: client }),
+    feedService: createFeedService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

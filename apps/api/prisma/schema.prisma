@@ -59,6 +59,7 @@ model User {
   servicePackages  ServicePackage[]
   portfolios       Portfolio[]
   projectDrafts    ProjectDraft[]
+  aiReports        AiReport[]
   chatReads        ChatRead[]
 
   @@map("users")
@@ -193,28 +194,35 @@ model Project {
 // 의뢰 요청 (ERD v0.6 work_requests). 페이즈 2는 공개 프로젝트 지원(PROJECT_APPLICATION)만 만든다.
 // 직접 의뢰(DIRECT_REQUEST)용 열(brief, response_expires_at, client_request_key 등)은 해당 기능에서 추가한다.
 model WorkRequest {
-  id            BigInt    @id @default(autoincrement())
-  requestType   String    @map("request_type")
-  clientId      BigInt    @map("client_id")
-  creatorId     BigInt    @map("creator_id")
-  projectId     BigInt?   @map("project_id")
-  message       String
-  initialAmount BigInt    @map("initial_amount")
-  expectedDays  Int       @map("expected_days")
-  status        String    @default("PENDING")
-  closedReason  String?   @map("closed_reason")
-  respondedAt   DateTime? @map("responded_at") @db.Timestamptz(3)
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id              BigInt    @id @default(autoincrement())
+  requestType     String    @map("request_type")
+  clientId        BigInt    @map("client_id")
+  creatorId       BigInt    @map("creator_id")
+  projectId       BigInt?   @map("project_id")
+  message         String
+  initialAmount   BigInt    @map("initial_amount")
+  expectedDays    Int       @map("expected_days")
+  status          String    @default("PENDING")
+  closedReason    String?   @map("closed_reason")
+  respondedAt     DateTime? @map("responded_at") @db.Timestamptz(3)
+  // 직접 의뢰(DIRECT_REQUEST)만: 패키지, 요청 시점 패키지 조건 사본, 목적·행사일, 크리에이터 응답 기한
+  packageId       BigInt?   @map("package_id")
+  packageSnapshot Json?     @map("package_snapshot")
+  purpose         String?
+  eventDate       DateTime? @map("event_date") @db.Date
+  respondDueAt    DateTime? @map("respond_due_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  client        User           @relation("WorkRequestClient", fields: [clientId], references: [id], onDelete: Restrict)
-  creator       User           @relation("WorkRequestCreator", fields: [creatorId], references: [id], onDelete: Restrict)
-  project       Project?       @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  notifications Notification[]
-  termsVersions TermsVersion[]
-  contract      Contract?
-  chatRoom      ChatRoom?
-  files         File[]
+  servicePackage ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  client         User            @relation("WorkRequestClient", fields: [clientId], references: [id], onDelete: Restrict)
+  creator        User            @relation("WorkRequestCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  notifications  Notification[]
+  termsVersions  TermsVersion[]
+  contract       Contract?
+  chatRoom       ChatRoom?
+  files          File[]
 
   @@unique([projectId, creatorId])
   @@index([creatorId, createdAt])
@@ -659,8 +667,9 @@ model ServicePackage {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  creator    User        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
-  portfolios Portfolio[]
+  creator      User          @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  portfolios   Portfolio[]
+  workRequests WorkRequest[]
 
   @@index([creatorId, createdAt])
   @@map("service_packages")
@@ -710,4 +719,25 @@ model ProjectDraft {
 
   @@index([clientId, updatedAt])
   @@map("project_drafts")
+}
+
+// ─── AI 단가 분석 보고서 (AI-01·02) ─────────────────────────────
+// 분석마다 입력·검증된 결과를 남긴다. 예산 반영은 의뢰인이 명시적으로 할 때만(applied_*).
+model AiReport {
+  id                 BigInt    @id @default(autoincrement())
+  userId             BigInt    @map("user_id")
+  model              String
+  input              Json
+  output             Json
+  estimatedBudgetKrw BigInt    @map("estimated_budget_krw")
+  appliedAt          DateTime? @map("applied_at") @db.Timestamptz(3)
+  appliedBudgetKrw   BigInt?   @map("applied_budget_krw")
+  appliedDraftId     BigInt?   @map("applied_draft_id")
+  appliedProjectId   BigInt?   @map("applied_project_id")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@map("ai_reports")
 }

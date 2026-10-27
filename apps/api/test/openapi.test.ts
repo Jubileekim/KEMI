@@ -202,6 +202,8 @@ describe("OpenAPI 문서", () => {
           .replace("{packageId}", "1")
           .replace("{portfolioId}", "1")
           .replace("{draftId}", "1")
+          .replace("{requestId}", "1")
+          .replace("{reportId}", "1")
           .replace("{userId}", "1")
           .replace("{orderId}", "00000000-0000-4000-8000-000000000000");
         const agent = request(app);
