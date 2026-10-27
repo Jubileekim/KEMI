@@ -227,6 +227,54 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
     expect(list.body.items).toHaveLength(2);
   });
 
+  it("비공개·마감·삭제 공고의 ID는 신고로 작성자 정보를 조회할 수 없다", async () => {
+    const client = await signup(app, "CLIENT");
+    const creator = await signup(app, "CREATOR");
+    const created = await post(client.token, "/api/projects", projectBody());
+    expect(created.status).toBe(201);
+    const projectId = BigInt(created.body.id);
+    const reportProject = () =>
+      post(creator.token, "/api/reports", {
+        commandId: randomUUID(),
+        targetType: "PROJECT",
+        targetId: String(projectId),
+        reason: "공고 신고 테스트",
+      });
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: "CLOSED" },
+    });
+    expect((await reportProject()).status).toBe(404);
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: "OPEN",
+        recruitmentEndAt: new Date(Date.now() - DAY_MS),
+      },
+    });
+    expect((await reportProject()).status).toBe(404);
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        recruitmentEndAt: new Date(Date.now() + 3 * DAY_MS),
+        deletedAt: new Date(),
+      },
+    });
+    expect((await reportProject()).status).toBe(404);
+    expect(await prisma.report.count()).toBe(0);
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { deletedAt: null },
+    });
+    const publicReport = await reportProject();
+    expect(publicReport.status).toBe(201);
+    expect(publicReport.body.subjectId).toBe(String(client.userId));
+  });
+
   it("최근 안내 50건 밖의 이용 제한도 안내와 API에서 유지한다", async () => {
     const subject = await signup(app, "CLIENT");
     const reporter = await signup(app, "CREATOR");
