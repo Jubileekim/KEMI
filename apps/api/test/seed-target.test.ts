@@ -80,7 +80,10 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
     expect(checkSeedTarget(base)).toBe(identity);
     expect(allowSharedProductionDemoSeed(base, identity)).toBe(true);
     expect(
-      allowSharedProductionDemoSeed({ ...base, SEED_PRODUCTION_ACK: undefined }, identity),
+      allowSharedProductionDemoSeed(
+        { ...base, SEED_PRODUCTION_ACK: undefined },
+        identity,
+      ),
     ).toBe(false);
 
     const refused = [
@@ -90,7 +93,12 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
       { ...base, SEED_CONFIRM_TARGET: "supabase:other" },
       { ...base, DATABASE_URL: OTHER },
       // 어느 운영 DB에나 일괄 적용되는 우회는 없어야 한다.
-      { ...base, DATABASE_URL: OTHER, SEED_ALLOWED_TARGETS: "supabase:prodref999", SEED_CONFIRM_TARGET: "supabase:prodref999" },
+      {
+        ...base,
+        DATABASE_URL: OTHER,
+        SEED_ALLOWED_TARGETS: "supabase:prodref999",
+        SEED_CONFIRM_TARGET: "supabase:prodref999",
+      },
     ];
     for (const env of refused) {
       expect(() => checkSeedTarget(env)).toThrow(SeedTargetError);
