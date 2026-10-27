@@ -343,4 +343,44 @@ describe("채팅 첨부 (CHAT-01)", () => {
       .send({ clientMessageId: randomUUID(), body: " " });
     expect(empty.status).toBe(400);
   });
+
+  it("같은 clientMessageId는 같은 첨부 집합이면 200, 다른 첨부면 409", async () => {
+    const { client, workRequestId } = await negotiation();
+    const upload = (fileName: string) =>
+      uploadReady(
+        client.token,
+        {
+          purpose: "CHAT_ATTACHMENT",
+          fileName,
+          mimeType: "video/mp4",
+          sizeBytes: 64,
+          workRequestId,
+        },
+        fileBytes("mp4"),
+      );
+    const first = await upload("첫번째.mp4");
+    const second = await upload("두번째.mp4");
+    const third = await upload("세번째.mp4");
+    const clientMessageId = randomUUID();
+    const post = (attachmentFileIds: string[]) =>
+      request(app)
+        .post(`/api/work-requests/${workRequestId}/chat/messages`)
+        .set(auth(client.token))
+        .send({ clientMessageId, body: "참고 자료", attachmentFileIds });
+
+    const sent = await post([first, second, first]);
+    expect(sent.status).toBe(201);
+    expect(sent.body.attachments).toHaveLength(2);
+    // 순서가 바뀌거나 중복이 있어도 같은 집합이면 이전 메시지를 그대로 준다.
+    const replayed = await post([second, first]);
+    expect([replayed.status, replayed.body.id]).toEqual([200, sent.body.id]);
+    // 첨부가 다르면(빠짐·추가·교체) 409
+    const changed = await Promise.all([
+      post([first]),
+      post([first, second, third]),
+      post([first, third]),
+    ]);
+    expect(changed.map((r) => r.status)).toEqual([409, 409, 409]);
+    expect(await prisma.chatMessage.count({ where: { kind: "USER" } })).toBe(1);
+  });
 });

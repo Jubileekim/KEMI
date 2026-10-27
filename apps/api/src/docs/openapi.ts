@@ -1312,7 +1312,7 @@ const openApiDocument = {
         tags: ["production"],
         summary: "제작 자료 내기 (READY-01)",
         description:
-          "의뢰인. 파일(확인이 끝난 본인 MATERIAL 파일)·실물 발송(택배사·송장번호)·메모. 문제가 신고된 자료는 `replacesMaterialId`로 대체한다(원래 자료는 REPLACED). 제작 준비 단계에서만.",
+          "의뢰인. 파일(확인이 끝난 본인 MATERIAL 파일)·실물 발송(택배사·송장번호)·메모. 문제가 신고된 자료는 `replacesMaterialId`로 대체한다(원래 자료는 REPLACED). 제작 준비 단계에서만. `commandId`(화면이 만든 UUID)가 같고 내용도 같은 재전송은 자료를 새로 만들지 않고 현재 상태를 준다. 같은 `commandId`에 다른 내용이면 409.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         requestBody: {

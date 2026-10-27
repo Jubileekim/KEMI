@@ -488,6 +488,8 @@ model ProductionMaterial {
   issueNote          String?   @map("issue_note")
   replacesMaterialId BigInt?   @unique @map("replaces_material_id")
   submittedBy        BigInt    @map("submitted_by")
+  // 화면이 만든 요청 식별자. 응답을 못 받고 다시 보내도 자료가 한 번만 생긴다.
+  commandId          String    @unique @map("command_id") @db.Uuid
   confirmedAt        DateTime? @map("confirmed_at") @db.Timestamptz(3)
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
