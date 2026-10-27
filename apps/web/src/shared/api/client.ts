@@ -71,7 +71,10 @@ function publicReadPath(url = "", method = "get") {
 api.interceptors.request.use(async (input) => {
   const config = input;
   if (session && protectedPath(config.url)) {
-    if (publicReadPath(config.url, config.method) && session.isAuthenticated?.() === false)
+    if (
+      publicReadPath(config.url, config.method) &&
+      session.isAuthenticated?.() === false
+    )
       return config;
     config.sessionEpoch ??= session.epoch();
     if (config.sessionEpoch !== session.epoch())
