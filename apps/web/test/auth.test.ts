@@ -180,8 +180,11 @@ describe("세션 수명과 실패", () => {
   it("실제 가입 충돌, 제한 계정과 잘못된 응답을 인증 성공으로 처리하지 않는다", async () => {
     const controller = createSessionController(true, vi.fn());
     const post = vi.spyOn(api, "post");
+    // 실제 가입: 서버가 중복 이메일 등으로 거절하면 인증되지 않는다.
+    post.mockRejectedValueOnce(new Error("409 CONFLICT"));
     await expect(controller.authenticate(input, true)).rejects.toThrow();
-    expect(post).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(controller.snapshot().role).toBe("guest");
     post.mockResolvedValue({
       data: { ...result, user: { ...result.user, status: "RESTRICTED" } },
     });
