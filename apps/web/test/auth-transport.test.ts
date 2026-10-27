@@ -30,18 +30,20 @@ describe("인증 Axios 경계", () => {
         config,
       };
     };
-    for (const path of [
-      "/api/feed?page=1",
-      "/api/projects?page=1",
-      "/api/projects/123",
-      "/api/creators/123",
-      "/api/packages/123",
-      "/api/portfolios/123",
-      "/api/portfolios/123/media",
-    ]) {
-      const response = await api.get(path);
-      expect(response.status).toBe(200);
-    }
+    await Promise.all(
+      [
+        "/api/feed?page=1",
+        "/api/projects?page=1",
+        "/api/projects/123",
+        "/api/creators/123",
+        "/api/packages/123",
+        "/api/portfolios/123",
+        "/api/portfolios/123/media",
+      ].map(async (path) => {
+        const response = await api.get(path);
+        expect(response.status).toBe(200);
+      }),
+    );
     expect(seen).toHaveLength(7);
     expect(token).not.toHaveBeenCalled();
     await expect(api.get("/api/projects/me")).rejects.toMatchObject({
