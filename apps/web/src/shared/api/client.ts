@@ -58,7 +58,7 @@ function protectedPath(url = "") {
 // 공개 조회는 비로그인 상태에서도 가능하다. 쓰기·내 정보는 항상 Bearer 검증한다.
 function publicReadPath(url = "", method = "get") {
   if (method.toLowerCase() !== "get") return false;
-  const path = url.split("?")[0];
+  const path = url.split("?")[0] ?? "";
   return (
     path === "/api/feed" ||
     path === "/api/projects" ||
