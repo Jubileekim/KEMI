@@ -137,25 +137,30 @@ export function createChatService({
 }: {
   prisma: PrismaClient;
 }): ChatService {
-  async function unreadCount(db: Db, roomId: bigint, userId: bigint) {
-    const read = await db.chatRead.findUnique({
-      where: { roomId_userId: { roomId, userId } },
-    });
-    return db.chatMessage.count({
-      where: {
-        roomId,
-        id: { gt: read?.lastReadMessageId ?? 0n },
-        // 내가 보낸 메시지는 읽지 않은 것으로 세지 않는다.
-        OR: [{ senderId: null }, { senderId: { not: userId } }],
-      },
-    });
+  // 방 여러 개의 안 읽은 수를 한 번에 센다(방마다 따로 세지 않는다). 내가 보낸 메시지는 세지 않는다.
+  async function unreadCounts(
+    db: Db,
+    roomIds: bigint[],
+    userId: bigint,
+  ): Promise<Map<bigint, number>> {
+    if (roomIds.length === 0) return new Map();
+    const rows = await db.$queryRaw<{ roomId: bigint; unread: number }[]>`
+      SELECT r.id AS "roomId", count(m.id)::int AS unread
+      FROM chat_rooms r
+      LEFT JOIN chat_reads cr ON cr.room_id = r.id AND cr.user_id = ${userId}
+      LEFT JOIN chat_messages m ON m.room_id = r.id
+        AND m.id > COALESCE(cr.last_read_message_id, 0)
+        AND (m.sender_id IS NULL OR m.sender_id <> ${userId})
+      WHERE r.id IN (${Prisma.join(roomIds)})
+      GROUP BY r.id`;
+    return new Map(rows.map((row) => [row.roomId, row.unread]));
   }
 
-  async function toSummary(
-    db: Db,
+  function summarize(
     room: RoomRow,
     userId: bigint,
-  ): Promise<ChatRoomSummary> {
+    unreadCount: number,
+  ): ChatRoomSummary {
     const request = room.workRequest;
     const last = room.messages[0];
     return {
@@ -170,8 +175,17 @@ export function createChatService({
           : request.client.name,
       readOnly: CLOSED_REQUEST_STATUSES.has(request.status),
       lastMessage: last ? toMessage(last) : null,
-      unreadCount: await unreadCount(db, room.id, userId),
+      unreadCount,
     };
+  }
+
+  async function toSummary(
+    db: Db,
+    room: RoomRow,
+    userId: bigint,
+  ): Promise<ChatRoomSummary> {
+    const counts = await unreadCounts(db, [room.id], userId);
+    return summarize(room, userId, counts.get(room.id) ?? 0);
   }
 
   // 당사자의 방만 연다. 다른 사람·방이 없는 요청은 404(존재를 드러내지 않음).
@@ -201,8 +215,13 @@ export function createChatService({
         },
         include: roomInclude,
       });
-      const items = await Promise.all(
-        rooms.map((room) => toSummary(prisma, room, userId)),
+      const counts = await unreadCounts(
+        prisma,
+        rooms.map((room) => room.id),
+        userId,
+      );
+      const items = rooms.map((room) =>
+        summarize(room, userId, counts.get(room.id) ?? 0),
       );
       const lastAt = (item: ChatRoomSummary) =>
         item.lastMessage?.createdAt ?? "";
@@ -241,20 +260,52 @@ export function createChatService({
     },
 
     // CHAT-01: 텍스트 메시지 전송. 읽기 전용 방은 409. 같은 clientMessageId의 재전송은 이전 메시지를 준다.
+    // 요청 행을 FOR SHARE로 잠근 채 상태를 확인하고 저장한다. 종료·철회·무선정 종료는 같은 행을 UPDATE하므로
+    // 확인과 저장 사이에 요청이 끝날 수 없다(전송끼리는 서로 막지 않는다).
     async send(user, workRequestId, input) {
       const data = chatMessageCreateSchema.parse(input);
       const { room, userId } = await findRoom(prisma, user, workRequestId);
-      if (CLOSED_REQUEST_STATUSES.has(room.workRequest.status)) {
-        throw new AppError(
-          409,
-          "CONFLICT",
-          "협의가 종료된 대화방에는 메시지를 보낼 수 없습니다.",
-        );
-      }
       const dedupeKey = `user:${userId}:${data.clientMessageId}`;
-      const fileIds = data.attachmentFileIds.map(BigInt);
+      // 첨부는 순서·중복과 관계없이 같은 집합이면 같은 요청으로 본다.
+      const byId = (a: bigint, b: bigint) => (a < b ? -1 : 1);
+      const fileIds = [...new Set(data.attachmentFileIds)]
+        .map(BigInt)
+        .sort(byId);
+      const sameFiles = (existing: MessageRow) => {
+        const saved = existing.attachments
+          .map(({ fileId }) => fileId)
+          .sort(byId);
+        return (
+          saved.length === fileIds.length &&
+          saved.every((id, index) => id === fileIds[index])
+        );
+      };
+      const replay = (existing: MessageRow) => {
+        if (existing.body !== data.body || !sameFiles(existing)) {
+          throw new AppError(
+            409,
+            "CONFLICT",
+            "같은 메시지 식별자로 다른 내용이나 첨부를 보낼 수 없습니다.",
+          );
+        }
+        return { created: false, message: toMessage(existing) };
+      };
       try {
-        const created = await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx) => {
+          const existing = await tx.chatMessage.findUnique({
+            where: { roomId_dedupeKey: { roomId: room.id, dedupeKey } },
+            include: includeAttachments,
+          });
+          if (existing) return replay(existing);
+          const [request] = await tx.$queryRaw<{ status: string }[]>`
+            SELECT status FROM work_requests WHERE id = ${room.workRequestId} FOR SHARE`;
+          if (!request || CLOSED_REQUEST_STATUSES.has(request.status)) {
+            throw new AppError(
+              409,
+              "CONFLICT",
+              "협의가 종료된 대화방에는 메시지를 보낼 수 없습니다.",
+            );
+          }
           await requireReadyFiles(tx, fileIds, {
             ownerId: userId,
             purpose: "CHAT_ATTACHMENT",
@@ -272,29 +323,24 @@ export function createChatService({
           await tx.chatAttachment.createMany({
             data: fileIds.map((fileId) => ({ messageId: message.id, fileId })),
           });
-          return tx.chatMessage.findUniqueOrThrow({
+          const created = await tx.chatMessage.findUniqueOrThrow({
             where: { id: message.id },
             include: includeAttachments,
           });
+          return { created: true, message: toMessage(created) };
         });
-        return { created: true, message: toMessage(created) };
       } catch (err) {
+        // 같은 식별자로 동시에 두 번 보낸 경우: 먼저 저장된 메시지를 기준으로 답한다.
         if (
           err instanceof Prisma.PrismaClientKnownRequestError &&
           err.code === "P2002"
         ) {
-          const existing = await prisma.chatMessage.findUniqueOrThrow({
-            where: { roomId_dedupeKey: { roomId: room.id, dedupeKey } },
-            include: includeAttachments,
-          });
-          if (existing.body !== data.body) {
-            throw new AppError(
-              409,
-              "CONFLICT",
-              "같은 메시지 식별자로 다른 내용을 보낼 수 없습니다.",
-            );
-          }
-          return { created: false, message: toMessage(existing) };
+          return replay(
+            await prisma.chatMessage.findUniqueOrThrow({
+              where: { roomId_dedupeKey: { roomId: room.id, dedupeKey } },
+              include: includeAttachments,
+            }),
+          );
         }
         throw err;
       }
