@@ -8,7 +8,14 @@ import { kemi, newCommandId } from "../../shared/api/kemi";
 import { dateTime, label, paymentStatusLabels, won } from "../live/labels";
 import { Card, Facts, Failure, Loading } from "../live/ui";
 import { errorText } from "../live/errors";
-import { openTossPayment, tossReady } from "./toss";
+import {
+  mountTossWidgets,
+  openTossPayment,
+  requestWidgetPayment,
+  tossReady,
+  tossWidgetMode,
+  type TossWidgets,
+} from "./toss";
 
 function OrderRow({ order }: { order: PaymentOrder }) {
   return (
@@ -34,11 +41,37 @@ function Checkout({ contractId }: { contractId: string }) {
     queryFn: ({ signal }) => kemi.payments(contractId, signal),
   });
   const [commandId] = useState(newCommandId);
+  // 결제위젯(test_gck_)은 결제 수단·약관을 화면에 먼저 그린다.
+  const widgets = useRef<TossWidgets | null>(null);
+  const [widgetError, setWidgetError] = useState("");
+  const amount = payments.data?.contract.amountKrw;
+  const showWidget =
+    tossWidgetMode &&
+    !!payments.data &&
+    !payments.data.items.some(
+      (p) => p.status === "SUCCEEDED" || p.status === "UNKNOWN",
+    );
+  useEffect(() => {
+    if (!showWidget || !amount || widgets.current) return;
+    mountTossWidgets(amount, "#toss-methods", "#toss-agreement")
+      .then((mounted) => {
+        widgets.current = mounted;
+      })
+      .catch(() =>
+        setWidgetError("결제 수단을 불러오지 못했어요. 새로고침해 주세요."),
+      );
+  }, [showWidget, amount]);
   const start = useMutation({
     mutationFn: async (existing?: PaymentOrder) => {
+      if (tossWidgetMode && !widgets.current)
+        throw new Error(
+          "결제 수단을 불러오는 중이에요. 잠시 후 다시 눌러 주세요.",
+        );
       const order =
         existing ?? (await kemi.createPayment(contractId, commandId));
-      await openTossPayment({ ...order, contractId });
+      if (widgets.current)
+        await requestWidgetPayment(widgets.current, { ...order, contractId });
+      else await openTossPayment({ ...order, contractId });
     },
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
@@ -64,6 +97,13 @@ function Checkout({ contractId }: { contractId: string }) {
         </p>
         {paid && (
           <p role="status">결제가 완료됐어요. 제작 준비를 시작할 수 있어요.</p>
+        )}
+        {showWidget && (
+          <div className="grid gap-3">
+            <div id="toss-methods" />
+            <div id="toss-agreement" />
+            {widgetError && <p role="alert">{widgetError}</p>}
+          </div>
         )}
         {!paid && !open && (
           <Button

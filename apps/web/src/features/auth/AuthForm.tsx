@@ -67,7 +67,8 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
     },
   });
   const blocked =
-    !authEnabled || ["checking", "logging-out", "logout-error"].includes(status);
+    !authEnabled ||
+    ["checking", "logging-out", "logout-error"].includes(status);
   const busy = form.formState.isSubmitting || mutation.isPending;
   const { errors } = form.formState;
   const submitLabel = signup ? "가입하고 시작하기" : "이메일로 로그인";

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { mockEnabled } from "../auth/config";
-import ScreenLinks from "../../app/ScreenLinks";
+import CatalogLive from "./CatalogLive";
 
 const CatalogMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/CatalogMock"))
@@ -12,11 +12,5 @@ export default function FeedPage() {
         <CatalogMock />
       </Suspense>
     );
-  return (
-    <section className="showcase-card grid gap-6">
-      <h1 className="type-heading-lg">작품 피드</h1>
-      <p>공개 작품 API 연결 준비 중이에요.</p>
-      <ScreenLinks />
-    </section>
-  );
+  return <CatalogLive />;
 }
