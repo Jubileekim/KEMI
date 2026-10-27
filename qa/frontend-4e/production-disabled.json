@@ -1,0 +1,12 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": false,
+  "results": [
+    {
+      "role": "GUEST",
+      "passed": true,
+      "unexpected": [],
+      "errors": []
+    }
+  ]
+}

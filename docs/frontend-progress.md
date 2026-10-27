@@ -113,7 +113,7 @@
 
 ## 다음 작업 하나
 
-**4-D 승인·최종 전달·수령 API 및 보류 정책 조율:** 승인 버전/계약 파일/수령/문제 보류의 서버 계약과 D11/D13/D17 정책을 합의한다. 별도 요청 후 착수한다. 이전 단계 실환경/정책 검증도 미완료다.
+**4-E 정산 API·보류 상태·D12 금액 정책 조율:** 정산 조회/실행/결과 확인·멱등성·취소/분쟁/환불 보류의 서버 계약과 VAT/절사 기준을 합의한다. 별도 요청 후 착수한다. 이전 단계 실환경/정책 검증도 미완료다.
 
 ## GitHub 통합 PR 준비 (2026-10-23 추가 요청)
 
@@ -785,3 +785,37 @@
 - 기능 [4574df1](https://github.com/Jubileekim/KEMI/commit/4574df1), 경로표/운영 QA/진행 기록 [cd0dd15](https://github.com/Jubileekim/KEMI/commit/cd0dd15)을 커밋·푸시하고 [Draft PR #66](https://github.com/Jubileekim/KEMI/pull/66)을 생성·이 채팅에 연결했다. open·Draft·미병합이며 base는 선행 `feat/frontend-4d-final-receipt`의 `a492cf0`다. 기능 소스는 추가 변경 없이 최종 회귀 결과만 문서/QA 커밋으로 전달한다. 최신 전달 커밋은 [PR 커밋 목록](https://github.com/Jubileekim/KEMI/pull/66/commits)에서 확인한다.
 - 현재 PR base는 기존 Web CI pull_request 필터에 없어 자동 Web CI 대상이 아니다. 로컬 전체 회귀와 원격 CI는 구분하며 최신 원격 실행/상태는 [Checks](https://github.com/Jubileekim/KEMI/pull/66/checks)에서 확인한다. CI 설정·수동 재실행/배포 설정을 바꾸지 않는다. 선행 #65가 병합되면 base main 조정 검토가 남는다. API 단위 timeout/ECONNRESET, 기존 미추적6개 포맷, 운영 API/미구현·정책 경계도 남으며 전체 저장소 검사 통과로 표시하지 않는다.
 - 종료 범위는 기존 화면 접근 안내·연결 보완이다. 추적 소스 변경 없이 마지막 결과 기록을 커밋·푸시하고 로컬/원격 추적/PR head 일치를 확인한다. 기존 `outputs/`, `tools/`는 보존·전달 제외하며 병합·자동 병합·명시적 배포/재배포·다음 작업 자동 착수는 하지 않는다.
+
+## 4-E 모의 정산·작업 이벤트 안내 (2026-10-26)
+
+### 구현·정책 경계
+
+- 원본 기능명세서 SETTLE-01(50행)·WORK-04(70행), P16/P19/P22·D12와 계획4단계3·4항, 기술 PDF, KEMI 토큰, API 문서/API/shared를 대조했다. 실제 정산/작업 사건 API가 없어 DEV/MSW로 분리하며 API/shared·의존성·lockfile·운영 인증/권한은 변경하지 않았다.
+- Mock 처리기가 고정 계약/성공 전액 결제 금액·통화, 준비·최신 검토 승인→계약 최종 파일 전달→전용 수령 연결과 문제 보류를 검사한다. 정상액10% 공제·의뢰인 별도0%, 합계 일치와 계약당 성공1개를 적용한다. 양측 결과 확인 요청이 처리기를 호출하며 사용자 금액·완료 판정 입력은 받지 않는다. 실제 지급 실행 권한·처리 시점의 최종 API 계약을 확정한 것이 아니다.
+- 처리 중·결과 확인 중·실패·보류·응답 미확정은 완료가 아니다. 진행 중에는 기존 ID 조정, 실패 확정 후 새 요청, 응답 유실은 재조회/같은 ID로 확인한다. 조회 오류/처리 중에는 이전 완료 내역을 숨긴다. D12 세금/VAT/절사를 정하지 않고 소수 원 수수료는 보류한다. 취소/분쟁 판정·해제/부분 환불은 실제 계약 미제공이며 이번 Mock 보류 fixture를 운영 검증으로 사용하지 않는다.
+- `/contracts/:contractId/settlement`를 양측 보호 라우트에 연결했다. 기존 제작 준비/영상의 링크→정산, 정산→같은 작업방/승인 파일, 같은 방 정산 성공 안내→정확한 정산 ID로 이동한다. 서명/준비 사건도 저장 원기록에서 파생해 기존 영상/요청/승인/최종 전달/수령 안내와 함께 보여준다. 준비 이력은 해당 링크 진입 시 펼친다. 일반 대화로 사건을 만들지 않고, 안내 조회 실패로 거래를 취소하지 않는다. 인앱 알림 생성/읽음은7단계에 남는다.
+- 단일 탭 메모리다. 기존 Mock 역할 marker는 새로고침 시 복원될 수 있지만 계약/영상/정산 기록은 초기화된다. 실제 API/DB/PG/송금/스토리지/취소·분쟁 보류 판정·다중 탭/영구 복원은 미연결·미검증이다. WORK-02 나머지·D09/D10/D11/D12/D13/D17/D20이 남아 **4단계 전체 완료는 아니다**.
+
+### 변경 파일
+
+- 모델/통신: `apps/web/src/mocks/settlement-{model,api,handlers}.ts`, `browser.ts`, 기존 `delivery-handlers.ts`/`payment-handlers.ts`/`signature-handlers.ts`의 원기록 조회 함수.
+- 화면/접근: `apps/web/src/features/resolution/SettlementSummary.tsx`, `mocks/{SettlementMock,SettlementNoticesMock,WorkNoticesMock}.tsx`, `app/{App.tsx,routes.ts}`, `mocks/{ChatPanelMock,DeliveryMock,ProductionMock,FinalNoticesMock}.tsx`, `features/production/FinalReceiptPanel.tsx`, `features/terms/SignaturePanel.tsx`.
+- 검사/문서: `test/settlement.test.ts`, `e2e/settlement-{helpers.ts,spec.ts}`, 기존 `e2e/final.spec.ts`의 수령 안내 locator1개, `docs/{frontend-settlement-4e,frontend-feature-matrix,frontend-screen-access,frontend-progress}.md`, `qa/frontend-4e/`. `.github/workflows/web-ci.yml`에는 이번 stacked base `feat/frontend-screen-access`1개만 허용했다. 기존 검사 명령·timeout/retry는 유지한다.
+
+### 로컬 검증·검토 (최종 회귀 진행 중)
+
+- 웹 단위 **200/200·실패0·exit0**(기존193+정산7), 최종 두 flag 운영 `build:web`의 타입·ESLint·빌드 **exit0**, 토큰 검사PASS. 기본 운영 인증 미설정1역할과 두 flag 운영 독립HTTP4역할에서 가드/연결 준비, Mock 코드/worker/요청 제외를 확인했다. 실제 인증/API 서버 검증이 아니다.
+- 전달 대상 추적/신규 파일 Prettier·diff 검사PASS. 전체 `format:check`는 작업 전 미추적 `outputs/share/KEMI-interactive.html`, `tools/share-html/{build.mjs,main.tsx,serve.mjs,share.css,ShareGuide.tsx}`6개에서 실패했다. 해당 파일은 수정/스테이징하지 않는다. API/shared는 미수정이며 API 단위는 이번에 재실행하지 않았다. 이전 기록의 API timeout/ECONNRESET 원인은 이 범위에서 해결하지 않았다.
+- 첫4-E8개는4통과/4실패(준비 이력 접힘·오류 해제 후 재조회 누락), 두 번째는6통과/2실패(새로고침 후 비회원이라는 잘못된 검사 가정)였다. 대상 이력 펼침·명시적 재조회·기존 역할 marker 복원/거래 초기화에 맞게 수정했다. 정상 공개 제안→양측 서명→주문/Mock 결제 버튼→준비/시작→검토/승인→최종ZIP 전달/다운로드/수령→정산·양측·정확한 사건 링크는 두 번째 데스크톱/모바일에서 통과했고320~1280px 넘침/정상 페이지 오류/관련 실제 제품 API 요청0을 확인했다.1280/390px 캡처를 시각 확인했다. 중간 실행과 최종 회귀 수를 합산하지 않는다.
+- 명세/품질·security-review·React 점검을 별도 관점으로 수행했다. 사용자 결과/금액 주입, 객체/역할/Bearer·epoch, 응답 유실/중복, 조회 오류/DEV 경계를 검토했다. 기존 수령 화면의 ‘정산 미실행’이 성공 후에도 남는 문구는 ‘정산 결과 별도’로 수정했다. 실제 서버 보안 검토를 대신하지 않는다. 최종60개 연관 회귀 결과는 아래에 추가한다.
+
+### Git 전달 (진행 중)
+
+- 시작 시4-E 관련 PR/브랜치가 없었다. [Draft #66](https://github.com/Jubileekim/KEMI/pull/66)은open·미병합·head4b20339였고, 새 `feat/frontend-4e-settlement`를 해당 소스에서 생성했다. PR base는 `feat/frontend-screen-access`이며 선행 병합 후 base 조정 검토가 필요하다.
+- 모델/통신/단위/근거 [f91fa24](https://github.com/Jubileekim/KEMI/commit/f91fa24)를 검토·커밋·푸시했다. 정산과 성공 사건 안내는 한 검증 흐름이므로 PR1개에 묶는다. 화면/검사 전달·최종 회귀·Draft PR/원격CI는 완료 후 아래에 기록한다. 병합·자동 병합·명시적 배포·다음 작업 자동 착수는 하지 않는다.
+
+### 4-E 후속 전달 정리 (2026-10-27)
+
+- 사용자 요청으로 미커밋 4-E 화면/라우트/검사를 이어서 사용했다. 변경 내용을 검토하고 웹 단위 200/200 exit0, build:web(타입·ESLint·운영 빌드) exit0, 전달 파일 Prettier/diff PASS를 새로 확인했다.
+- 전용5195·Edge·worker1·retry0에서 정산 E2E 데스크톱4+모바일4 **8/8·exit0·5.0분**. 공개 제안→서명·결제·준비·승인·최종 전달·수령→정산, 보류/실패/미확정·유실/중복·권한을 검증했다. 8개 완료 뒤 이번 전용5195 프로세스만 종료해 러너 종료를 확인했다. 근거: `qa/frontend-4e/final-settlement-e2e.json`. 이전 진행 중 60개 회귀의 결과는 이 실행으로 대체하거나 통과로 주장하지 않는다.
+- 실제 API/DB/PG/송금/스토리지 미검증, 기존 outputs/tools 포맷 실패 및 API timeout은 기존 경계다. 4단계 전체 완료 아님. 선행 화면 변경을 별도 전달한 뒤 사용자 지정 5단계 범위로 진행한다.

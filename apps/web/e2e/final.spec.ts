@@ -154,7 +154,7 @@ test("4-D 통합: 공개 제안→서명/결제/준비/검토→승인→ZIP 전
   await expect(notices.getByRole("link")).toHaveCount(3);
   await notices
     .getByRole("link", {
-      name: "최종 수령 확인·정산 미실행 바로가기",
+      name: "최종 수령 확인·정산 결과 별도 바로가기",
       exact: true,
     })
     .click();

@@ -24,6 +24,9 @@ const ReadinessPanel = lazy(
 const DeliveryVersions = lazy(
   () => import("../features/production/DeliveryVersions"),
 );
+const SettlementSummary = lazy(
+  () => import("../features/resolution/SettlementSummary"),
+);
 const PaymentResultPage = lazy(
   () => import("../features/payments/PaymentResultPage"),
 );
@@ -89,6 +92,9 @@ export default function App() {
                       {screen.path === "/contracts/:contractId/deliveries" && (
                         <DeliveryVersions />
                       )}
+                      {screen.path === "/contracts/:contractId/settlement" && (
+                        <SettlementSummary />
+                      )}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
@@ -103,6 +109,7 @@ export default function App() {
                         "/payments/result",
                         "/contracts/:contractId/production",
                         "/contracts/:contractId/deliveries",
+                        "/contracts/:contractId/settlement",
                         "/login",
                         "/signup",
                         "/auth/social/callback",

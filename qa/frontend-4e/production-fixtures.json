@@ -1,0 +1,30 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": true,
+  "results": [
+    {
+      "role": "GUEST",
+      "passed": true,
+      "unexpected": [],
+      "errors": []
+    },
+    {
+      "role": "CLIENT",
+      "passed": true,
+      "unexpected": [],
+      "errors": []
+    },
+    {
+      "role": "CREATOR",
+      "passed": true,
+      "unexpected": [],
+      "errors": []
+    },
+    {
+      "role": "ADMIN",
+      "passed": true,
+      "unexpected": [],
+      "errors": []
+    }
+  ]
+}

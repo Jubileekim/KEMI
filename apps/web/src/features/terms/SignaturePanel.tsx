@@ -300,6 +300,7 @@ export default function SignaturePanel({
             key={round.versionId}
             className="min-w-0 break-words rounded-xl bg-muted p-4"
             aria-label={`서명 이력 v${version?.number}`}
+            id={`signature-${round.versionId}`}
           >
             <h4>
               v{version?.number} · {labels[state]}
