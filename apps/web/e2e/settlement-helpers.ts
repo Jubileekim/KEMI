@@ -61,9 +61,23 @@ export async function setupSettlement(page: Page, receive = true) {
   await login(page, "client");
   await navigate(page, `/contracts/${result.contractId}/deliveries`);
   await page.getByLabel("선택한 검토 버전의 내용을 확인했어요").check();
-  await page
-    .getByRole("button", { name: "이 검토 버전 승인 (Mock)", exact: true })
-    .click();
+  const approvalButton = page.getByRole("button", {
+    name: "이 검토 버전 승인 (Mock)",
+    exact: true,
+  });
+  await expect(approvalButton).toBeEnabled();
+  // Fixture preparation uses native keyboard activation, avoiding mobile scroll
+  // movement during video layout. Wait for the actual write, never retry it.
+  await approvalButton.focus();
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname ===
+          `/__mock__/deliveries/${result.contractId}/final`,
+    ),
+    approvalButton.press("Enter"),
+  ]);
   await expect(page.getByLabel("검토본 승인", { exact: true })).toContainText(
     "검토 승인 기록",
   );

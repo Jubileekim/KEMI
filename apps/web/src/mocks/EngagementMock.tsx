@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { z } from "zod";
+import { Link, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { reviewInputSchema } from "./engagement-model";
 import { session, useSession } from "../app/session";
 import Button from "../components/ui/button";
 import Label from "../components/ui/label";
@@ -11,8 +14,25 @@ import { loadNotifications, loadReview } from "./engagement-api";
 function Notices() {
   const { user } = useSession();
   const cache = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const requestedPage = Number(params.get("page") ?? 1);
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
+  const unreadOnly = params.get("unread") === "true";
+  const setPage = (value: number) => {
+    const next = new URLSearchParams(params);
+    next.set("page", String(value));
+    setParams(next);
+  };
+  const setUnreadOnly = (value: boolean) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set("unread", "true");
+    else next.delete("unread");
+    next.delete("page");
+    setParams(next);
+  };
   const query = useQuery({
     queryKey: ["mock-notifications", session.epoch(), user?.id],
     queryFn: ({ signal }) => loadNotifications(signal),
@@ -60,10 +80,10 @@ function Notices() {
       <Label>
         <input
           type="checkbox"
-          checked={unreadOnly}
+          key={unreadOnly ? "unread" : "all"}
+          defaultChecked={unreadOnly}
           onChange={(e) => {
             setUnreadOnly(e.target.checked);
-            setPage(1);
           }}
         />{" "}
         미확인만 보기
@@ -124,24 +144,18 @@ function Notices() {
 }
 function ReviewForm({ id }: { id: string }) {
   const { user } = useSession();
-  const [rating, setRating] = useState("5");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState("");
+  const form = useForm<z.infer<typeof reviewInputSchema>>({
+    resolver: zodResolver(reviewInputSchema),
+    defaultValues: { rating: 5, content: "", tags: [] },
+  });
   const query = useQuery({
     queryKey: ["mock-review", session.epoch(), user?.id, id],
     queryFn: ({ signal }) => loadReview(id, signal),
     refetchOnMount: "always",
   });
   const mutation = useMutation({
-    mutationFn: () =>
-      loadReview(id, undefined, {
-        rating: Number(rating),
-        content,
-        tags: tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      }),
+    mutationFn: (values: z.infer<typeof reviewInputSchema>) =>
+      loadReview(id, undefined, values),
     onSuccess: () => query.refetch(),
   });
   const busy = query.isFetching || mutation.isPending;
@@ -179,16 +193,12 @@ function ReviewForm({ id }: { id: string }) {
           {data.eligible && !data.own && (
             <form
               className="grid gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                mutation.mutate();
-              }}
+              onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
             >
               <Label htmlFor="review-rating">별점 (필수)</Label>
               <select
                 id="review-rating"
-                value={rating}
-                onChange={(e) => setRating(e.target.value)}
+                {...form.register("rating", { valueAsNumber: true })}
               >
                 {[1, 2, 3, 4, 5].map((n) => (
                   <option key={n} value={n}>
@@ -201,19 +211,29 @@ function ReviewForm({ id }: { id: string }) {
                 id="review-content"
                 required
                 maxLength={2000}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                {...form.register("content")}
+                aria-invalid={Boolean(form.formState.errors.content)}
               />
               <Label htmlFor="review-tags">태그 (선택·쉼표로 구분)</Label>
               <Input
                 id="review-tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
+                {...form.register("tags", {
+                  setValueAs: (value: unknown) =>
+                    typeof value === "string"
+                      ? value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean)
+                      : value,
+                })}
               />
               <p>
                 개발 입력 보호: 내용 2,000자, 태그 최대 5개·각 30자. 운영 정책은
                 미결정이에요.
               </p>
+              {Object.keys(form.formState.errors).length > 0 && (
+                <p role="alert">별점·리뷰 내용·태그 입력을 확인해 주세요.</p>
+              )}
               <Button type="submit">상대방 리뷰 작성</Button>
             </form>
           )}

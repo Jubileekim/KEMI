@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import ScreenLinks from "../app/ScreenLinks";
 import { session, useSession } from "../app/session";
 import Button from "../components/ui/button";
 import loadActivity from "./activity-api";
@@ -157,6 +158,7 @@ export default function ActivityMock() {
           <Link to="/campaigns">공개 모집 둘러보기</Link>
         </>
       )}
+      <ScreenLinks />
     </section>
   );
 }

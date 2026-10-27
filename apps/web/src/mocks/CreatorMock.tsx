@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
+import { recordMockEvent } from "../shared/analytics/events";
 import Button from "../components/ui/button";
 import { session, useSession } from "../app/session";
 import loadCatalog from "./catalog-api";
@@ -15,6 +17,9 @@ export default function CreatorMock() {
       loadCatalog(new URLSearchParams({ creatorId }).toString(), signal),
   });
   const creator = query.data?.creator;
+  useEffect(() => {
+    if (creator) recordMockEvent("creator_view", creator.id);
+  }, [creator]);
   return (
     <section className="grid min-w-0 gap-6">
       <p className="rounded-xl bg-muted p-4">

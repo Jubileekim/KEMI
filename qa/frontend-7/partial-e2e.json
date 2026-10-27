@@ -1,0 +1,235 @@
+{
+  "scope": "pre-fix local DEV/MSW run; do not aggregate as one final 24/24 run",
+  "stats": {
+    "startTime": "2026-10-27T02:50:41.210Z",
+    "duration": 424759.313,
+    "expected": 22,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  },
+  "unchangedPassingCases": 20,
+  "results": [
+    {
+      "file": "activity.spec.ts",
+      "title": "7-A 메뉴→모집 저장→본인 목록·추천·역할 제한·재조회",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 12422,
+      "errors": []
+    },
+    {
+      "file": "activity.spec.ts",
+      "title": "7-A 위조·중복·계정 변경·프로필 추천 이유·조회 오류",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 11665,
+      "errors": []
+    },
+    {
+      "file": "activity.spec.ts",
+      "title": "7-A 메뉴→모집 저장→본인 목록·추천·역할 제한·재조회",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 11935,
+      "errors": []
+    },
+    {
+      "file": "activity.spec.ts",
+      "title": "7-A 위조·중복·계정 변경·프로필 추천 이유·조회 오류",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 11907,
+      "errors": []
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 13321,
+      "errors": []
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 응답 유실 같은ID 복구·타 패키지/역할·Bearer·지연 로그아웃 차단",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 14851,
+      "errors": []
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 13145,
+      "errors": []
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 응답 유실 같은ID 복구·타 패키지/역할·Bearer·지연 로그아웃 차단",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 14446,
+      "errors": []
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양측·본인만 조회",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 33377,
+      "errors": []
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 미완료 리뷰·잘못된 대상·조회 실패·입력 보존",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 24751,
+      "errors": []
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양측·본인만 조회",
+      "project": "mobile-chromium",
+      "status": "failed",
+      "retry": 0,
+      "durationMs": 32829,
+      "errors": [
+        "Error: locator.check: Clicking the checkbox did not change its state\nCall log:\n\u001b[2m  - waiting for getByRole('checkbox', { name: '미확인만 보기', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <input type=\"checkbox\"/>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - performing click action\u001b[22m\n\u001b[2m    - click action done\u001b[22m\n\u001b[2m    - waiting for scheduled navigations to finish\u001b[22m\n\u001b[2m    - navigations have finished\u001b[22m\n\n\n  79 |   await page\n  80 |     .getByRole(\"checkbox\", { name: \"미확인만 보기\", exact: true })\n> 81 |     .check();\n     |      ^\n  82 |   await expect(page).toHaveURL(/unread=true/);\n  83 |   await page.goBack();\n  84 |   await expect(\n    at C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI-frontend-7\\apps\\web\\e2e\\engagement.spec.ts:81:6"
+      ]
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 미완료 리뷰·잘못된 대상·조회 실패·입력 보존",
+      "project": "mobile-chromium",
+      "status": "failed",
+      "retry": 0,
+      "durationMs": 33282,
+      "errors": [
+        "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByLabel('검토본 승인', { exact: true })\nExpected substring: \u001b[32m\"검토\u001b[7m 승인 기록\u001b[27m\"\u001b[39m\nReceived string:    \u001b[31m\"검토\u001b[7m본 승인승인은 선택한 검토 버전을 고정해요. 최종 파일 전달과 전용 수령 확인이 별도로 필요하며 정산을 실행하지 않아요.선택한 검토 버전의 내용을 확인했어요이 검토 버전 승인 (Mock)\u001b[27m\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByLabel('검토본 승인', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByLabel('검토본 승인', { exact: true })\u001b[22m\n\u001b[2m    14 × locator resolved to <section aria-label=\"검토본 승인\" class=\"grid min-w-0 gap-3 rounded-xl border p-4\">…</section>\u001b[22m\n\u001b[2m       - unexpected value \"검토본 승인승인은 선택한 검토 버전을 고정해요. 최종 파일 전달과 전용 수령 확인이 별도로 필요하며 정산을 실행하지 않아요.선택한 검토 버전의 내용을 확인했어요이 검토 버전 승인 (Mock)\"\u001b[22m\n\n\n   at settlement-helpers.ts:67\n\n  65 |     .getByRole(\"button\", { name: \"이 검토 버전 승인 (Mock)\", exact: true })\n  66 |     .click();\n> 67 |   await expect(page.getByLabel(\"검토본 승인\", { exact: true })).toContainText(\n     |                                                            ^\n  68 |     \"검토 승인 기록\",\n  69 |   );\n  70 |   await login(page);\n    at setupSettlement (C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI-frontend-7\\apps\\web\\e2e\\settlement-helpers.ts:67:60)\n    at C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI-frontend-7\\apps\\web\\e2e\\engagement.spec.ts:132:26"
+      ]
+    },
+    {
+      "file": "safety-analytics.spec.ts",
+      "title": "7단계 통합: 기존 거래→신고/유실 복구→수동 제한→기존 납품·이의→해제·분석",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 32054,
+      "errors": []
+    },
+    {
+      "file": "safety-analytics.spec.ts",
+      "title": "7-C 비회원·운영 접근·입력 검증·지연 로그아웃·실제 제한 인증 경계",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 7104,
+      "errors": []
+    },
+    {
+      "file": "safety-analytics.spec.ts",
+      "title": "7단계 통합: 기존 거래→신고/유실 복구→수동 제한→기존 납품·이의→해제·분석",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 37121,
+      "errors": []
+    },
+    {
+      "file": "safety-analytics.spec.ts",
+      "title": "7-C 비회원·운영 접근·입력 검증·지연 로그아웃·실제 제한 인증 경계",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 12569,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "홈에서 회원가입·로그인과 공개 모집 상세로 이동한다",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 4083,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간다",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 5337,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "크리에이터는 홈·프로필에서 제작 관리로 이동하고 의뢰인 경로는 차단된다",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 5705,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인은 다른 모집에서 크리에이터 전용 제출 행동을 보지 않는다",
+      "project": "chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 4164,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "홈에서 회원가입·로그인과 공개 모집 상세로 이동한다",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 10035,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간다",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 11129,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "크리에이터는 홈·프로필에서 제작 관리로 이동하고 의뢰인 경로는 차단된다",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 11624,
+      "errors": []
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인은 다른 모집에서 크리에이터 전용 제출 행동을 보지 않는다",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "retry": 0,
+      "durationMs": 4206,
+      "errors": []
+    }
+  ],
+  "sourceHashes": "Not captured for this pre-fix run; final engagement recheck captures current sources"
+}

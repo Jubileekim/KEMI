@@ -1,0 +1,49 @@
+{
+  "mode": "default",
+  "scope": "local production bundle + independent HTTP auth fixtures; no real API",
+  "mockExcluded": true,
+  "results": [
+    {
+      "role": "GUEST",
+      "path": "/me/activity",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/bookmarks",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/recommendations",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/notifications",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/review",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/reports/new",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/ops/reports",
+      "expected": "인증 연결 준비 중",
+      "passed": true
+    }
+  ]
+}

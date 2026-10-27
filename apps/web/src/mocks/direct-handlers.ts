@@ -1,4 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
+import { mockAccountLimited } from "./safety-store";
+import { recordMockEvent } from "../shared/analytics/events";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { catalogCreator } from "./catalog-handlers";
@@ -43,6 +45,14 @@ export default [
     if (selected === "malformed") return HttpResponse.json({ invalid: true });
     const cmd = directSendSchema.safeParse(raw);
     if (!cmd.success) return fail(400, "발송 형식을 확인해 주세요.");
+    if (
+      !readMockProposals().items.some((p) => p.id === cmd.data.id) &&
+      (mockAccountLimited(user.id) || mockAccountLimited(cmd.data.creatorId))
+    )
+      return fail(
+        403,
+        "개발용 제한 중 신규 발송을 보류해요. 기존 거래·이의는 유지돼요.",
+      );
     try {
       writeMockProposals(
         sendDirect(
@@ -52,6 +62,7 @@ export default [
           catalogCreator(cmd.data.creatorId),
         ),
       );
+      recordMockEvent("request_sent", cmd.data.id);
       if (selected === "lost-response") return HttpResponse.error();
       return HttpResponse.json({ ok: true, id: cmd.data.id });
     } catch (error) {

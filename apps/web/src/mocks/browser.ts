@@ -16,12 +16,14 @@ import resolutionHandlers from "./resolution-handlers";
 import catalogHandlers from "./catalog-handlers";
 import directHandlers from "./direct-handlers";
 
+import safetyHandlers from "./safety-handlers";
 import engagementHandlers from "./engagement-handlers";
 import activityHandlers from "./activity-handlers";
 
 const worker = setupWorker(
   ...activityHandlers,
   ...engagementHandlers,
+  ...safetyHandlers,
   ...handlers,
   ...authHandlers,
   ...profileHandlers,

@@ -7,6 +7,7 @@ import { readMockPaidOrder } from "./payment-handlers";
 import { readMockProduction } from "./production-handlers";
 import { readMockDelivery } from "./delivery-handlers";
 import { readMockSettlement } from "./settlement-handlers";
+import { readMockSafety } from "./safety-store";
 import type { noticeSchema } from "./engagement-model";
 
 // Project successful domain facts into notices. No client-generated success state
@@ -90,5 +91,25 @@ export default function engagementEvents(user: AuthUser) {
           );
       });
     });
+  readMockSafety().forEach((r) => {
+    if (r.reporterId === user.id)
+      add(
+        `report:${r.id}`,
+        "신고 접수 확인",
+        "/reports/new",
+        r.history[0]?.at ?? new Date().toISOString(),
+      );
+    if (r.reporterId === user.id || r.subjectId === user.id)
+      r.history
+        .filter((h) => h.action !== "RECEIVED")
+        .forEach((h) =>
+          add(
+            `operation:${h.id}`,
+            "신고·이용 안내 상태 변경",
+            "/reports/new",
+            h.at,
+          ),
+        );
+  });
   return events;
 }

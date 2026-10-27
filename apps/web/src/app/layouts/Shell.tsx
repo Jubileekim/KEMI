@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, matchRoutes, useLocation } from "react-router";
 import Brand from "@/components/kemi/brand";
+import RestrictionNotice from "../../features/operations/RestrictionNotice";
 import NotificationLink from "../../features/activity/NotificationLink";
 import { screens } from "../routes";
 import { session, useSession } from "../session";
@@ -34,7 +35,10 @@ export default function Shell() {
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
             {role === "ops" && (
-              <NavLink to="/ops/disputes">분쟁·보류 검토</NavLink>
+              <>
+                <NavLink to="/ops/disputes">분쟁·보류 검토</NavLink>
+                <NavLink to="/ops/reports">신고 검토</NavLink>
+              </>
             )}
             {role === "client" && (
               <NavLink to="/campaigns/new">캠페인 작성</NavLink>
@@ -43,6 +47,7 @@ export default function Shell() {
             {(role === "client" || role === "creator") && (
               <>
                 <NotificationLink />
+                <NavLink to="/reports/new">신고·이용 안내</NavLink>
                 <NavLink to="/me/profile">내 프로필</NavLink>
               </>
             )}
@@ -98,7 +103,10 @@ export default function Shell() {
             )}
           </section>
         ) : (
-          <Outlet />
+          <>
+            <RestrictionNotice />
+            <Outlet />
+          </>
         )}
       </main>
       <footer className="page-container text-sm text-muted-foreground">

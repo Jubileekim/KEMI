@@ -1,4 +1,9 @@
 import { http, HttpResponse, delay } from "msw";
+import { readMockDelivery } from "./delivery-handlers";
+import { readMockSettlement } from "./settlement-handlers";
+import { readMockProduction } from "./production-handlers";
+import { readMockPaidOrder } from "./payment-handlers";
+import { resolutionHeld } from "./resolution-store";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { allCampaigns } from "./campaign-handlers";
@@ -20,6 +25,19 @@ function actor(request: Request) {
     request.headers.get("Authorization") === `Bearer mock-access-${user.id}`
     ? user
     : undefined;
+}
+function requestStatus(id: string, fallback: string) {
+  const contract = readMockSignatureRounds(id).find(
+    (r) => r.contractId,
+  )?.contractId;
+  if (!contract) return fallback;
+  if (resolutionHeld(contract)) return "취소·분쟁 검토";
+  if (readMockSettlement(contract)?.status === "SUCCEEDED")
+    return "모의 정산 완료";
+  if (readMockDelivery(contract).final.receipt) return "정상 수령 완료";
+  if (readMockProduction(contract).startedAt) return "제작 중";
+  if (readMockPaidOrder(contract)) return "제작 준비";
+  return "계약 확정 · 결제 대기";
 }
 export default [
   http.post("/__mock__/activity/scenario", async ({ request }) => {
@@ -68,7 +86,7 @@ export default [
           .map((p) => ({
             id: p.id,
             title: p.title,
-            status: p.contracted ? "계약 확정" : p.status,
+            status: requestStatus(p.id, p.status),
             contractIds: readMockSignatureRounds(p.id).flatMap((r) =>
               r.contractId ? [r.contractId] : [],
             ),

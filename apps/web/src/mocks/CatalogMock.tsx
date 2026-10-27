@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router";
+import { recordMockEvent } from "../shared/analytics/events";
 import Button from "../components/ui/button";
 import PortfolioCard from "../features/portfolio/PortfolioCard";
 import loadCatalog from "./catalog-api";
@@ -21,6 +22,9 @@ export default function CatalogMock() {
     queryFn: ({ signal }) => loadCatalog(search, signal),
   });
   const { data } = query;
+  useEffect(() => {
+    if (data && !workId) recordMockEvent("feed_view", "feed");
+  }, [data, workId]);
   const filter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     next.delete("page");
@@ -69,6 +73,9 @@ export default function CatalogMock() {
                 aria-label="공개 샘플 영상"
                 src={sampleVideo}
                 onError={() => setFailed(true)}
+                onPlaying={() => {
+                  if (workId) recordMockEvent("work_play", workId);
+                }}
               >
                 <track kind="captions" />
                 동영상 재생을 지원하는 브라우저가 필요해요.

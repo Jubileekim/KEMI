@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { http, HttpResponse, delay } from "msw";
+import { mockAccountLimited } from "./safety-store";
 import {
   browseCampaigns,
   closeCampaign,
@@ -166,6 +167,17 @@ export default [
       return fail(405, "지원하지 않는 동작이에요.");
     const parsed = campaignEnvelope.safeParse(raw);
     if (!parsed.success) return fail(400, "입력 형식을 확인해 주세요.");
+    if (
+      parsed.data.command.type === "publish" &&
+      mockAccountLimited(user.id) &&
+      !state.items.some(
+        (c) => c.id === parsed.data.command.id && c.status === "OPEN",
+      )
+    )
+      return fail(
+        403,
+        "개발용 제한 중 신규 공개를 보류해요. 기존 거래·이의는 이용 안내에서 확인해 주세요.",
+      );
     try {
       const next = applyCampaign(state, parsed.data, user);
       states.set(user.id, next);

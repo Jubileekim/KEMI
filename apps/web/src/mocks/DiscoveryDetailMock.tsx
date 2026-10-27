@@ -62,6 +62,11 @@ export default function DiscoveryDetailMock({ id }: { id: string }) {
       <Link to={`/campaigns?${params}`}>모집 목록으로</Link>
       <h1 className="type-heading-lg">모집 상세</h1>
       <BookmarkMock key={id} id={id} />
+      {user && (
+        <Link to={`/reports/new?type=campaign&target=${id}`}>
+          이 캠페인 신고
+        </Link>
+      )}
       <Button variant="outline" disabled={busy} onClick={() => query.refetch()}>
         최신 상태 확인
       </Button>

@@ -1,0 +1,175 @@
+{
+  "mode": "flags",
+  "scope": "local production bundle + independent HTTP auth fixtures; no real API",
+  "mockExcluded": true,
+  "results": [
+    {
+      "role": "GUEST",
+      "path": "/me/activity",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/bookmarks",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/recommendations",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/notifications",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/review",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/reports/new",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/ops/reports",
+      "expected": "로그인",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/me/activity",
+      "expected": "활동 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/bookmarks",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/recommendations",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/notifications",
+      "expected": "알림·리뷰 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/review",
+      "expected": "알림·리뷰 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/reports/new",
+      "expected": "신고·이용 제한 안내 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/ops/reports",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/me/activity",
+      "expected": "활동 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/bookmarks",
+      "expected": "활동 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/recommendations",
+      "expected": "활동 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/notifications",
+      "expected": "알림·리뷰 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/review",
+      "expected": "알림·리뷰 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/reports/new",
+      "expected": "신고·이용 제한 안내 연결 준비 중",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/ops/reports",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/me/activity",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/bookmarks",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/recommendations",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/notifications",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/contracts/00000000-0000-4000-8000-000000000001/review",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/reports/new",
+      "expected": "접근 권한이 없어요",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/ops/reports",
+      "expected": "신고·이용 제한 안내 연결 준비 중",
+      "passed": true
+    }
+  ]
+}

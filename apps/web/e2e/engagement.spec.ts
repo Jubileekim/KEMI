@@ -76,6 +76,14 @@ test("7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양�
     (await deliveryRequest(page, "/__mock__/notifications")).data,
   );
   expect(first.unreadCount).toBeGreaterThan(0);
+  await page
+    .getByRole("checkbox", { name: "미확인만 보기", exact: true })
+    .check();
+  await expect(page).toHaveURL(/unread=true/);
+  await page.goBack();
+  await expect(
+    page.getByRole("checkbox", { name: "미확인만 보기", exact: true }),
+  ).not.toBeChecked();
   const again = notificationsViewSchema.parse(
     (await deliveryRequest(page, "/__mock__/notifications")).data,
   );

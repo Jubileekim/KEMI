@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from "msw";
+import { recordMockEvent } from "../shared/analytics/events";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { readMockProposal, confirmMockContract } from "./proposal-handlers";
@@ -105,6 +106,9 @@ export default [
         const next = changeSignatures(rounds, doc, item, user, cmd.data);
         if (next.some((r) => r.contractId)) confirmMockContract(item.id);
         records.set(item.id, next);
+        next.forEach((r) => {
+          if (r.contractId) recordMockEvent("contract_confirmed", r.contractId);
+        });
       }
       if (selected === "lost-response") return HttpResponse.error();
       return HttpResponse.json({ ok: true });

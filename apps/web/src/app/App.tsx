@@ -5,6 +5,8 @@ import Shell from "./layouts/Shell";
 import { Guard, Placeholder } from "./route-pages";
 import { screens } from "./routes";
 
+const SafetyPage = lazy(() => import("../features/operations/SafetyPage"));
+const safetyPaths = ["/reports/new", "/ops/reports"];
 const EngagementPage = lazy(
   () => import("../features/activity/EngagementPage"),
 );
@@ -88,6 +90,7 @@ export default function App() {
                   element={
                     <Guard screen={screen}>
                       {activityPaths.includes(screen.path) && <ActivityPage />}
+                      {safetyPaths.includes(screen.path) && <SafetyPage />}
                       {engagementPaths.includes(screen.path) && (
                         <EngagementPage />
                       )}
@@ -148,6 +151,7 @@ export default function App() {
                         ...proposalPaths,
                         ...activityPaths,
                         ...engagementPaths,
+                        ...safetyPaths,
                         "/",
                         "/works/:workId",
                         "/creators/:creatorId",

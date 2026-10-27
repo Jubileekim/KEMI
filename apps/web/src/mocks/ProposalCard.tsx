@@ -26,6 +26,9 @@ export default function ProposalCard({
     ["PENDING", "DISCUSSING"].includes(item.status) && !item.contracted;
   return (
     <article className="showcase-card grid gap-4 break-words">
+      <Link to={`/reports/new?type=request&target=${item.id}`}>
+        이 의뢰 상대방 신고
+      </Link>
       <h2 className="type-heading-md">
         {item.title} ·{" "}
         {user.role === "CLIENT" ? item.creatorName : item.clientName}

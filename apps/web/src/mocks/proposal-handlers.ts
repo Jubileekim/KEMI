@@ -1,4 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
+import { mockAccountLimited } from "./safety-store";
+import { recordMockEvent } from "../shared/analytics/events";
 import { readMockUser, readMockDisplayName } from "./auth-handlers";
 import { allCampaigns, endMockCampaign } from "./campaign-handlers";
 import { readMockStudio } from "./studio-handlers";
@@ -115,17 +117,34 @@ export default [
       return fail(405, "지원하지 않는 동작이에요.");
     const parsed = proposalCommandSchema.safeParse(raw);
     if (!parsed.success) return fail(400, "입력 형식을 확인해 주세요.");
+    const command = parsed.data;
+    if (
+      command.type === "submit" &&
+      !state.items.some((p) => p.id === command.id) &&
+      (mockAccountLimited(user.id) ||
+        mockAccountLimited(
+          allCampaigns().find(
+            (c) => command.type === "submit" && c.id === command.campaignId,
+          )?.ownerId ?? "",
+        ))
+    )
+      return fail(
+        403,
+        "개발용 제한 중 신규 제안을 보류해요. 기존 거래·이의는 유지돼요.",
+      );
     try {
       const next = changeProposals(
         state,
-        parsed.data,
+        command,
         user,
         allCampaigns(),
         readMockStudio(user.id),
       );
-      if (parsed.data.type === "end" && next !== state)
-        endMockCampaign(parsed.data.campaignId, user.id);
+      if (command.type === "end" && next !== state)
+        endMockCampaign(command.campaignId, user.id);
       state = next;
+      if (command.type === "submit")
+        recordMockEvent("request_sent", command.id);
       if (selected === "lost-response") return HttpResponse.error();
       return HttpResponse.json({ ok: true });
     } catch (error) {

@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from "msw";
+import { recordMockEvent } from "../shared/analytics/events";
 import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { resolutionHeld } from "./resolution-store";
@@ -132,6 +133,8 @@ export default [
           new Date().toISOString(),
         );
         records.set(contract.id, next);
+        if (next.at(-1)?.status === "SUCCEEDED")
+          recordMockEvent("transaction_completed", contract.id);
         if (selected === "lost-response") return HttpResponse.error();
       } catch (error) {
         return fail(error instanceof ProposalError ? error.status : 400);
