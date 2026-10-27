@@ -142,8 +142,16 @@ export function createSafetyService({
     targetId: bigint,
   ): Promise<bigint> {
     if (targetType === "PROJECT") {
-      const project = await prisma.project.findUnique({
-        where: { id: targetId },
+      // 신고 대상 공고는 실제 공개 목록에 보이는 상태여야 한다.
+      // 임의 ID로 마감/비공개/삭제된 공고의 작성자를 역조회하지 못하게 막는다.
+      const project = await prisma.project.findFirst({
+        where: {
+          id: targetId,
+          status: "OPEN",
+          recruitmentEndAt: { gt: now() },
+          deletedAt: null,
+          client: { status: "ACTIVE" },
+        },
         select: { clientId: true },
       });
       if (!project) throw new AppError(404, "NOT_FOUND", "공고가 없습니다.");
