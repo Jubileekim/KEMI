@@ -4,6 +4,7 @@ import { session } from "../app/session";
 import { readMockUser } from "./auth-handlers";
 import { readMockSignedContract } from "./signature-handlers";
 import { readMockDelivery } from "./delivery-handlers";
+import { readMockSettlement } from "./settlement-handlers";
 import { resolutionHeld } from "./resolution-store";
 import { ProposalError } from "./proposal-model";
 import {
@@ -79,7 +80,8 @@ async function handle({
     const cancelled = resolutionHeld(contract.id);
     const complete =
       Boolean(readMockDelivery(contract.id).final.receipt) &&
-      !readMockDelivery(contract.id).final.problem;
+      !readMockDelivery(contract.id).final.problem &&
+      readMockSettlement(contract.id)?.status === "SUCCEEDED";
     if (request.method === "POST")
       reviews = submitReview(reviews, raw, {
         contractId: contract.id,
