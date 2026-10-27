@@ -55,6 +55,32 @@ describe("Toss 클라이언트", () => {
     expect(init?.body).toBeUndefined();
   });
 
+  it("부분 취소는 결제 키 경로·멱등 키·취소 금액으로 부르고, 남은 금액을 읽는다", async () => {
+    const canceled = {
+      ...PAYMENT,
+      status: "PARTIAL_CANCELED",
+      balanceAmount: 25_000,
+    };
+    const fetchFn = vi.fn<typeof fetch>(async () =>
+      jsonResponse(200, canceled),
+    );
+    const client = createTossClient({ secretKey: "test_sk_abc", fetchFn });
+    const outcome = await client.cancel({
+      paymentKey: "pk_test",
+      cancelAmount: 20_000,
+      cancelReason: "KEMI 취소 합의",
+      idempotencyKey: "refund-1-1",
+    });
+    expect(outcome).toEqual({ kind: "payment", payment: canceled });
+    const [url, init] = fetchFn.mock.calls[0] ?? [];
+    expect(url).toBe("https://api.tosspayments.com/v1/payments/pk_test/cancel");
+    expect(init?.headers).toMatchObject({ "Idempotency-Key": "refund-1-1" });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      cancelAmount: 20_000,
+      cancelReason: "KEMI 취소 합의",
+    });
+  });
+
   it("4xx 오류 코드는 거절, 5xx·네트워크 오류·잘못된 본문은 결과 불명확으로 나눈다", async () => {
     const outcomes = await Promise.all(
       [

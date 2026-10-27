@@ -26,6 +26,7 @@ import { createCatalogService } from "./catalog/catalog.service.js";
 import { createProjectDraftService } from "./projects/project-draft.service.js";
 import { createDirectRequestService } from "./direct/direct.service.js";
 import { createFeedService } from "./direct/feed.service.js";
+import { createCancelService } from "./cancel/cancel.service.js";
 import { createSupabaseStorage } from "./files/storage.js";
 
 // 환경 변수가 있는 제공자만 켠다.
@@ -58,6 +59,10 @@ function start(env: Env) {
           bucket: env.STORAGE_BUCKET,
         })
       : undefined;
+  // 테스트 시크릿 키가 있을 때만 결제·환불을 켠다(env.ts가 live 키를 거부한다).
+  const toss = env.TOSS_SECRET_KEY
+    ? createTossClient({ secretKey: env.TOSS_SECRET_KEY })
+    : undefined;
   const app = createApp({
     checkDatabase: async () => {
       await prisma.$queryRaw`SELECT 1`;
@@ -89,13 +94,11 @@ function start(env: Env) {
       prisma,
       storage,
     }),
-    // 테스트 시크릿 키가 있을 때만 결제를 켠다(env.ts가 live 키를 거부한다).
     paymentService: createPaymentService({
       prisma,
-      toss: env.TOSS_SECRET_KEY
-        ? createTossClient({ secretKey: env.TOSS_SECRET_KEY })
-        : undefined,
+      toss,
     }),
+    cancelService: createCancelService({ prisma, toss }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

@@ -32,35 +32,41 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  identities       AuthIdentity[]
-  sessions         AuthSession[]
-  clientProfile    ClientProfile?
-  creatorProfile   CreatorProfile?
-  projects         Project[]
-  clientRequests   WorkRequest[]        @relation("WorkRequestClient")
-  creatorRequests  WorkRequest[]        @relation("WorkRequestCreator")
-  notifications    Notification[]
-  projectBookmarks ProjectBookmark[]
-  termsAuthored    TermsVersion[]       @relation("TermsVersionAuthor")
-  termsRequested   TermsVersion[]       @relation("TermsVersionSigningRequester")
-  signatures       Signature[]
-  clientContracts  Contract[]           @relation("ContractClient")
-  creatorContracts Contract[]           @relation("ContractCreator")
-  payments         Payment[]
-  chatMessages     ChatMessage[]
-  files            File[]
-  materials        ProductionMaterial[]
-  deadlineChanges  DeadlineChange[]     @relation("DeadlineChangeRequester")
-  deadlineAnswers  DeadlineChange[]     @relation("DeadlineChangeResponder")
-  deliverables     Deliverable[]        @relation("DeliverableSubmitter")
-  revisionRequests RevisionRequest[]    @relation("RevisionRequester")
-  reviewsWritten   Review[]             @relation("ReviewAuthor")
-  reviewsReceived  Review[]             @relation("ReviewSubject")
-  servicePackages  ServicePackage[]
-  portfolios       Portfolio[]
-  projectDrafts    ProjectDraft[]
-  aiReports        AiReport[]
-  chatReads        ChatRead[]
+  identities            AuthIdentity[]
+  sessions              AuthSession[]
+  clientProfile         ClientProfile?
+  creatorProfile        CreatorProfile?
+  projects              Project[]
+  clientRequests        WorkRequest[]        @relation("WorkRequestClient")
+  creatorRequests       WorkRequest[]        @relation("WorkRequestCreator")
+  notifications         Notification[]
+  projectBookmarks      ProjectBookmark[]
+  termsAuthored         TermsVersion[]       @relation("TermsVersionAuthor")
+  termsRequested        TermsVersion[]       @relation("TermsVersionSigningRequester")
+  signatures            Signature[]
+  clientContracts       Contract[]           @relation("ContractClient")
+  creatorContracts      Contract[]           @relation("ContractCreator")
+  payments              Payment[]
+  chatMessages          ChatMessage[]
+  files                 File[]
+  materials             ProductionMaterial[]
+  deadlineChanges       DeadlineChange[]     @relation("DeadlineChangeRequester")
+  deadlineAnswers       DeadlineChange[]     @relation("DeadlineChangeResponder")
+  deliverables          Deliverable[]        @relation("DeliverableSubmitter")
+  revisionRequests      RevisionRequest[]    @relation("RevisionRequester")
+  reviewsWritten        Review[]             @relation("ReviewAuthor")
+  reviewsReceived       Review[]             @relation("ReviewSubject")
+  servicePackages       ServicePackage[]
+  portfolios            Portfolio[]
+  projectDrafts         ProjectDraft[]
+  aiReports             AiReport[]
+  cancellationsProposed Cancellation[]       @relation("CancellationProposer")
+  cancellationsAnswered Cancellation[]       @relation("CancellationResponder")
+  disputesOpened        Dispute[]            @relation("DisputeOpener")
+  disputesResolved      Dispute[]            @relation("DisputeResolver")
+  disputeEvidence       DisputeEvidence[]
+  operationRecords      OperationRecord[]
+  chatReads             ChatRead[]
 
   @@map("users")
 }
@@ -226,6 +232,7 @@ model WorkRequest {
 
   @@unique([projectId, creatorId])
   @@index([creatorId, createdAt])
+  @@index([clientId, createdAt])
   @@index([projectId, status])
   @@map("work_requests")
 }
@@ -337,15 +344,18 @@ model Contract {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  workRequest  WorkRequest  @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
-  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  termsVersion TermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
-  client       User         @relation("ContractClient", fields: [clientId], references: [id], onDelete: Restrict)
-  creator      User         @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
-  payments     Payment[]
-  production   Production?
-  settlement   Settlement?
-  reviews      Review[]
+  workRequest   WorkRequest    @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  project       Project?       @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  termsVersion  TermsVersion   @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
+  client        User           @relation("ContractClient", fields: [clientId], references: [id], onDelete: Restrict)
+  creator       User           @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  payments      Payment[]
+  production    Production?
+  settlement    Settlement?
+  reviews       Review[]
+  cancellations Cancellation[]
+  refunds       Refund[]
+  disputes      Dispute[]
 
   @@map("contracts")
 }
@@ -372,6 +382,7 @@ model Payment {
 
   contract Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
   creator  User     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  refunds  Refund[]
 
   @@index([contractId, createdAt])
   @@map("payments")
@@ -442,14 +453,16 @@ model File {
   completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  owner            User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  workRequest      WorkRequest?         @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
-  chatAttachments  ChatAttachment[]
-  materials        ProductionMaterial[]
-  deliverableFiles DeliverableFile[]
-  revisionFiles    RevisionFile[]
-  portfolioVideos  Portfolio[]          @relation("PortfolioVideo")
-  portfolioThumbs  Portfolio[]          @relation("PortfolioThumbnail")
+  owner             User                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workRequest       WorkRequest?          @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  chatAttachments   ChatAttachment[]
+  materials         ProductionMaterial[]
+  deliverableFiles  DeliverableFile[]
+  revisionFiles     RevisionFile[]
+  portfolioVideos   Portfolio[]           @relation("PortfolioVideo")
+  cancellationFiles CancellationFile[]
+  evidenceFiles     DisputeEvidenceFile[]
+  portfolioThumbs   Portfolio[]           @relation("PortfolioThumbnail")
 
   @@index([ownerId, createdAt])
   @@index([workRequestId])
@@ -740,4 +753,129 @@ model AiReport {
 
   @@index([userId, createdAt])
   @@map("ai_reports")
+}
+
+// ─── 취소·부분 환불 (CANCEL-01~02, REFUND-01) ───────────────────
+// 취소 합의 버전. 한쪽이 제안하고 상대방이 승인한다. 계약마다 1부터 번호를 매긴다.
+model Cancellation {
+  id                  BigInt    @id @default(autoincrement())
+  contractId          BigInt    @map("contract_id")
+  versionNo           Int       @map("version_no")
+  status              String    @default("PROPOSED")
+  proposedBy          BigInt    @map("proposed_by")
+  reason              String
+  // 결제 완료 계약: 완료 작업 대가 + 환불액 = 원결제 금액
+  completedWorkKrw    BigInt    @map("completed_work_krw")
+  refundKrw           BigInt    @map("refund_krw")
+  unfinishedState     String?   @map("unfinished_state")
+  usageRights         String?   @map("usage_rights")
+  respondedBy         BigInt?   @map("responded_by")
+  respondedAt         DateTime? @map("responded_at") @db.Timestamptz(3)
+  handoverConfirmedAt DateTime? @map("handover_confirmed_at") @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  contract       Contract           @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  proposer       User               @relation("CancellationProposer", fields: [proposedBy], references: [id], onDelete: Restrict)
+  responder      User?              @relation("CancellationResponder", fields: [respondedBy], references: [id], onDelete: Restrict)
+  deliveredFiles CancellationFile[]
+  refund         Refund?
+
+  @@unique([contractId, versionNo])
+  @@map("cancellations")
+}
+
+model CancellationFile {
+  cancellationId BigInt @map("cancellation_id")
+  fileId         BigInt @map("file_id")
+
+  cancellation Cancellation @relation(fields: [cancellationId], references: [id], onDelete: Restrict)
+  file         File         @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@id([cancellationId, fileId])
+  @@map("cancellation_files")
+}
+
+// 부분 환불. 승인된 취소 합의 하나에 하나. 실패하면 시도 번호를 올려 다시 요청한다(같은 시도는 같은 멱등 키).
+model Refund {
+  id             BigInt   @id @default(autoincrement())
+  contractId     BigInt   @map("contract_id")
+  cancellationId BigInt   @unique @map("cancellation_id")
+  paymentId      BigInt   @map("payment_id")
+  amountKrw      BigInt   @map("amount_krw")
+  status         String   @default("REQUESTED")
+  attempt        Int      @default(1)
+  failureCode    String?  @map("failure_code")
+  failureMessage String?  @map("failure_message")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  contract     Contract     @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  cancellation Cancellation @relation(fields: [cancellationId], references: [id], onDelete: Restrict)
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@map("refunds")
+}
+
+// ─── 분쟁·운영 (DISPUTE-01, OPS-01) ─────────────────────────────
+// 분쟁이 열려 있으면 정산하지 않는다. 대화·증빙 제출은 계속된다. 운영자는 근거를 남기고 닫는다.
+model Dispute {
+  id         BigInt    @id @default(autoincrement())
+  contractId BigInt    @map("contract_id")
+  openedBy   BigInt    @map("opened_by")
+  status     String    @default("OPEN")
+  reason     String
+  resolution String?
+  resolvedBy BigInt?   @map("resolved_by")
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  contract Contract          @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  opener   User              @relation("DisputeOpener", fields: [openedBy], references: [id], onDelete: Restrict)
+  resolver User?             @relation("DisputeResolver", fields: [resolvedBy], references: [id], onDelete: Restrict)
+  evidence DisputeEvidence[]
+
+  @@index([status, createdAt])
+  @@map("disputes")
+}
+
+model DisputeEvidence {
+  id          BigInt   @id @default(autoincrement())
+  disputeId   BigInt   @map("dispute_id")
+  submittedBy BigInt   @map("submitted_by")
+  note        String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  dispute   Dispute               @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+  submitter User                  @relation(fields: [submittedBy], references: [id], onDelete: Restrict)
+  files     DisputeEvidenceFile[]
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_evidence")
+}
+
+model DisputeEvidenceFile {
+  evidenceId BigInt @map("evidence_id")
+  fileId     BigInt @map("file_id")
+
+  evidence DisputeEvidence @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  file     File            @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@id([evidenceId, fileId])
+  @@map("dispute_evidence_files")
+}
+
+// 운영자 처리 기록. 무엇을 왜 했는지 남긴다(지우지 않는다).
+model OperationRecord {
+  id         BigInt   @id @default(autoincrement())
+  adminId    BigInt   @map("admin_id")
+  targetType String   @map("target_type")
+  targetId   BigInt   @map("target_id")
+  action     String
+  reason     String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId])
+  @@map("operation_records")
 }

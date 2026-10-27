@@ -37,6 +37,13 @@ import {
   USER_ROLES,
   USER_STATUSES,
   aiReportApplySchema,
+  CANCELLATION_STATUSES,
+  cancellationCreateSchema,
+  DISPUTE_STATUSES,
+  disputeCreateSchema,
+  disputeEvidenceSchema,
+  disputeResolveSchema,
+  REFUND_STATUSES,
   CATALOG_STATUSES,
   directRequestCreateSchema,
   CONTRACT_STATUSES,
@@ -266,6 +273,11 @@ const openApiDocument = {
       name: "chat",
       description:
         "요청별 대화방 (협의 요청 때 생기고 계약 뒤에도 같은 방, 실시간 전송 없음)",
+    },
+    {
+      name: "cancel",
+      description:
+        "취소 합의·부분 환불·분쟁·운영 (CANCEL-01~02, REFUND-01, DISPUTE-01, OPS-01). 자동 지급·환불 없음",
     },
     {
       name: "direct",
@@ -1160,6 +1172,272 @@ const openApiDocument = {
           400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
           ...bearerErrors,
           404: errorResponse("방·메시지가 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/cancellation": {
+      get: {
+        tags: ["cancel"],
+        summary: "취소·환불·분쟁 현황",
+        description:
+          "당사자. 결제 금액, 취소 제안 버전·환불 상태, 분쟁·증빙, 정산 보류 사유(`settlementHold`).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/cancellations": {
+      post: {
+        tags: ["cancel"],
+        summary: "취소 제안 (CANCEL-01·02)",
+        description:
+          "당사자. 미결제 계약은 대가·환불 모두 0, 결제 완료 계약은 완료 작업 대가 + 환불액 = 원결제 금액. 인도 파일(크리에이터의 DELIVERABLE 파일)·미완성 상태·사용권 합의를 함께 적는다. 대기 중이던 이전 제안은 SUPERSEDED. 결제 확인 중(READY·UNKNOWN)이면 409.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(cancellationCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/cancellations/{cancellationId}/accept": {
+      post: {
+        tags: ["cancel"],
+        summary: "취소 승인",
+        description:
+          "제안하지 않은 당사자. 계약·제작을 CANCELED로 바꾸고, 환불액이 있으면 승인과 환불 시도를 먼저 커밋한 뒤 Toss 부분 취소를 요청한다(`Idempotency-Key: refund-{{cancellationId}}-{{attempt}}`). 결과는 SUCCEEDED(주문 번호·원결제·남은 금액이 모두 맞을 때만)·FAILED·UNKNOWN, 결과 기록이 실패하면 REQUESTED로 남아 조회로 맞춘다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("cancellationId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+          503: errorResponse(
+            "테스트 결제(환불) 미설정 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/cancellations/{cancellationId}/reject": {
+      post: {
+        tags: ["cancel"],
+        summary: "취소 거절",
+        description: "제안하지 않은 당사자. 계약은 그대로 진행된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("cancellationId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/cancellations/{cancellationId}/withdraw": {
+      post: {
+        tags: ["cancel"],
+        summary: "취소 제안 거두기",
+        description: "제안한 당사자.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("cancellationId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/refund/retry": {
+      post: {
+        tags: ["cancel"],
+        summary: "환불 재시도 (REFUND-01)",
+        description:
+          "FAILED 환불만. 시도 번호를 올려 새 멱등 키로 요청한다. 결과 불명확(UNKNOWN) 중에는 재시도할 수 없다(중복 환불 방지).",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+          503: errorResponse(
+            "테스트 결제(환불) 미설정 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/refund/sync": {
+      post: {
+        tags: ["cancel"],
+        summary: "환불 결과 조회",
+        description:
+          "REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원결제·남은 금액이 모두 맞으면 SUCCEEDED, 취소 기록이 없으면 FAILED(재시도 가능). 보낸 지 30초가 지나지 않은 REQUESTED는 판정하지 않고 그대로 둔다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          503: errorResponse(
+            "테스트 결제(환불) 미설정 (`SERVICE_UNAVAILABLE`)",
+          ),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/handover/confirm": {
+      post: {
+        tags: ["cancel"],
+        summary: "인도 파일 수령 확인",
+        description:
+          "의뢰인. 승인된 취소 합의의 인도 파일을 받았음을 확인한다. 환불 성공·분쟁 없음이면 완료 작업 대가를 10%로 모의 정산한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/disputes": {
+      post: {
+        tags: ["cancel"],
+        summary: "분쟁 신고 (DISPUTE-01)",
+        description:
+          "당사자. 계약당 열린 분쟁은 하나. 열려 있는 동안 정산하지 않는다(납품·대화·증빙은 계속). 증빙 파일은 본인 EVIDENCE 파일.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(disputeCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/contracts/{contractId}/disputes/{disputeId}/evidence": {
+      post: {
+        tags: ["cancel"],
+        summary: "분쟁 증빙 추가",
+        description: "당사자. 열린 분쟁에만.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId"), idParam("disputeId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(disputeEvidenceSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("취소·환불·분쟁 현황", "CancellationOverview"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/admin/disputes": {
+      get: {
+        tags: ["cancel"],
+        summary: "분쟁 목록 (OPS-01)",
+        description: "운영자(ADMIN). 열린 분쟁 먼저.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("분쟁 목록", "DisputeList"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/admin/disputes/{disputeId}": {
+      get: {
+        tags: ["cancel"],
+        summary: "분쟁 상세",
+        description: "운영자. 신고·증빙·처리 이력.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("disputeId")],
+        responses: {
+          200: jsonResponse("분쟁", "Dispute"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/admin/disputes/{disputeId}/resolve": {
+      post: {
+        tags: ["cancel"],
+        summary: "분쟁 처리 (OPS-01)",
+        description:
+          "운영자. 처리 근거를 남기고 닫는다(operation_records). 지급·환불을 대신 실행하지 않는다. 보류가 풀리면 정산이 이어진다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("disputeId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(disputeResolveSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("분쟁", "Dispute"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/admin/operation-records": {
+      get: {
+        tags: ["cancel"],
+        summary: "운영 처리 기록",
+        description: "운영자. 최근 100건.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("기록", "OperationRecordList"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
         },
       },
     },
@@ -2805,6 +3083,176 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/ChatMessage" },
           },
           hasMore: { type: "boolean" },
+        },
+      },
+      Refund: {
+        type: "object",
+        required: [
+          "id",
+          "amountKrw",
+          "status",
+          "attempt",
+          "failureCode",
+          "failureMessage",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          amountKrw: { type: "integer" },
+          status: { type: "string", enum: [...REFUND_STATUSES] },
+          attempt: { type: "integer" },
+          failureCode: { type: ["string", "null"] },
+          failureMessage: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      Cancellation: {
+        type: "object",
+        required: [
+          "id",
+          "versionNo",
+          "status",
+          "proposedBy",
+          "reason",
+          "completedWorkKrw",
+          "refundKrw",
+          "deliveredFileIds",
+          "unfinishedState",
+          "usageRights",
+          "respondedBy",
+          "respondedAt",
+          "handoverConfirmedAt",
+          "refund",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          versionNo: { type: "integer" },
+          status: { type: "string", enum: [...CANCELLATION_STATUSES] },
+          proposedBy: { type: "string" },
+          reason: { type: "string" },
+          completedWorkKrw: { type: "integer" },
+          refundKrw: { type: "integer" },
+          deliveredFileIds: { type: "array", items: { type: "string" } },
+          unfinishedState: { type: ["string", "null"] },
+          usageRights: { type: ["string", "null"] },
+          respondedBy: { type: ["string", "null"] },
+          respondedAt: { type: ["string", "null"], format: "date-time" },
+          handoverConfirmedAt: {
+            type: ["string", "null"],
+            format: "date-time",
+          },
+          refund: {
+            oneOf: [{ $ref: "#/components/schemas/Refund" }, { type: "null" }],
+          },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      Dispute: {
+        type: "object",
+        required: [
+          "id",
+          "contractId",
+          "openedBy",
+          "status",
+          "reason",
+          "evidence",
+          "resolution",
+          "resolvedBy",
+          "resolvedAt",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          contractId: { type: "string" },
+          openedBy: { type: "string" },
+          status: { type: "string", enum: [...DISPUTE_STATUSES] },
+          reason: { type: "string" },
+          evidence: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["id", "submittedBy", "note", "fileIds", "createdAt"],
+              properties: {
+                id: { type: "string" },
+                submittedBy: { type: "string" },
+                note: { type: "string" },
+                fileIds: { type: "array", items: { type: "string" } },
+                createdAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+          resolution: { type: ["string", "null"] },
+          resolvedBy: { type: ["string", "null"] },
+          resolvedAt: { type: ["string", "null"], format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      DisputeList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Dispute" },
+          },
+        },
+      },
+      CancellationOverview: {
+        type: "object",
+        required: [
+          "contractId",
+          "contractStatus",
+          "paidKrw",
+          "cancellations",
+          "disputes",
+          "settlementHold",
+        ],
+        properties: {
+          contractId: { type: "string" },
+          contractStatus: { type: "string" },
+          paidKrw: { type: "integer" },
+          cancellations: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Cancellation" },
+          },
+          disputes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Dispute" },
+          },
+          settlementHold: { type: ["string", "null"] },
+        },
+      },
+      OperationRecordList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "id",
+                "adminId",
+                "targetType",
+                "targetId",
+                "action",
+                "reason",
+                "createdAt",
+              ],
+              properties: {
+                id: { type: "string" },
+                adminId: { type: "string" },
+                targetType: { type: "string" },
+                targetId: { type: "string" },
+                action: { type: "string" },
+                reason: { type: "string" },
+                createdAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
         },
       },
       DirectRequest: {

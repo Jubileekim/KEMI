@@ -14,6 +14,8 @@ const tossPaymentSchema = z.object({
   totalAmount: z.number(),
   approvedAt: z.string().nullable().optional(),
   method: z.string().nullable().optional(),
+  // 취소 뒤 남은 금액(부분 취소 확인용)
+  balanceAmount: z.number().optional(),
 });
 export type TossPayment = z.infer<typeof tossPaymentSchema>;
 
@@ -40,6 +42,13 @@ export interface TossClient {
     idempotencyKey: string;
   }): Promise<TossOutcome>;
   getByOrderId(orderId: string): Promise<TossOutcome>;
+  // 결제 (부분) 취소. 같은 멱등 키의 재요청은 처음 결과를 돌려준다.
+  cancel(input: {
+    paymentKey: string;
+    cancelAmount: number;
+    cancelReason: string;
+    idempotencyKey: string;
+  }): Promise<TossOutcome>;
 }
 
 export function createTossClient({
@@ -110,6 +119,12 @@ export function createTossClient({
     getByOrderId: (orderId) =>
       call(`/v1/payments/orders/${encodeURIComponent(orderId)}`, {
         method: "GET",
+      }),
+    cancel: ({ paymentKey, cancelAmount, cancelReason, idempotencyKey }) =>
+      call(`/v1/payments/${encodeURIComponent(paymentKey)}/cancel`, {
+        method: "POST",
+        body: { cancelAmount, cancelReason },
+        idempotencyKey,
       }),
   };
 }
