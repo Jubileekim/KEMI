@@ -33,12 +33,14 @@ const idString = z.string().regex(/^[1-9]\d*$/);
 export const materialCreateSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("FILE"),
+    commandId: z.uuid(),
     fileId: idString,
     note: text(1000).optional(),
     replacesMaterialId: idString.optional(),
   }),
   z.strictObject({
     kind: z.literal("SHIPMENT"),
+    commandId: z.uuid(),
     carrier: text(50),
     trackingNumber: text(50),
     note: text(1000).optional(),
@@ -46,6 +48,7 @@ export const materialCreateSchema = z.discriminatedUnion("kind", [
   }),
   z.strictObject({
     kind: z.literal("NOTE"),
+    commandId: z.uuid(),
     note: text(2000),
     replacesMaterialId: idString.optional(),
   }),

@@ -236,6 +236,29 @@ export function createProductionService({
       return inTransaction(async (tx) => {
         const { userId, role, production } = await lock(tx, user, contractId);
         requireRole(role, "CLIENT");
+        // 같은 commandId의 재전송: 내용이 같으면 새로 만들지 않고 현재 상태를 준다(계약 행 잠금 아래라 동시 재전송도 하나만 생긴다).
+        const sent = await tx.productionMaterial.findUnique({
+          where: { commandId: data.commandId },
+        });
+        if (sent) {
+          const same =
+            sent.contractId === contractId &&
+            sent.kind === data.kind &&
+            sent.fileId ===
+              (data.kind === "FILE" ? BigInt(data.fileId) : null) &&
+            sent.carrier === (data.kind === "SHIPMENT" ? data.carrier : null) &&
+            sent.trackingNumber ===
+              (data.kind === "SHIPMENT" ? data.trackingNumber : null) &&
+            sent.note === (data.note ?? null) &&
+            sent.replacesMaterialId ===
+              (data.replacesMaterialId
+                ? BigInt(data.replacesMaterialId)
+                : null);
+          if (!same) {
+            throw conflict("같은 요청 식별자로 다른 자료를 낼 수 없습니다.");
+          }
+          return reload(tx, contractId);
+        }
         if (production.status !== "PREPARING") {
           throw conflict("제작 준비 단계에서만 자료를 낼 수 있습니다.");
         }
@@ -272,6 +295,7 @@ export function createProductionService({
             note: data.note ?? null,
             replacesMaterialId: replaces?.id ?? null,
             submittedBy: userId,
+            commandId: data.commandId,
           },
         });
         return reload(tx, contractId);

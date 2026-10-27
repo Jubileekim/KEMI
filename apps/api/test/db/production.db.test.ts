@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -29,8 +30,47 @@ beforeEach(async () => {
 const base = (contractId: string) => `/api/contracts/${contractId}/production`;
 const get = (token: string, contractId: string) =>
   request(app).get(base(contractId)).set(auth(token));
+// 자료 추가는 commandId가 필요하다. 테스트에서 따로 주지 않으면 새로 만든다.
 const post = (token: string, path: string, body: object = {}) =>
-  request(app).post(path).set(auth(token)).send(body);
+  request(app)
+    .post(path)
+    .set(auth(token))
+    .send(
+      path.endsWith("/materials") && !("commandId" in body)
+        ? { commandId: randomUUID(), ...body }
+        : body,
+    );
+
+describe("자료 재전송 (READY-01 멱등성)", () => {
+  it("같은 commandId·같은 내용은 자료를 하나만 만들고, 내용이 다르면 409", async () => {
+    const { client, contractId } = await signedDeal(app, prisma);
+    const commandId = randomUUID();
+    const shipment = {
+      commandId,
+      kind: "SHIPMENT",
+      carrier: "우체국",
+      trackingNumber: "1234-5678",
+    };
+    // 응답을 못 받은 화면이 같은 요청을 동시에 여러 번 보낸 경우
+    const sent = await Promise.all(
+      [1, 2, 3].map(() =>
+        post(client.token, `${base(contractId)}/materials`, shipment),
+      ),
+    );
+    expect(sent.map((r) => r.status)).toEqual([201, 201, 201]);
+    expect(sent.map((r) => r.body.materials.length)).toEqual([1, 1, 1]);
+    const changed = await post(client.token, `${base(contractId)}/materials`, {
+      ...shipment,
+      trackingNumber: "9999-0000",
+    });
+    expect(changed.status).toBe(409);
+    expect(
+      await prisma.productionMaterial.count({
+        where: { contractId: BigInt(contractId) },
+      }),
+    ).toBe(1);
+  });
+});
 
 describe("마감일 계산 [제안, D09]", () => {
   it("KST 시작일 + 작업 일수(달력일)", () => {
