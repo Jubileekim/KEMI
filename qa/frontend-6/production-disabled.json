@@ -1,0 +1,36 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": false,
+  "results": [
+    {
+      "role": "UNCONFIGURED",
+      "path": "/",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/works/sample-work-1",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/creators/mock-creator",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/creators/mock-creator/request?packageId=sample-package",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/requests",
+      "passed": true
+    },
+    {
+      "role": "UNCONFIGURED",
+      "path": "/workspace/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    }
+  ]
+}

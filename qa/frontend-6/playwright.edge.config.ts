@@ -6,10 +6,16 @@ import base from "../../apps/web/playwright.config";
 export default defineConfig({
   ...base,
   testDir: "../../apps/web/e2e",
-  outputDir: join(tmpdir(), "kemi-6-results"),
+  outputDir: process.env.KEMI_QA_OUTPUT_DIR ?? join(tmpdir(), "kemi-6-results"),
   reporter: [
     ["list"],
-    ["json", { outputFile: join(tmpdir(), "kemi-6-report.json") }],
+    [
+      "json",
+      {
+        outputFile:
+          process.env.KEMI_QA_REPORT ?? join(tmpdir(), "kemi-6-report.json"),
+      },
+    ],
   ],
   use: { ...base.use, baseURL: "http://127.0.0.1:5196", channel: "msedge" },
   webServer:

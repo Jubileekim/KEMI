@@ -15,7 +15,12 @@ export default function CatalogMock() {
   const [params, setParams] = useSearchParams();
   const [failed, setFailed] = useState(false);
   const search = workId
-    ? new URLSearchParams({ workId }).toString()
+    ? new URLSearchParams({
+        workId,
+        ...(params.get("creatorId")
+          ? { creatorId: params.get("creatorId") ?? "" }
+          : {}),
+      }).toString()
     : params.toString();
   const query = useQuery({
     queryKey: ["mock-catalog", session.epoch(), search],

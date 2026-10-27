@@ -6,6 +6,8 @@ import { allCampaigns, endMockCampaign } from "./campaign-handlers";
 import { readMockStudio } from "./studio-handlers";
 import { session } from "../app/session";
 import { selectContract } from "./signature-model";
+import { expireDirect } from "./direct-model";
+import { directNow } from "./direct-clock";
 import {
   changeProposals,
   emptyProposals,
@@ -65,9 +67,11 @@ export default [
       return fail(Number(selected), "모의 요청 실패");
     if (selected === "malformed") return HttpResponse.json({ invalid: true });
     const params = new URL(request.url).searchParams;
+    state = expireDirect(state, directNow().getTime());
     if (request.method === "GET") {
       const campaignId = params.get("campaignId");
       const roomId = params.get("roomId");
+      const requestId = params.get("requestId");
       const campaigns = allCampaigns();
       const campaign = campaigns.find(
         (item) => item.id === campaignId && item.status !== "DRAFT",
@@ -78,6 +82,8 @@ export default [
       )
         return fail(404, "본인 공개 공고를 찾을 수 없어요.");
       const own = state.items.filter((item) => participant(item, user));
+      if (requestId && !own.some((item) => item.id === requestId))
+        return fail(404, "본인 의뢰를 찾을 수 없어요.");
       const room = own.find((item) => item.id === roomId && hasRoom(item));
       if (roomId && !room) return fail(404, "본인 협의방을 찾을 수 없어요.");
       const studio = readMockStudio(user.id);
@@ -86,6 +92,7 @@ export default [
           .filter(
             (item) =>
               (!campaignId || item.campaignId === campaignId) &&
+              (!requestId || item.id === requestId) &&
               (!roomId || item.id === roomId),
           )
           .map((item) => ({

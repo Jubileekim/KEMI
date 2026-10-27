@@ -1,0 +1,126 @@
+{
+  "source": "independent HTTP fixtures, not live API",
+  "auth": true,
+  "results": [
+    {
+      "role": "GUEST",
+      "path": "/",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/works/sample-work-1",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/creators/mock-creator",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/creators/mock-creator/request?packageId=sample-package",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/requests",
+      "passed": true
+    },
+    {
+      "role": "GUEST",
+      "path": "/workspace/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/works/sample-work-1",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/creators/mock-creator",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/creators/mock-creator/request?packageId=sample-package",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/requests",
+      "passed": true
+    },
+    {
+      "role": "CLIENT",
+      "path": "/workspace/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/works/sample-work-1",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/creators/mock-creator",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/creators/mock-creator/request?packageId=sample-package",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/requests",
+      "passed": true
+    },
+    {
+      "role": "CREATOR",
+      "path": "/workspace/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/works/sample-work-1",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/creators/mock-creator",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/creators/mock-creator/request?packageId=sample-package",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/requests",
+      "passed": true
+    },
+    {
+      "role": "ADMIN",
+      "path": "/workspace/00000000-0000-4000-8000-000000000001",
+      "passed": true
+    }
+  ]
+}
