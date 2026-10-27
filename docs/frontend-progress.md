@@ -852,3 +852,24 @@
 - 실제 API·PG·DB·스토리지와 정책/완료 후 취소/미결제 취소 종결·취소 없는 분쟁의 정상 작업 재개는 남는다. 이번 Mock은 성공한 전액 결제와 취소 합의의 합계를 검사하며, 미결제에는 요청 기록까지만 허용한다. 보류 해제 권한/회신 기한/세금·절사를 생산 정책으로 확정한 것이 아니다. 5단계 실제 서비스 전체 완료로 표시하지 않는다.
 
 - **운영 최종:** 두flag(`VITE_ENABLE_MOCKS=true`, `VITE_ENABLE_AUTH_API=true`) 운영 build:web(타입/기존ESLint 포함) exit0. 독립HTTP GUEST/CLIENT/CREATOR/ADMIN×새3경로 **12/12 exit0**, 기본 인증 미설정3/3과 합쳐15개 보호/미연결 안내 검사다. Mock 코드/요청/worker 제외·페이지 예외0. 실제 인증/API/외부 제공자 검증이 아니다. 환경 값은 명령 종료 전 제거했고 전용4205 preview도 exit0으로 종료했다.
+
+### 5-B Git 전달
+
+- [10e4b02](https://github.com/Jubileekim/KEMI/commit/10e4b02) 커밋·푸시, [Draft PR #69](https://github.com/Jubileekim/KEMI/pull/69) 생성·이 채팅 연결 완료. base는 미병합5-A `3e8c98c`이며 선행 병합 후 base 조정 검토가 필요하다. 핵심 모델·파일·화면·운영 보류·검사는 한 취소 종결 흐름이어서 하나의 독립 검증 묶음으로 전달했다.
+- source/API/shared·의존성 범위를 재검토하고 전달 파일 형식/diff를 확인했다. 다음5-C는 이미 검증한 공개 모집 검사와 전체76개 결과/정상 캡처 전달만 포함하며 제품 코드를 추가하지 않는다. 원격 CI는 아래 종료 기록에서 별도로 확인한다.
+
+## 5-C 공개 모집 전체 흐름 통합 검증 (2026-10-27)
+
+- `apps/web/e2e/public-recruitment.spec.ts`: 기존 공개 모집 작성/공개·제안·협의·조건서/양측 서명·전액 Mock 결제·준비/제작·검토/승인·최종ZIP 다운로드·전용 수령·정산을 실제 UI와 기존 helper로 잇는다. 정산 후 취소 역행은 D13 보호 차단으로 확인했다. 양측 조회와 같은 작업방의 정확한 정산 링크도 검증했다.
+- 두 번째 통합은 새 취소 경로의 지연 확인 중 로그아웃·위조 Bearer·실제 다른 Mock 신규 회원의 객체 접근 거부·운영 가드·새로고침 거래 초기화를 확인한다. 취소/환불/분쟁의 분기 전체는5-A/5-B 검사와 함께 최종76개 실행에 포함했다. 시간 정책을 만들지 않았으며 기존 서명 만료 정각·새 확인 버전·대화 유지는 기존3-B 검사로 확인했다.
+- 신규5-C 데스크톱2+모바일2 **4/4**는 최종76/76·exit0의 부분집합이다. 개별 기능만 완료한 뒤 단계 통합을 생략하지 않았다. `qa/frontend-5/final-e2e.json`에 같은 실행의 전체 개별 결과/명령/소스 해시를 추가하고 `normal-*.png`는 같은 실행의4-E 정상 통합에서 별도 보존했다. 앞선 실행과 합산하지 않는다.
+- 최종 단위214/214·기본/두flag build:web·운영15개·토큰·전달 파일 형식/diff 결과는 위와 같다. 전체 웹316개는 목록 확인만 했으며 이번에는 연관76개만 실행했다. 실제 제공자·API/DB·운영 인증·배포 검증이 아니다.
+- 5-A/5-B의 클라이언트·명시적 Mock 구현과5-C 통합 검증 범위만 완료다. 실제 서비스의5단계 전체 완료는 아니다. API/파일/PG·미결정 정책/미결제·완료 후 취소/취소 없는 분쟁의 정상 작업 재개·영구 복원/다중 탭, 기존 outputs/tools 포맷·API timeout은 남는다.
+- **다음 작업 하나:** 5단계 취소·환불·분쟁 API 및 D12/D13/D18 정책 조율. 원결제/같은 합의 버전/파일·증빙/보류 해제·운영 권한과 미결제·완료 후 취소/작업 재개 계약을 합의한다. 별도 요청 후 착수하며6단계·PR 병합/자동 병합·명시적 배포는 진행하지 않는다.
+
+### 5-C Git 전달·종료 상태
+
+- 검사/전체 근거 [ceffc73](https://github.com/Jubileekim/KEMI/commit/ceffc73)를 커밋·푸시하고 [Draft PR #70](https://github.com/Jubileekim/KEMI/pull/70)을 생성·이 채팅에 연결했다. base는5-B `10e4b02`다. 이번 범위의 독립 묶음은 [5-A #68](https://github.com/Jubileekim/KEMI/pull/68), [5-B #69](https://github.com/Jubileekim/KEMI/pull/69), [5-C #70](https://github.com/Jubileekim/KEMI/pull/70)으로 분리했다. 모두 Draft/open·미병합이며 선행 병합 후 base 조정 검토가 필요하다.
+- **원격 Web CI(로컬과 별도):** 선행4-E [600ce4d/run40426261708](https://github.com/Jubileekim/KEMI/actions/runs/40426261708)는 포맷·단위·빌드 success, 브라우저 in_progress였다. 따라서 최초 JSON 포맷 실패는 수정됐지만 원격 전체 통과는 아니다. 5-A `3e8c98c`는 base 필터 때문에 실행0건이었다. 5-B [10e4b02/run40430076103](https://github.com/Jubileekim/KEMI/actions/runs/40430076103)는 포맷·단위·빌드 success/브라우저 in_progress, 5-C [ceffc73/run40430191777](https://github.com/Jubileekim/KEMI/actions/runs/40430191777)는 포맷·단위 success/빌드 in_progress였다. 최신 문서 전달은 새 CI 대상이므로 최종 원격 결과는 아직 미검증이며 [#70 최신 Checks](https://github.com/Jubileekim/KEMI/pull/70/checks)를 확인한다. 원격 전체316개 통과를 로컬76개로 대체하지 않는다.
+- 로컬 종료 검증: 단위214/214, 연관 E2E76/76, 기본/두flag build:web, 운영 보호/미연결15개·Mock 제외, 토큰·전달 파일 형식/diff PASS. 서버 API/shared·의존성/lockfile·원본 엑셀/PDF/디자인 키트 변경 없음. 기존 outputs/tools는 시작 상태 그대로 미추적·미포함이다. 브라우저/운영 preview 전용5195/4205를 정리했고 다른 기존 프로세스는 종료하지 않았다.
+- 푸시 뒤 원격 추적 ref가 로컬에 없던 상태를 발견해 해당 브랜치들만 명시적으로 fetch하고 로컬/원격 추적/PR head를 대조했다. 마지막 종료 기록은 문서만 추가하며 [#70 커밋 목록](https://github.com/Jubileekim/KEMI/pull/70/commits)에서 최종 전달 SHA를 확인할 수 있다. 새 기능/다음 범위·병합·자동 병합·명시적 배포/재배포는 실행하지 않았다.
