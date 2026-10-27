@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { setupSettlement } from "./settlement-helpers";
+import { setupSettlement, settlementScenario } from "./settlement-helpers";
 import { deliveryRequest } from "./delivery-helpers";
 import { login, navigate } from "./proposal-helpers";
 import {
@@ -12,6 +12,13 @@ test("7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양�
   page,
 }) => {
   const { contractId } = await setupSettlement(page);
+  await navigate(page, `/contracts/${contractId}/review`);
+  await expect(page.getByText(/정상 수령 완료 거래만 가능해요/)).toBeVisible();
+  await navigate(page, `/contracts/${contractId}/settlement`);
+  await page
+    .getByRole("button", { name: "모의 정산 결과 확인", exact: true })
+    .click();
+  await expect(page.getByLabel("확정 모의 정산 내역")).toBeVisible();
   await navigate(page, "/me/activity");
   await page.getByRole("link", { name: "완료 거래 리뷰", exact: true }).click();
   await page.getByLabel("리뷰 내용 (필수)").fill("성실하게 작업했어요.");
@@ -128,6 +135,32 @@ test("7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양�
   );
   expect(own.own?.authorId).toBe("mock-creator");
 });
+test("7-B 수령 완료만으로는 리뷰 불가, 정산 실패·UNKNOWN에도 차단", async ({ page }) => {
+  const { contractId } = await setupSettlement(page);
+  const url = `/__mock__/reviews/${contractId}`;
+  const review = { rating: 5, content: "정산 전 작성 시도", tags: [] };
+  await navigate(page, `/contracts/${contractId}/review`);
+  await expect(page.getByLabel("리뷰 내용 (필수)")).toHaveCount(0);
+  expect((await deliveryRequest(page, url, review)).status).toBe(409);
+  await navigate(page, `/contracts/${contractId}/settlement`);
+  await settlementScenario(page, "failed");
+  await page
+    .getByRole("button", { name: "모의 정산 결과 확인", exact: true })
+    .click();
+  await expect(page.getByLabel("모의 정산", { exact: true })).toContainText(
+    "모의 정산 실패",
+  );
+  expect((await deliveryRequest(page, url, review)).status).toBe(409);
+  await settlementScenario(page, "unknown");
+  await page
+    .getByRole("button", { name: "모의 정산 결과 확인", exact: true })
+    .click();
+  await expect(page.getByLabel("모의 정산", { exact: true })).toContainText(
+    "모의 정산 결과 확인 중",
+  );
+  expect((await deliveryRequest(page, url, review)).status).toBe(409);
+});
+
 test("7-B 미완료 리뷰·잘못된 대상·조회 실패·입력 보존", async ({ page }) => {
   const { contractId } = await setupSettlement(page, false);
   await navigate(page, `/contracts/${contractId}/review`);
