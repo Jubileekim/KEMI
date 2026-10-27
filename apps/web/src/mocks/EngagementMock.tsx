@@ -164,9 +164,9 @@ function ReviewForm({ id }: { id: string }) {
     <section className="showcase-card grid gap-4">
       <h1 className="type-heading-lg">완료 거래 리뷰</h1>
       <p>
-        정상 수령 완료 후 양측 각각 1회. D14 공개 시점·수정·삭제·태그 정책은
-        미결정으로 본인 작성 내용만 표시해요. 상대방 알림·공개 평점에는 반영하지
-        않아요.
+        정상 수령·모의 정산 성공 확인 후 양측 각각 1회. D14 공개
+        시점·수정·삭제·태그 정책은 미결정으로 본인 작성 내용만 표시해요. 상대방
+        알림·공개 평점에는 반영하지 않아요.
       </p>
       <Button variant="outline" disabled={busy} onClick={() => query.refetch()}>
         리뷰 상태 다시 확인

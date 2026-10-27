@@ -2,9 +2,9 @@
   "scope": "local DEV/MSW Edge; no real API/DB/provider verification",
   "command": "npm exec -- playwright test --config qa/frontend-7/playwright.edge.config.ts engagement.spec.ts",
   "stats": {
-    "startTime": "2026-10-27T02:59:48.478Z",
-    "duration": 200390.82700000002,
-    "expected": 4,
+    "startTime": "2026-10-27T03:10:39.813Z",
+    "duration": 230493.09,
+    "expected": 6,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
@@ -17,7 +17,17 @@
       "status": "passed",
       "expectedStatus": "passed",
       "retry": 0,
-      "durationMs": 33773,
+      "durationMs": 33651,
+      "errors": []
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 수령 완료만으로는 리뷰 불가, 정산 실패·UNKNOWN에도 차단",
+      "project": "chromium",
+      "status": "passed",
+      "expectedStatus": "passed",
+      "retry": 0,
+      "durationMs": 29967,
       "errors": []
     },
     {
@@ -27,7 +37,7 @@
       "status": "passed",
       "expectedStatus": "passed",
       "retry": 0,
-      "durationMs": 29695,
+      "durationMs": 30295,
       "errors": []
     },
     {
@@ -37,7 +47,17 @@
       "status": "passed",
       "expectedStatus": "passed",
       "retry": 0,
-      "durationMs": 33313,
+      "durationMs": 33296,
+      "errors": []
+    },
+    {
+      "file": "engagement.spec.ts",
+      "title": "7-B 수령 완료만으로는 리뷰 불가, 정산 실패·UNKNOWN에도 차단",
+      "project": "mobile-chromium",
+      "status": "passed",
+      "expectedStatus": "passed",
+      "retry": 0,
+      "durationMs": 30546,
       "errors": []
     },
     {
@@ -47,13 +67,13 @@
       "status": "passed",
       "expectedStatus": "passed",
       "retry": 0,
-      "durationMs": 30601,
+      "durationMs": 30811,
       "errors": []
     }
   ],
   "sourceSha256": {
     "apps/web/e2e/activity.spec.ts": "c2547f7ec10412b8aa0c467c36d2f37c7d0e8f8c04490c46bd755ca25929a05a",
-    "apps/web/e2e/engagement.spec.ts": "1b932886c90baf27f8fe4c0406a9d9d0a97b1becc3c05b71d66b6366b7c07bde",
+    "apps/web/e2e/engagement.spec.ts": "29183463fd0143ba2f292f4f5013b4f71216785c6fad1197a6cea65325251697",
     "apps/web/e2e/safety-analytics.spec.ts": "952fd9f40303128918b5ee341afe4c0f4703e421e4fab1fe8dc0cb2b9204267b",
     "apps/web/e2e/settlement-helpers.ts": "90861df7275a396c5e3724b73a1bab0de81b55db2e1fcbfa36a1d50ee4386362",
     "apps/web/src/app/App.tsx": "25901cc55c6c54ef438645897539ca7350b7026f5325fe59ceafd11d8e325bcd",
@@ -68,7 +88,7 @@
     "apps/web/src/mocks/CatalogMock.tsx": "1568ed64bc843fdb04faf731f68ee031f0480d84a2a1e8ebd0e0c62ed2a2a1dd",
     "apps/web/src/mocks/CreatorMock.tsx": "6e6ee2bf0aec3f3e496f9635651fc1057a19584f41366702fda4da6b14e6d877",
     "apps/web/src/mocks/DiscoveryDetailMock.tsx": "f837b1c01c6026637fddc4e6eab19f11cbdb2cb1ec7c85bae231a1f9cd34390f",
-    "apps/web/src/mocks/EngagementMock.tsx": "ad9b71eaf1bfb7f96d99b1f140530fd697e2523a86bccf3f66ab60507d4921ef",
+    "apps/web/src/mocks/EngagementMock.tsx": "bb1e7207ff7da209936eb52d748f99a0628e5f4e711d475e6ad0cdef3c2f228a",
     "apps/web/src/mocks/NotificationBadgeMock.tsx": "51d3cb0d2c6f5dbca938dd648216e9c741bd88264a910a75e1fd6794fe1486fd",
     "apps/web/src/mocks/ProposalCard.tsx": "471428631d5ec18624f6718bae3863c7b44f4cde687fa31f947d8a7bb7017b1b",
     "apps/web/src/mocks/RestrictionNoticeMock.tsx": "128783dbc516852dd98b25da7295ec12243005de6b79cb877d1a99f894d28e94",
@@ -82,7 +102,7 @@
     "apps/web/src/mocks/direct-handlers.ts": "aae64a2baf9e94c8837426e83c71d5019b2c8e84cf430d1107ecc9c26918bcc4",
     "apps/web/src/mocks/engagement-api.ts": "1f21718c5decc89a8684c7449bfeb8953353d9c8b5e7c55773c264a6cc77e4c3",
     "apps/web/src/mocks/engagement-events.ts": "6a431f0a4b736f4cf8f650d48af2aad4a842a523b18afda395cb12440d7cb4b5",
-    "apps/web/src/mocks/engagement-handlers.ts": "b58a81b568cadf952f3e25befdbd5c99e927982351b85485da218d25170af473",
+    "apps/web/src/mocks/engagement-handlers.ts": "91dd3a10dd0d677fdc0e43469bf859b63b10234606121da117064926e636755c",
     "apps/web/src/mocks/engagement-model.ts": "a99d8fba8c1c8ae70746946170c9b281d63e6a891beae3a6646de7ff78314438",
     "apps/web/src/mocks/member-request.ts": "eeb8dfe27aee8d1f85fd6c1c6d9232a1c60fff66ff6164f47097f570783c9747",
     "apps/web/src/mocks/profile-handlers.ts": "367c77d746c253d37fc405c2eda2c0cec41d7caf433dae81729d758fb3b84835",

@@ -101,8 +101,8 @@ async function handle({
       eligible: complete && !cancelled,
       reason:
         complete && !cancelled
-          ? "정상 수령 완료"
-          : "정상 수령 완료 거래만 가능해요. 취소·분쟁 거래의 리뷰는 D14 조율 중이에요.",
+          ? "정상 수령 완료 · 모의 정산 성공"
+          : "정상 수령 완료 거래만 가능해요. 모의 정산 성공 확인도 필요해요. 취소·분쟁 거래의 리뷰는 D14 조율 중이에요.",
       own:
         reviews.find(
           (r) => r.contractId === contract.id && r.authorId === user.id,
