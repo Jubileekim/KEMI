@@ -1,6 +1,8 @@
+import type { ReadableStreamReadResult } from "node:stream/web";
+
 // Supabase Storage(비공개 버킷) 어댑터. 서버는 service role 키로 서명 URL 발급과 파일 확인만 한다.
 // 파일 바이트는 서버를 거치지 않는다(브라우저 → Storage 직접 업로드).
-// [검증 필요] 실제 Supabase 프로젝트(KEMI-dev) 버킷으로는 아직 호출해 보지 않았다.
+// 요청·응답 형태는 단위 테스트(test/storage.test.ts)로 확인한다. 실제 버킷 호출은 배포 전 점검(runbook)에서 확인한다.
 
 export const STORAGE_TIMEOUT_MS = 10_000;
 
@@ -21,6 +23,33 @@ export class StorageUnavailableError extends Error {
   constructor() {
     super("storage request failed");
     this.name = "StorageUnavailableError";
+  }
+}
+
+// 응답 본문을 앞에서부터 bytes만큼만 읽고 스트림을 닫는다.
+export async function readPrefix(
+  response: Response,
+  bytes: number,
+): Promise<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const out = new Uint8Array(bytes);
+  const pull = async (filled: number): Promise<number> => {
+    if (filled >= bytes) return filled;
+    const chunk: ReadableStreamReadResult<Uint8Array> = await reader.read();
+    if (chunk.done) return filled;
+    const { value } = chunk;
+    const take = value.subarray(0, bytes - filled);
+    out.set(take, filled);
+    return pull(filled + take.length);
+  };
+  try {
+    const filled = await pull(0);
+    return out.slice(0, filled);
+  } catch {
+    throw new StorageUnavailableError();
+  } finally {
+    await reader.cancel().catch(() => undefined);
   }
 }
 
@@ -107,7 +136,8 @@ export function createSupabaseStorage({
       );
       if (response.status === 404 || response.status === 400) return null;
       if (!response.ok) throw new StorageUnavailableError();
-      return new Uint8Array(await response.arrayBuffer()).slice(0, bytes);
+      // 저장소가 Range를 무시하고 전체 파일(최대 수백 MB)을 보내도 앞부분만 읽고 나머지는 받지 않는다.
+      return readPrefix(response, bytes);
     },
 
     async createDownloadUrl(path, expiresInSeconds) {

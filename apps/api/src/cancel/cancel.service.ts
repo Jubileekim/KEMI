@@ -19,12 +19,18 @@ import { postSystemMessage } from "../chat/chat.service.js";
 import { requireReadyFiles } from "../files/file.service.js";
 import notify, { type NotificationInput } from "../notifications/notify.js";
 import { loadSettlementHold, settleIfReady } from "../delivery/settlement.js";
-import type { TossClient, TossOutcome } from "../payments/toss.js";
+import {
+  TOSS_TIMEOUT_MS,
+  type TossClient,
+  type TossOutcome,
+} from "../payments/toss.js";
 
 type Tx = Prisma.TransactionClient;
 
 // 환불 API 호출(최대 10초)을 잠금 안에서 기다린다.
 const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 };
+// 보낸 지 이 시간이 지나지 않은 REQUESTED 환불은 조회로 판정하지 않는다(Toss 응답 대기 시간의 세 배).
+export const REFUND_SYNC_GRACE_MS = TOSS_TIMEOUT_MS * 3;
 const CONFIG_ERROR_CODES = new Set([
   "UNAUTHORIZED_KEY",
   "INVALID_API_KEY",
@@ -171,18 +177,10 @@ export function createCancelService({
   const inTransaction = <T>(work: (tx: Tx) => Promise<T>) =>
     prisma.$transaction(work, TRANSACTION_OPTIONS);
 
-  // 계약 행을 잠그고 당사자인지 확인한다. 당사자가 아니면 404.
-  async function lock(tx: Tx, user: AuthUser, contractId: bigint) {
-    const userId = BigInt(user.id);
-    const found = await tx.contract.findUnique({
-      where: { id: contractId },
-      select: { clientId: true, creatorId: true },
-    });
-    if (!found || (found.clientId !== userId && found.creatorId !== userId)) {
-      throw notFound("계약");
-    }
+  // 잠금 순서는 언제나 계약 → (분쟁·환불 등) 계약에 딸린 행이다(데드락 방지).
+  async function lockContract(tx: Tx, contractId: bigint) {
     await tx.$queryRaw`SELECT id FROM contracts WHERE id = ${contractId} FOR UPDATE`;
-    const contract = await tx.contract.findUniqueOrThrow({
+    return tx.contract.findUniqueOrThrow({
       where: { id: contractId },
       include: {
         payments: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
@@ -194,6 +192,19 @@ export function createCancelService({
         },
       },
     });
+  }
+
+  // 계약 행을 잠그고 당사자인지 확인한다. 당사자가 아니면 404.
+  async function lock(tx: Tx, user: AuthUser, contractId: bigint) {
+    const userId = BigInt(user.id);
+    const found = await tx.contract.findUnique({
+      where: { id: contractId },
+      select: { clientId: true, creatorId: true },
+    });
+    if (!found || (found.clientId !== userId && found.creatorId !== userId)) {
+      throw notFound("계약");
+    }
+    const contract = await lockContract(tx, contractId);
     const otherId =
       userId === contract.clientId ? contract.creatorId : contract.clientId;
     return { userId, otherId, contract };
@@ -235,7 +246,8 @@ export function createCancelService({
     };
   }
 
-  // Toss 취소 결과를 환불 상태로 줄인다. 주문 번호가 같고 남은 금액이 맞아야 성공으로 본다.
+  // Toss 취소 결과를 환불 상태로 줄인다. 주문 번호·원결제 금액·남은 금액이 모두 응답에 있고 맞아야 성공으로 본다.
+  // 증거가 빠지거나 다르면 UNKNOWN으로 두고 조회(sync)로 다시 맞춘다.
   function refundResult(
     outcome: TossOutcome,
     payment: { orderId: string; amountKrw: bigint },
@@ -243,7 +255,12 @@ export function createCancelService({
   ): { status: string; failureCode?: string; failureMessage?: string } {
     if (outcome.kind === "unavailable") return { status: "UNKNOWN" };
     if (outcome.kind === "rejected") {
-      if (CONFIG_ERROR_CODES.has(outcome.code)) throw tossUnavailable();
+      if (CONFIG_ERROR_CODES.has(outcome.code)) {
+        // 키 설정 오류는 결제사가 요청을 처리하지 않은 것이다. 실패로 남기고 설정을 고친 뒤 재시도한다.
+        console.warn("[refunds] Toss key configuration error", {
+          code: outcome.code,
+        });
+      }
       return {
         status: "FAILED",
         failureCode: outcome.code,
@@ -257,8 +274,9 @@ export function createCancelService({
     if (
       outcome.payment.orderId === payment.orderId &&
       canceled &&
-      (outcome.payment.balanceAmount === undefined ||
-        outcome.payment.balanceAmount === expectedBalance)
+      outcome.payment.totalAmount === Number(payment.amountKrw) &&
+      outcome.payment.balanceAmount !== undefined &&
+      outcome.payment.balanceAmount === expectedBalance
     ) {
       return { status: "SUCCEEDED" };
     }
@@ -306,27 +324,57 @@ export function createCancelService({
     await settleIfReady(tx, contract.id);
   }
 
-  // 환불을 요청하고 결과를 기록한다. 성공하면 양쪽에 알리고 잔여 대가 정산을 시도한다.
-  async function executeRefund(
-    tx: Tx,
-    contract: Locked,
-    refund: RefundRow,
-  ): Promise<void> {
+  // 2단계 환불. 1단계(호출하는 쪽): 환불 시도(REQUESTED, attempt)를 트랜잭션으로 먼저 커밋한다. 멱등 키는
+  // refund-{cancellationId}-{attempt}라 DB에 남은 값으로 언제든 다시 만들 수 있다.
+  // 2단계(여기): 트랜잭션 밖에서 Toss를 부르고, 결과는 계약 잠금 아래 새 트랜잭션으로 기록한다.
+  // Toss 성공 뒤 기록이 실패해도 시도는 REQUESTED로 남아 조회(sync)로 맞추며, 새 멱등 키를 만들지 않는다.
+  async function dispatchRefund(contractId: bigint, refundId: bigint) {
     if (!toss) throw tossUnavailable();
-    const payment = contract.payments.find((p) => p.id === refund.paymentId);
-    if (!payment?.paymentKey) throw conflict("환불할 결제를 찾을 수 없습니다.");
+    const refund = await prisma.refund.findUniqueOrThrow({
+      where: { id: refundId },
+      include: { payment: true },
+    });
+    if (refund.status !== "REQUESTED") return;
+    const { payment } = refund;
+    if (!payment.paymentKey) throw conflict("환불할 결제를 찾을 수 없습니다.");
     const outcome = await toss.cancel({
       paymentKey: payment.paymentKey,
       cancelAmount: Number(refund.amountKrw),
       cancelReason: "KEMI 취소 합의",
       idempotencyKey: `refund-${refund.cancellationId}-${refund.attempt}`,
     });
-    await applyRefund(
-      tx,
-      contract,
-      refund,
-      refundResult(outcome, payment, refund.amountKrw),
-    );
+    const result = refundResult(outcome, payment, refund.amountKrw);
+    try {
+      await inTransaction(async (tx) => {
+        const contract = await lockContract(tx, contractId);
+        const current = await tx.refund.findUniqueOrThrow({
+          where: { id: refundId },
+        });
+        // 그사이 조회로 이미 정리됐거나 다른 시도로 넘어갔으면 이 결과는 쓰지 않는다.
+        if (
+          current.status !== "REQUESTED" ||
+          current.attempt !== refund.attempt
+        ) {
+          return;
+        }
+        await applyRefund(tx, contract, current, result);
+      });
+    } catch (err) {
+      // 결제사 처리 결과는 Toss에 남아 있다. 시도는 REQUESTED로 두고 조회로 맞춘다.
+      console.warn("[refunds] could not record the Toss result; sync later", {
+        refundId: refundId.toString(),
+        status: result.status,
+      });
+      throw err;
+    }
+  }
+
+  // 환불 시도를 보낸 뒤 현재 상태를 돌려준다. 결과 기록 단계의 실패는 응답을 막지 않는다(REQUESTED로 보인다).
+  async function dispatchThenOverview(contractId: bigint, refundId: bigint) {
+    await dispatchRefund(contractId, refundId).catch((err: unknown) => {
+      if (err instanceof AppError) throw err;
+    });
+    return inTransaction((tx) => overviewOf(tx, contractId));
   }
 
   function acceptedOf(contract: Locked) {
@@ -442,7 +490,7 @@ export function createCancelService({
 
     // 상대방의 승인·거절, 제안자의 철회. 승인하면 계약·제작을 취소하고 환불(있으면)을 요청한다.
     async respond(user, contractId, cancellationId, action) {
-      return inTransaction(async (tx) => {
+      const refundId = await inTransaction(async (tx) => {
         const { userId, contract } = await lock(tx, user, contractId);
         const target = contract.cancellations.find(
           (c) => c.id === cancellationId,
@@ -463,7 +511,7 @@ export function createCancelService({
             where: { id: cancellationId },
             data: { status: "WITHDRAWN" },
           });
-          return overviewOf(tx, contractId);
+          return null;
         }
         if (target.proposedBy === userId) {
           throw new AppError(
@@ -491,7 +539,7 @@ export function createCancelService({
               workRequestId: contract.workRequestId,
             },
           ]);
-          return overviewOf(tx, contractId);
+          return null;
         }
 
         // 승인: 제안 뒤 결제가 끝났으면 금액이 맞지 않으므로 다시 제안해야 한다.
@@ -538,6 +586,7 @@ export function createCancelService({
           `양측이 계약 취소에 합의했습니다. 완료 작업 대가 ${won(target.completedWorkKrw)}, 환불 ${won(target.refundKrw)}.`,
         );
         if (payment && target.refundKrw > 0n) {
+          // 1단계: 승인과 환불 시도를 함께 커밋한다. Toss 호출은 커밋 뒤에 한다.
           const refund = await tx.refund.create({
             data: {
               contractId,
@@ -546,29 +595,34 @@ export function createCancelService({
               amountKrw: target.refundKrw,
             },
           });
-          await executeRefund(tx, contract, refund);
-        } else {
-          await settleIfReady(tx, contractId);
+          return refund.id;
         }
-        return overviewOf(tx, contractId);
+        await settleIfReady(tx, contractId);
+        return null;
       });
+      if (refundId === null) {
+        return inTransaction((tx) => overviewOf(tx, contractId));
+      }
+      return dispatchThenOverview(contractId, refundId);
     },
 
     // REFUND-01: 실패한 환불을 새 시도로 다시 요청한다(같은 시도는 Toss가 같은 결과를 준다).
     async retryRefund(user, contractId) {
-      return inTransaction(async (tx) => {
+      if (!toss) throw tossUnavailable();
+      const refundId = await inTransaction(async (tx) => {
         const { contract } = await lock(tx, user, contractId);
         const { refund } = acceptedOf(contract);
         if (!refund || refund.status !== "FAILED") {
           throw conflict("실패한 환불만 다시 요청할 수 있습니다.");
         }
-        const next = await tx.refund.update({
+        // 1단계: 새 시도 번호(새 멱등 키)를 먼저 커밋한다.
+        await tx.refund.update({
           where: { id: refund.id },
           data: { status: "REQUESTED", attempt: refund.attempt + 1 },
         });
-        await executeRefund(tx, contract, next);
-        return overviewOf(tx, contractId);
+        return refund.id;
       });
+      return dispatchThenOverview(contractId, refundId);
     },
 
     // 결과가 불명확한 환불은 Toss 주문 조회로 맞춘다. 취소되지 않았으면 FAILED로 두어 재시도할 수 있게 한다.
@@ -579,6 +633,14 @@ export function createCancelService({
         if (
           !refund ||
           (refund.status !== "UNKNOWN" && refund.status !== "REQUESTED")
+        ) {
+          return overviewOf(tx, contractId);
+        }
+        // 방금 보낸 시도는 Toss 응답을 기다리는 중일 수 있다. 그때 "취소 기록 없음"으로 실패 처리하면
+        // 재시도가 새 멱등 키로 한 번 더 환불할 수 있으므로, 응답 대기 시간이 지난 뒤에만 조회로 판정한다.
+        if (
+          refund.status === "REQUESTED" &&
+          now().getTime() - refund.updatedAt.getTime() < REFUND_SYNC_GRACE_MS
         ) {
           return overviewOf(tx, contractId);
         }
@@ -757,6 +819,13 @@ export function createCancelService({
       const adminId = requireAdmin(user);
       const { reason } = disputeResolveSchema.parse(input);
       return inTransaction(async (tx) => {
+        // 잠금 순서: 계약 → 분쟁(신고·정산 등 다른 작업과 같은 순서).
+        const target = await tx.dispute.findUnique({
+          where: { id: disputeId },
+          select: { contractId: true },
+        });
+        if (!target) throw notFound("분쟁");
+        await tx.$queryRaw`SELECT id FROM contracts WHERE id = ${target.contractId} FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM disputes WHERE id = ${disputeId} FOR UPDATE`;
         const dispute = await tx.dispute.findUnique({
           where: { id: disputeId },
@@ -769,7 +838,6 @@ export function createCancelService({
         if (!dispute) throw notFound("분쟁");
         if (dispute.status !== "OPEN")
           throw conflict("처리가 끝난 분쟁입니다.");
-        await tx.$queryRaw`SELECT id FROM contracts WHERE id = ${dispute.contractId} FOR UPDATE`;
         await tx.dispute.update({
           where: { id: disputeId },
           data: {

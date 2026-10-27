@@ -5,8 +5,7 @@
 ALTER TABLE "work_requests" DROP CONSTRAINT "work_requests_closed_reason_check";
 ALTER TABLE "work_requests" ADD CONSTRAINT "work_requests_closed_reason_check" CHECK ("closed_reason" IS NULL OR "closed_reason" IN ('OTHER_SELECTED', 'PROJECT_DELETED', 'NO_SELECTION'));
 
--- 알림 종류: '선정됨'(APPLICATION_ACCEPTED)을 '협의 요청'(DISCUSSION_REQUESTED)으로 바꾸고, 철회·무선정 종료를 추가한다.
--- 이미 저장된 알림이 있으면 새 이름으로 옮긴다(제약을 다시 만들기 전에).
+-- 알림 종류: '협의 요청'(DISCUSSION_REQUESTED)·철회·무선정 종료를 추가한다.
+-- 과거 '선정됨'(APPLICATION_ACCEPTED) 알림은 당시 실제로 선정된 기록이므로 바꾸지 않고 그대로 둔다(새로 만들지는 않는다).
 ALTER TABLE "notifications" DROP CONSTRAINT "notifications_event_type_check";
-UPDATE "notifications" SET "event_type" = 'DISCUSSION_REQUESTED' WHERE "event_type" = 'APPLICATION_ACCEPTED';
-ALTER TABLE "notifications" ADD CONSTRAINT "notifications_event_type_check" CHECK ("event_type" IN ('APPLICATION_SUBMITTED', 'DISCUSSION_REQUESTED', 'APPLICATION_AUTO_REJECTED', 'APPLICATION_DECLINED', 'PROJECT_CLOSED', 'APPLICATION_WITHDRAWN', 'PROJECT_ENDED_NO_SELECTION', 'TERMS_SIGNING_REQUESTED', 'CONTRACT_SIGNED', 'PAYMENT_SUCCEEDED'));
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_event_type_check" CHECK ("event_type" IN ('APPLICATION_SUBMITTED', 'APPLICATION_ACCEPTED', 'DISCUSSION_REQUESTED', 'APPLICATION_AUTO_REJECTED', 'APPLICATION_DECLINED', 'PROJECT_CLOSED', 'APPLICATION_WITHDRAWN', 'PROJECT_ENDED_NO_SELECTION', 'TERMS_SIGNING_REQUESTED', 'CONTRACT_SIGNED', 'PAYMENT_SUCCEEDED'));

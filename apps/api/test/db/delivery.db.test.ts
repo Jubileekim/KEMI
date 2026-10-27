@@ -57,6 +57,7 @@ async function inProduction() {
       status: "CONFIRMED",
       confirmedAt: new Date(),
       submittedBy: deal.client.userId,
+      commandId: randomUUID(),
     },
   });
   const started = await post(
@@ -65,17 +66,22 @@ async function inProduction() {
   );
   expect(started.body.status).toBe("IN_PROGRESS");
 
+  // 같은 commandId로 다시 보내면 같은 파일을 쓴다(진짜 재전송과 같게).
+  const filesByCommand = new Map<string, string>();
   const submit = async (
     kind: "DRAFT" | "REVIEW" | "FINAL",
     commandId = randomUUID(),
-  ) =>
-    post(deal.creator.token, `/api/contracts/${deal.contractId}/deliverables`, {
-      commandId,
-      kind,
-      fileIds: [
-        await readyFile(deal.creator, "DELIVERABLE", deal.workRequestId),
-      ],
-    });
+  ) => {
+    const fileId =
+      filesByCommand.get(commandId) ??
+      (await readyFile(deal.creator, "DELIVERABLE", deal.workRequestId));
+    filesByCommand.set(commandId, fileId);
+    return post(
+      deal.creator.token,
+      `/api/contracts/${deal.contractId}/deliverables`,
+      { commandId, kind, fileIds: [fileId] },
+    );
+  };
   const revise = (
     deliverableId: string,
     type: "GENERAL" | "DRAFT_FEEDBACK" | "CONTRACT_FIX",
@@ -158,6 +164,33 @@ describe("검토·수정·최종 수령 (DEL·REV)", () => {
     const resent = await deal.submit("REVIEW", commandId);
     expect(resent.body.deliverables).toHaveLength(3);
     expect(resent.body.revisionsUsed).toBe(1);
+
+    // 같은 식별자에 다른 내용(종류·파일·메모)은 409이고 새 버전을 만들지 않는다.
+    const changedFile = await readyFile(
+      creator,
+      "DELIVERABLE",
+      deal.workRequestId,
+    );
+    const deliverables = `/api/contracts/${contractId}/deliverables`;
+    const reused = await Promise.all(
+      [
+        { kind: "REVIEW", fileIds: [changedFile] },
+        { kind: "FINAL", fileIds: resent.body.deliverables[2].fileIds },
+        {
+          kind: "REVIEW",
+          fileIds: resent.body.deliverables[2].fileIds,
+          note: "메모 추가",
+        },
+      ].map((body) =>
+        post(creator.token, deliverables, { commandId, ...body }),
+      ),
+    );
+    expect(reused.map((r) => r.status)).toEqual([409, 409, 409]);
+    expect(
+      await prisma.deliverable.count({
+        where: { contractId: BigInt(contractId) },
+      }),
+    ).toBe(3);
 
     // 승인 전에는 최종본을 낼 수 없고, 검토본 승인만으로는 정산되지 않는다.
     expect((await deal.submit("FINAL")).status).toBe(409);
@@ -396,5 +429,49 @@ describe("리뷰 (REVIEW-01)", () => {
         where: { eventType: "REVIEW_RECEIVED" },
       }),
     ).toBe(2);
+  });
+});
+
+describe("수정 요청 재전송 (REV-01 멱등성)", () => {
+  it("같은 commandId·같은 내용은 한 번만 만들고, 대상·종류·항목·메모가 다르면 409", async () => {
+    const deal = await inProduction();
+    const review = await deal.submit("REVIEW");
+    const reviewId = deal.latestId(review.body);
+    const commandId = randomUUID();
+    const items = [
+      { position: "00:42", problem: "자막이 빠릅니다.", desired: "1초 더" },
+    ];
+    const body = { commandId, items };
+
+    const sent = await Promise.all([
+      deal.revise(reviewId, "GENERAL", body),
+      deal.revise(reviewId, "GENERAL", body),
+    ]);
+    expect(sent.map((r) => r.status)).toEqual([201, 201]);
+    // 공백 차이는 입력 정리 뒤 같은 값이다.
+    const trimmed = await deal.revise(reviewId, "GENERAL", {
+      commandId,
+      items: [{ ...items[0], problem: " 자막이 빠릅니다. " }],
+    });
+    expect(trimmed.status).toBe(201);
+
+    const changed = await Promise.all([
+      deal.revise(reviewId, "CONTRACT_FIX", body),
+      deal.revise(reviewId, "GENERAL", {
+        commandId,
+        items: [{ ...items[0], desired: "2초 더" }],
+      }),
+      deal.revise(reviewId, "GENERAL", { ...body, note: "추가 메모" }),
+      deal.revise(reviewId, "GENERAL", {
+        commandId,
+        items: [{ problem: items[0]?.problem, desired: items[0]?.desired }],
+      }),
+    ]);
+    expect(changed.map((r) => r.status)).toEqual([409, 409, 409, 409]);
+    expect(
+      await prisma.revisionRequest.count({
+        where: { contractId: BigInt(deal.contractId) },
+      }),
+    ).toBe(1);
   });
 });

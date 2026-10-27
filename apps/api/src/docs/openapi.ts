@@ -1222,7 +1222,7 @@ const openApiDocument = {
         tags: ["cancel"],
         summary: "취소 승인",
         description:
-          "제안하지 않은 당사자. 계약·제작을 CANCELED로 바꾸고, 환불액이 있으면 Toss 부분 취소를 요청한다(`Idempotency-Key: refund-{{cancellationId}}-{{attempt}}`). 결과는 SUCCEEDED·FAILED·UNKNOWN.",
+          "제안하지 않은 당사자. 계약·제작을 CANCELED로 바꾸고, 환불액이 있으면 승인과 환불 시도를 먼저 커밋한 뒤 Toss 부분 취소를 요청한다(`Idempotency-Key: refund-{{cancellationId}}-{{attempt}}`). 결과는 SUCCEEDED(주문 번호·원결제·남은 금액이 모두 맞을 때만)·FAILED·UNKNOWN, 결과 기록이 실패하면 REQUESTED로 남아 조회로 맞춘다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId"), idParam("cancellationId")],
         responses: {
@@ -1294,7 +1294,7 @@ const openApiDocument = {
         tags: ["cancel"],
         summary: "환불 결과 조회",
         description:
-          "REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 남은 금액이 맞으면 SUCCEEDED, 취소 기록이 없으면 FAILED(재시도 가능).",
+          "REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원결제·남은 금액이 모두 맞으면 SUCCEEDED, 취소 기록이 없으면 FAILED(재시도 가능). 보낸 지 30초가 지나지 않은 REQUESTED는 판정하지 않고 그대로 둔다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         responses: {
@@ -1819,7 +1819,7 @@ const openApiDocument = {
         tags: ["catalog"],
         summary: "작업물 공개 (PORT-02)",
         description:
-          "영상·목적·본인 역할(1개 이상)이 있어야 한다. 고객 의뢰 작업(CLIENT_WORK)은 고객 공개 동의가 있어야 한다 [제안, D16]. 고객 납품물은 자동으로 공개되지 않는다.",
+          "영상·목적·본인 역할(1개 이상)이 있어야 한다. 고객 의뢰 작업(CLIENT_WORK)은 고객 동의 확인 기능이 준비될 때까지 공개할 수 없다(409, DB CHECK로도 막음) [D16]. 고객 납품물은 자동으로 공개되지 않는다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("portfolioId")],
         responses: {
@@ -2220,7 +2220,7 @@ const openApiDocument = {
         tags: ["production"],
         summary: "제작 자료 내기 (READY-01)",
         description:
-          "의뢰인. 파일(확인이 끝난 본인 MATERIAL 파일)·실물 발송(택배사·송장번호)·메모. 문제가 신고된 자료는 `replacesMaterialId`로 대체한다(원래 자료는 REPLACED). 제작 준비 단계에서만.",
+          "의뢰인. 파일(확인이 끝난 본인 MATERIAL 파일)·실물 발송(택배사·송장번호)·메모. 문제가 신고된 자료는 `replacesMaterialId`로 대체한다(원래 자료는 REPLACED). 제작 준비 단계에서만. `commandId`(화면이 만든 UUID)가 같고 내용도 같은 재전송은 자료를 새로 만들지 않고 현재 상태를 준다. 같은 `commandId`에 다른 내용이면 409.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         requestBody: {

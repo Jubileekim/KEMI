@@ -274,6 +274,39 @@ describe("협의 종료·계약 전후 (CHAT-04·05, WORK-04)", () => {
     ).toHaveLength(2);
   });
 
+  it("요청이 끝나는 중에 보낸 메시지는 종료가 확정될 때까지 기다렸다가 409가 된다", async () => {
+    const { creators, ids } = await negotiations(1);
+    const id = BigInt(ids[0] ?? "0");
+    let pending: ReturnType<typeof send> | undefined;
+    let settledEarly = false;
+    await prisma.$transaction(async (tx) => {
+      // 거절 처리가 요청 행을 바꾸고 아직 커밋하지 않은 상태
+      await tx.workRequest.update({
+        where: { id },
+        data: { status: "DECLINED" },
+      });
+      pending = send(
+        creators[0]?.token ?? "",
+        ids[0] ?? "",
+        "종료 직전 메시지",
+      );
+      const raced = await Promise.race([
+        pending.then(() => true),
+        new Promise<boolean>((resolve) => {
+          setTimeout(() => resolve(false), 500);
+        }),
+      ]);
+      settledEarly = raced;
+    });
+    expect(settledEarly).toBe(false);
+    expect((await pending)?.status).toBe(409);
+    expect(
+      await prisma.chatMessage.count({
+        where: { room: { workRequestId: id }, kind: "USER" },
+      }),
+    ).toBe(0);
+  });
+
   it("서명 요청·계약 체결이 같은 방에 시스템 안내로 남고, 계약 뒤에도 대화가 이어진다", async () => {
     const { client, creators, ids } = await negotiations(1);
     const id = ids[0] ?? "";
