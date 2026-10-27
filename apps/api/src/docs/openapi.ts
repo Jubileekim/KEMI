@@ -1222,7 +1222,7 @@ const openApiDocument = {
         tags: ["cancel"],
         summary: "취소 승인",
         description:
-          "제안하지 않은 당사자. 계약·제작을 CANCELED로 바꾸고, 환불액이 있으면 Toss 부분 취소를 요청한다(`Idempotency-Key: refund-{{cancellationId}}-{{attempt}}`). 결과는 SUCCEEDED·FAILED·UNKNOWN.",
+          "제안하지 않은 당사자. 계약·제작을 CANCELED로 바꾸고, 환불액이 있으면 승인과 환불 시도를 먼저 커밋한 뒤 Toss 부분 취소를 요청한다(`Idempotency-Key: refund-{{cancellationId}}-{{attempt}}`). 결과는 SUCCEEDED(주문 번호·원결제·남은 금액이 모두 맞을 때만)·FAILED·UNKNOWN, 결과 기록이 실패하면 REQUESTED로 남아 조회로 맞춘다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId"), idParam("cancellationId")],
         responses: {
@@ -1294,7 +1294,7 @@ const openApiDocument = {
         tags: ["cancel"],
         summary: "환불 결과 조회",
         description:
-          "REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 남은 금액이 맞으면 SUCCEEDED, 취소 기록이 없으면 FAILED(재시도 가능).",
+          "REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원결제·남은 금액이 모두 맞으면 SUCCEEDED, 취소 기록이 없으면 FAILED(재시도 가능). 보낸 지 30초가 지나지 않은 REQUESTED는 판정하지 않고 그대로 둔다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         responses: {

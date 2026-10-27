@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createCancelService } from "../../src/cancel/cancel.service.js";
+import {
+  createCancelService,
+  REFUND_SYNC_GRACE_MS,
+} from "../../src/cancel/cancel.service.js";
 import type { TossClient, TossOutcome } from "../../src/payments/toss.js";
 import { auth, type Party, signedDeal, signup } from "../support/deal.js";
 import { createTestApp } from "../support/test-app.js";
@@ -62,6 +65,7 @@ async function startedDeal() {
       status: "CONFIRMED",
       confirmedAt: new Date(),
       submittedBy: deal.client.userId,
+      commandId: randomUUID(),
     },
   });
   await post(
@@ -282,7 +286,194 @@ describe("취소 합의·부분 환불 (CANCEL·REFUND)", () => {
   });
 });
 
+describe("환불 결과 판정과 2단계 기록 (#63 리뷰)", () => {
+  async function acceptFullRefund() {
+    const deal = await startedDeal();
+    const proposed = await post(
+      deal.client.token,
+      `${deal.base}/cancellations`,
+      { reason: "취소합니다.", completedWorkKrw: 0, refundKrw: 200_000 },
+    );
+    const { id } = proposed.body.cancellations[0];
+    const accept = () =>
+      post(deal.creator.token, `${deal.base}/cancellations/${id}/accept`);
+    return { ...deal, id, accept };
+  }
+
+  const canceledWith = (
+    orderId: string,
+    fields: { totalAmount?: number; balanceAmount?: number },
+  ): TossOutcome => ({
+    kind: "payment",
+    payment: {
+      paymentKey: "pk",
+      orderId,
+      status: "CANCELED",
+      totalAmount: fields.totalAmount ?? 200_000,
+      ...(fields.balanceAmount === undefined
+        ? {}
+        : { balanceAmount: fields.balanceAmount }),
+    },
+  });
+
+  it("남은 금액이 없거나 원결제 금액이 다른 응답은 성공이 아니라 UNKNOWN", async () => {
+    const missing = await acceptFullRefund();
+    cancel.mockResolvedValueOnce(canceledWith(missing.payment.orderId, {}));
+    const noBalance = await missing.accept();
+    expect(noBalance.body.cancellations[0].refund.status).toBe("UNKNOWN");
+    expect(noBalance.body.settlementHold).toBe("환불 처리 중");
+
+    // 조회도 같은 기준으로 판정한다. 증거가 맞으면 그때 성공.
+    getByOrderId.mockResolvedValueOnce(
+      canceledWith(missing.payment.orderId, {
+        totalAmount: 150_000,
+        balanceAmount: 0,
+      }),
+    );
+    const wrongTotal = await post(
+      missing.client.token,
+      `${missing.base}/refund/sync`,
+    );
+    expect(wrongTotal.body.cancellations[0].refund.status).toBe("UNKNOWN");
+    getByOrderId.mockResolvedValueOnce(
+      canceledWith(missing.payment.orderId, { balanceAmount: 0 }),
+    );
+    const synced = await post(
+      missing.client.token,
+      `${missing.base}/refund/sync`,
+    );
+    expect(synced.body.cancellations[0].refund.status).toBe("SUCCEEDED");
+  });
+
+  it("Toss 성공 뒤 DB 기록이 실패해도 환불 시도·멱등 키가 남고, 응답 대기 시간이 지난 뒤 조회로 맞춘다", async () => {
+    // 환불 시도 시각(updatedAt)은 실제 시계로 남으므로 지금 시각에서 시작한다.
+    let clock = new Date();
+    app = createTestApp({
+      prisma,
+      cancelService: createCancelService({
+        prisma,
+        toss: fakeToss,
+        now: () => clock,
+      }),
+    });
+    const deal = await acceptFullRefund();
+    // 결과 기록 단계(SUCCEEDED로 바꾸는 UPDATE)만 실패하게 만든다.
+    await prisma.$executeRawUnsafe(`
+      CREATE OR REPLACE FUNCTION test_fail_refund_success() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.status = 'SUCCEEDED' THEN RAISE EXCEPTION 'simulated failure'; END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TRIGGER test_fail_refund_success BEFORE UPDATE ON refunds
+      FOR EACH ROW EXECUTE FUNCTION test_fail_refund_success()`);
+    try {
+      cancel.mockResolvedValueOnce(
+        canceledWith(deal.payment.orderId, { balanceAmount: 0 }),
+      );
+      const accepted = await deal.accept();
+      // 승인과 환불 시도는 이미 커밋됐다. 결과만 기록되지 않았다.
+      expect(accepted.status).toBe(200);
+      expect(accepted.body.contractStatus).toBe("CANCELED");
+      expect(accepted.body.cancellations[0].refund).toMatchObject({
+        status: "REQUESTED",
+        attempt: 1,
+      });
+    } finally {
+      await prisma.$executeRawUnsafe(
+        "DROP TRIGGER IF EXISTS test_fail_refund_success ON refunds",
+      );
+      await prisma.$executeRawUnsafe(
+        "DROP FUNCTION IF EXISTS test_fail_refund_success()",
+      );
+    }
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idempotencyKey: `refund-${deal.id}-1` }),
+    );
+
+    // 다시 승인하거나 재시도해도 새 취소·새 멱등 키가 생기지 않는다.
+    expect((await deal.accept()).status).toBe(409);
+    expect(
+      (await post(deal.client.token, `${deal.base}/refund/retry`)).status,
+    ).toBe(409);
+    expect(await prisma.refund.count()).toBe(1);
+    expect(cancel).toHaveBeenCalledTimes(1);
+
+    // 방금 보낸 시도는 조회로 판정하지 않는다(응답 대기 중일 수 있음).
+    const early = await post(deal.client.token, `${deal.base}/refund/sync`);
+    expect(early.body.cancellations[0].refund.status).toBe("REQUESTED");
+    expect(getByOrderId).not.toHaveBeenCalled();
+
+    clock = new Date(clock.getTime() + REFUND_SYNC_GRACE_MS + 1_000);
+    getByOrderId.mockResolvedValueOnce(
+      canceledWith(deal.payment.orderId, { balanceAmount: 0 }),
+    );
+    const synced = await post(deal.client.token, `${deal.base}/refund/sync`);
+    expect(synced.body.cancellations[0].refund).toMatchObject({
+      status: "SUCCEEDED",
+      attempt: 1,
+    });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Toss 키 설정 오류는 실패로 남기고, 설정을 고친 뒤 새 시도로 재요청한다", async () => {
+    const deal = await acceptFullRefund();
+    cancel.mockResolvedValueOnce({
+      kind: "rejected",
+      httpStatus: 401,
+      code: "UNAUTHORIZED_KEY",
+      message: "인증되지 않은 키",
+    });
+    const accepted = await deal.accept();
+    expect(accepted.body.cancellations[0].refund).toMatchObject({
+      status: "FAILED",
+      failureCode: "UNAUTHORIZED_KEY",
+    });
+    cancel.mockResolvedValueOnce(
+      canceledWith(deal.payment.orderId, { balanceAmount: 0 }),
+    );
+    const retried = await post(deal.client.token, `${deal.base}/refund/retry`);
+    expect(retried.body.cancellations[0].refund).toMatchObject({
+      status: "SUCCEEDED",
+      attempt: 2,
+    });
+  });
+});
+
 describe("분쟁·운영 (DISPUTE·OPS)", () => {
+  it("분쟁 처리와 증빙 제출이 동시에 와도 잠금 순서가 같아 교착 없이 끝난다", async () => {
+    const deal = await startedDeal();
+    const { client, creator, base } = deal;
+    const admin = await signup(app, "CLIENT", 9);
+    await prisma.user.update({
+      where: { id: admin.userId },
+      data: { role: "ADMIN" },
+    });
+    const opened = await post(creator.token, `${base}/disputes`, {
+      reason: "자료가 계약과 다르게 왔습니다.",
+    });
+    const disputeId = opened.body.disputes[0].id;
+    const resolve = () =>
+      post(admin.token, `/api/admin/disputes/${disputeId}/resolve`, {
+        reason: "확인했습니다.",
+      });
+    const evidence = (token: string) =>
+      post(token, `${base}/disputes/${disputeId}/evidence`, { note: "증빙" });
+    const results = await Promise.all([
+      resolve(),
+      evidence(client.token),
+      resolve(),
+      evidence(creator.token),
+    ]);
+    const statuses = results.map((r) => r.status);
+    expect(statuses.filter((code) => code >= 500)).toEqual([]);
+    expect([statuses[0], statuses[2]].sort()).toEqual([200, 409]);
+    expect(
+      await prisma.operationRecord.count({ where: { targetType: "DISPUTE" } }),
+    ).toBe(1);
+  });
+
   it("분쟁 중에는 수령 확인 뒤에도 정산하지 않고, 운영자가 근거를 남기고 닫으면 정산이 이어진다", async () => {
     const deal = await startedDeal();
     const { client, creator, base } = deal;
