@@ -64,7 +64,9 @@ describe("인증 Axios 경계", () => {
       isAuthenticated: () => true,
     });
     api.defaults.adapter = async (config) => {
-      expect(config.headers.get("Authorization")).toBe("Bearer signed-in-token");
+      expect(config.headers.get("Authorization")).toBe(
+        "Bearer signed-in-token",
+      );
       return {
         data: { items: [] },
         status: 200,
