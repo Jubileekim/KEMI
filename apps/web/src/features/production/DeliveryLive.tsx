@@ -67,7 +67,8 @@ function SubmitForm({
       className="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault();
-        submit.mutate(new FormData(event.currentTarget));
+        const el = event.currentTarget;
+        submit.mutate(new FormData(el), { onSuccess: () => el.reset() });
       }}
     >
       <Field id="deliverable-kind" label="버전 종류">
@@ -150,7 +151,8 @@ function RevisionForm({
       className="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault();
-        send.mutate(new FormData(event.currentTarget));
+        const el = event.currentTarget;
+        send.mutate(new FormData(el), { onSuccess: () => el.reset() });
       }}
     >
       <Field id={`revision-type-${deliverableId}`} label="수정 종류">

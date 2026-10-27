@@ -83,7 +83,8 @@ function MaterialForm({
       className="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault();
-        add.mutate(new FormData(event.currentTarget));
+        const el = event.currentTarget;
+        add.mutate(new FormData(el), { onSuccess: () => el.reset() });
       }}
     >
       <Field id="material-kind" label="자료 종류">
@@ -257,7 +258,8 @@ function DeadlinePanel({
           className="grid gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault();
-            request.mutate(new FormData(event.currentTarget));
+            const el = event.currentTarget;
+            request.mutate(new FormData(el), { onSuccess: () => el.reset() });
           }}
         >
           <Field id="deadline-date" label="새 납품 기한">
@@ -316,8 +318,12 @@ export default function ProductionLive({ contractId }: { contractId: string }) {
             ["결제", p.paid ? "완료" : "대기"],
             [
               "자료 확인",
-              p.materials.some((m) => m.status === "CONFIRMED")
-                ? "확인된 자료 있음"
+              p.materials.some((m) => m.status === "CONFIRMED") &&
+              !p.materials.some(
+                (m) =>
+                  m.status === "SUBMITTED" || m.status === "ISSUE_REPORTED",
+              )
+                ? "모두 확인"
                 : "확인 대기",
             ],
             ["제작 시작", p.startedAt ? dateTime(p.startedAt) : "시작 전"],
@@ -338,7 +344,8 @@ export default function ProductionLive({ contractId }: { contractId: string }) {
         )}
         {role === "creator" && p.status === "PREPARING" && !p.readyToStart && (
           <p className="text-muted-foreground">
-            결제가 끝나고 자료를 확인하면 제작을 시작할 수 있어요.
+            결제가 끝나고 낸 자료를 모두 정상 확인하면 제작을 시작할 수
+            있어요(문제 신고된 자료는 대체 자료가 필요해요).
           </p>
         )}
       </Card>
