@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 for (const role of ["CLIENT", "CREATOR"] as const) {
-  test(`실제 API: ${role} 가입 → 온보딩 저장 → 세션 복원`, async ({
+  test(`실제 API: ${role} 가입 → 온보딩(내 프로필로 이동) 저장 → 세션 복원`, async ({
     page,
   }, info) => {
     const mockRequests: string[] = [];
@@ -33,9 +33,11 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
       .click();
     expect((await signup).status()).toBe(201);
     await expect(page).toHaveURL(/\/me\/profile$/);
+    // 온보딩은 내 프로필 화면으로 이동한다(#82).
     await page.goto("/onboarding");
+    await expect(page).toHaveURL(/\/me\/profile$/);
     await expect(
-      page.getByRole("heading", { name: "프로필 완성하기", exact: true }),
+      page.getByRole("heading", { name: "내 프로필", exact: true }),
     ).toBeVisible();
     await page
       .getByLabel("표시 이름 (필수)", { exact: true })
@@ -53,15 +55,6 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
     await expect(
       page.getByLabel("표시 이름 (필수)", { exact: true }),
     ).toHaveValue("저장된 이름");
-    await expect(
-      page.getByRole("link", {
-        name: role === "CLIENT" ? "첫 모집 작성하기" : "모집 둘러보기",
-        exact: true,
-      }),
-    ).toHaveAttribute(
-      "href",
-      role === "CLIENT" ? "/campaigns/new" : "/campaigns",
-    );
     expect(mockRequests).toEqual([]);
   });
 }

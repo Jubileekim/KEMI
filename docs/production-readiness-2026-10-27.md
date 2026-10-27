@@ -7,7 +7,7 @@
 ## 발견한 문제와 이번 수정
 
 - 운영 새 브라우저에서 작품·모집 조회가 취소된 뒤 무한 로딩하는 문제를 재현했다. 추적 기록에서 `/api/auth/refresh` 401과 공개 목록 요청 `net::ERR_ABORTED`를 확인했다. 세션 초기화가 Query 캐시와 진행 중 조회를 지웠지만 공개 화면의 관찰자는 이전 조회에 남았다. 공개 라우트를 세션 epoch 변경 시 다시 마운트해 조회를 재개한다. 로그인·회원가입·OAuth 콜백은 처리 중 상태 보존을 위해 제외했다.
-- `/onboarding`만 등록된 회원 라우트 중 운영에서 일반 Placeholder로 남아 있었다. 기존 실제 프로필 컴포넌트로 연결하고 역할별 다음 동작을 제공했다. 역할·이름은 회원가입 API에서 이미 저장하므로 중복 가입이나 역할 변경 API를 만들지 않았다.
+- `/onboarding`만 등록된 회원 라우트 중 운영에서 일반 Placeholder로 남아 있었다. 내 프로필 화면(`/me/profile`)으로 이동하도록 연결했다(#82와 같은 방식). 역할·이름은 회원가입 API에서 이미 저장하므로 중복 가입이나 역할 변경 API를 만들지 않았다.
 - 하단과 운영 공간에 남은 개발 단계 문구를 정리했다.
 - 기본 Web CI는 Mock UI 테스트였다. 이름을 명확히 하고, production 빌드 + 실제 API + 격리 PostgreSQL로 실행하는 `Web Live API CI`를 추가했다. 운영 자격증명이나 운영 DB는 사용하지 않는다.
 - 배포 주소의 공개 조회와 로그인 폼 활성화를 확인하는 별도 수동 워크플로를 추가했다. 이는 운영 전체 거래 테스트가 아니다.
@@ -18,7 +18,7 @@
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `/signup`, `/login`                          | `/api/auth/signup`, `/login`, `/refresh`                                                          | 두 역할 가입·새로고침 세션 복원 로컬 실제 API 통과. 운영 폼 별도 확인                                |
 | Google 로그인·콜백                           | `/api/auth/google/start`, `/callback`, `/api/auth/social/signup`                                  | 코드 연결됨. 희년님 Google OAuth 및 Render 설정 후 실제 계정 검증 필요                               |
-| `/onboarding`, `/me/profile`                 | GET/PATCH `/api/profiles/me`                                                                      | 온보딩 Placeholder 수정. 두 역할 저장·재조회 로컬 검증                                               |
+| `/onboarding`, `/me/profile`                 | GET/PATCH `/api/profiles/me`                                                                      | 온보딩은 내 프로필로 이동. 두 역할 저장·재조회 로컬 검증                                             |
 | `/`, `/works/:id`, `/creators/:id`           | `/api/feed`, `/api/portfolios/:id`, `/media`, `/api/creators/:id`                                 | 운영 피드 200·0건 확인. 작품·제작자 상세는 공개 데이터 생성 후 확인 필요                             |
 | `/studio/packages`, `/studio/portfolio`      | `/api/creator/packages`, `/portfolios`, `/service/*`, `/api/files`                                | 실제 API 코드 있음. 공개하려면 패키지·서비스·작품 공개 조건 충족 필요. 운영 Storage 업로드 미확인    |
 | `/campaigns`, 상세·작성·수정                 | `/api/projects`, `/api/project-drafts`                                                            | 운영 목록 200·0건. 로컬 작성·초안·공개·재조회 통과                                                   |
