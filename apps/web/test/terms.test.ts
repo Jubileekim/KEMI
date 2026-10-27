@@ -200,6 +200,7 @@ describe("3-A explicit Mock terms versions", () => {
       }).package,
     ).toBeNull();
     const doc = first();
+    if (!sources.campaign) throw new Error("campaign fixture missing");
     const changed = {
       ...sources,
       campaign: { ...sources.campaign, budget: "999999" },
@@ -216,7 +217,7 @@ describe("3-A explicit Mock terms versions", () => {
       item,
       changed,
     );
-    expect(next.sources.campaign.budget).toBe("150000");
+    expect(next.sources.campaign?.budget).toBe("150000");
     expect(next.sources.package?.price).toBe("100000");
     expect(next.versions[0]?.values.amount).toBe("110000");
     expect(() => saveTerms(undefined, cmd, client, item, changed)).toThrow(

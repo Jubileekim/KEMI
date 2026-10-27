@@ -8,6 +8,8 @@ import {
 } from "./proposal-model";
 import Button from "../components/ui/button";
 import ProposalConfirm from "./ProposalConfirm";
+import RequestInbox from "../features/requests/RequestInbox";
+import { packageFields, packageSchema } from "./studio-model";
 
 export default function ProposalCard({
   item,
@@ -24,6 +26,9 @@ export default function ProposalCard({
 }) {
   const active =
     ["PENDING", "DISCUSSING"].includes(item.status) && !item.contracted;
+  let statusLabel = proposalLabels[item.status];
+  if (item.direct && item.status === "PENDING") statusLabel = "응답 대기";
+  if (item.direct && item.status === "DECLINED") statusLabel = "제작자 거절";
   return (
     <article className="showcase-card grid gap-4 break-words">
       <h2 className="type-heading-md">
@@ -32,7 +37,7 @@ export default function ProposalCard({
       </h2>
       <p>
         {item.direct && "직접 의뢰 · "}
-        {item.contracted ? "선정 완료" : proposalLabels[item.status]}
+        {item.contracted ? "선정 완료" : statusLabel}
         {item.contracted ? " · 확정 계약" : " · 계약 미확정"}
       </p>
       <p className="whitespace-pre-wrap">{item.direction}</p>
@@ -53,7 +58,23 @@ export default function ProposalCard({
             · 48시간
           </p>
           <p>수락은 협의 시작이며 계약·결제는 별도예요.</p>
+          <details>
+            <summary>발송 당시 패키지 전체 조건</summary>
+            <dl className="grid gap-2">
+              {Object.entries(packageFields).map(([key, label]) => (
+                <div key={key}>
+                  <dt>{label}</dt>
+                  <dd className="whitespace-pre-wrap">
+                    {item.direct?.snapshot[packageSchema.keyof().parse(key)]}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </details>
         </div>
+      )}
+      {item.direct && (
+        <RequestInbox key={`${item.id}-${item.revision}`} item={item} />
       )}
       <dl className="grid gap-2">
         <div>

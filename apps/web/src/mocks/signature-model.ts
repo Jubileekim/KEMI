@@ -128,6 +128,7 @@ export function selectContract(
   const winner = state.items.find((p) => p.id === id);
   if (!winner) throw new ProposalError("협의가 없어요.", 404);
   if (
+    winner.campaignId &&
     state.items.some(
       (p) => p.campaignId === winner.campaignId && p.contracted && p.id !== id,
     )
@@ -142,6 +143,7 @@ export function selectContract(
       if (p.id === id)
         return { ...p, contracted: true, revision: p.revision + 1 };
       if (
+        winner.campaignId &&
         p.campaignId === winner.campaignId &&
         ["PENDING", "DISCUSSING"].includes(p.status)
       )

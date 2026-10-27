@@ -39,6 +39,7 @@ export const proposalSchema = z.strictObject({
     "WITHDRAWN",
     "ENDED",
     "NOT_SELECTED",
+    "EXPIRED",
   ]),
   reason: z.string(),
   revision: z.number().int().nonnegative(),
@@ -340,4 +341,5 @@ export const proposalLabels = {
   WITHDRAWN: "제작자 철회",
   ENDED: "무선정 종료",
   NOT_SELECTED: "미선정",
+  EXPIRED: "최초 응답 만료",
 };

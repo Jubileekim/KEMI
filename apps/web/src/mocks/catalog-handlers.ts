@@ -2,6 +2,7 @@ import { http, HttpResponse, delay } from "msw";
 import { allMockStudios } from "./studio-handlers";
 import { readMockDisplayName } from "./auth-handlers";
 import { catalogFixture, publicWorks } from "./catalog-model";
+import { readMockPublicIntroduction } from "./profile-handlers";
 
 export function catalogStudios() {
   const studios = new Map(allMockStudios());
@@ -15,15 +16,21 @@ export function catalogCreator(id: string) {
   const packages = studio.packages.filter((p) => p.visibility === "PUBLIC");
   if (!packages.some((p) => p.id === studio.primaryId)) return null;
   const name = readMockDisplayName(id);
+  const synthetic = id === "mock-creator" && !new Map(allMockStudios()).has(id);
   return {
     id,
     name,
+    introduction:
+      readMockPublicIntroduction(id) ??
+      (synthetic
+        ? "개발용 샘플 제작자 소개 · 편집과 영상의 흐름을 검토해요."
+        : ""),
     primaryId: studio.primaryId,
     packages: [...packages].sort(
       (a, b) =>
         Number(b.id === studio.primaryId) - Number(a.id === studio.primaryId),
     ),
-    works: publicWorks(studio, id, name),
+    works: publicWorks(studio, id, name, synthetic),
   };
 }
 let scenario = "success";
@@ -58,7 +65,12 @@ export default [
       Number.isSafeInteger(rawPage) && rawPage > 0
         ? Math.min(rawPage, pages)
         : 1;
-    const work = all.find((w) => w.id === p.get("workId")) ?? null;
+    const work =
+      all.find(
+        (w) =>
+          w.id === p.get("workId") &&
+          (!p.get("creatorId") || w.creatorId === p.get("creatorId")),
+      ) ?? null;
     const creator = catalogCreator(p.get("creatorId") ?? "");
     if ((p.has("workId") && !work) || (p.has("creatorId") && !creator))
       return HttpResponse.json(

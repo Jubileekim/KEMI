@@ -5,6 +5,12 @@ describe("6-A 공개 작업물 경계", () => {
   it("후기·거래 없이 신규 샘플 노출, 비공개 서비스 차단", () => {
     const studio = catalogFixture();
     expect(publicWorks(studio, "mock-creator", "제작자")).toHaveLength(5);
+    expect(publicWorks(studio, "mock-creator", "제작자")[0]?.playable).toBe(
+      false,
+    );
+    expect(
+      publicWorks(studio, "mock-creator", "제작자", true)[0]?.playable,
+    ).toBe(true);
     expect(publicWorks({ ...studio, service: "PRIVATE" }, "c", "n")).toEqual(
       [],
     );

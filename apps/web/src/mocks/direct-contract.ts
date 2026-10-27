@@ -21,4 +21,12 @@ export const directMetadataSchema = z.strictObject({
   snapshot: packageItemSchema,
   conditions: text,
   respondDueAt: z.iso.datetime(),
+  respondedAt: z.iso.datetime().optional(),
 });
+export const directResponseSchema = z.strictObject({
+  id: z.string().uuid(),
+  revision: z.number().int().nonnegative(),
+  action: z.enum(["accept", "decline"]),
+  reason: z.string().trim().max(4000),
+});
+export type DirectResponse = z.infer<typeof directResponseSchema>;
