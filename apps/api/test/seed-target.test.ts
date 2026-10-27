@@ -100,8 +100,8 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
         SEED_CONFIRM_TARGET: "supabase:prodref999",
       },
     ];
-    for (const env of refused) {
+    refused.forEach((env) => {
       expect(() => checkSeedTarget(env)).toThrow(SeedTargetError);
-    }
+    });
   });
 });
