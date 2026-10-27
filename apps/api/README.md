@@ -339,6 +339,8 @@ Supabase 대시보드 **Connect** 화면에서 실제 배포 환경에 맞는 �
 
 Render 계정은 희년님이 관리한다(무료 워크스페이스는 팀원 초대 불가). 팀원은 대시보드 대신 PR로 바꾸고, 배포 결과는 이슈 #27에서 공유한다. 자세한 역할은 절차서 2-0.
 
+**운영 DB 마이그레이션은 배포·서버 시작에 자동으로 묶지 않는다.** `npm start -w @kemi/api`는 앱만 시작한다. `main`에 DB 변경이 들어오기 전에 백업 및 기존 데이터 보존 여부를 확인하고, 별도 개발용 DB에서 해당 커밋의 마이그레이션과 API/DB 테스트를 검증한 다음 담당자 승인 후 `npm run db:deploy -w @kemi/api`로 명시적으로 적용한다. Render 무료 플랜은 pre-deploy command를 제공하지 않으므로 새 코드 배포 전에 이 절차를 별도 수행한다. `prisma migrate status`와 `/health/ready`를 확인하고, 병합·자동 배포 뒤에는 실제 `/api/projects` 조회와 Render 오류 로그를 점검한다. 앱 롤백이 DB 마이그레이션을 되돌리지는 않으므로, 문제가 생겨도 `migrate reset`이나 레거시 테이블 삭제를 운영 DB에 실행하지 않는다. 이미 적용된 7개 이력과 기존 테이블 보존 상태는 [이슈 #24](https://github.com/Jubileekim/KEMI/issues/24)에 기록되어 있다.
+
 헬스 체크는 DB를 보지 않는 `/health`를 쓴다. DB 장애 때문에 Render가 서버를 계속 재시작하지 않게 하기 위해서다. DB까지 확인하려면 `/health/ready`를 사용한다.
 
 무료 플랜은 15분 동안 요청이 없으면 잠들고, 다음 첫 요청에서 약 1분 동안 깨어난다. 시연 전에는 `/health`를 미리 호출해 깨워둔다.
