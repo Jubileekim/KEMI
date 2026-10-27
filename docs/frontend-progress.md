@@ -866,3 +866,10 @@
 - 최종 단위214/214·기본/두flag build:web·운영15개·토큰·전달 파일 형식/diff 결과는 위와 같다. 전체 웹316개는 목록 확인만 했으며 이번에는 연관76개만 실행했다. 실제 제공자·API/DB·운영 인증·배포 검증이 아니다.
 - 5-A/5-B의 클라이언트·명시적 Mock 구현과5-C 통합 검증 범위만 완료다. 실제 서비스의5단계 전체 완료는 아니다. API/파일/PG·미결정 정책/미결제·완료 후 취소/취소 없는 분쟁의 정상 작업 재개·영구 복원/다중 탭, 기존 outputs/tools 포맷·API timeout은 남는다.
 - **다음 작업 하나:** 5단계 취소·환불·분쟁 API 및 D12/D13/D18 정책 조율. 원결제/같은 합의 버전/파일·증빙/보류 해제·운영 권한과 미결제·완료 후 취소/작업 재개 계약을 합의한다. 별도 요청 후 착수하며6단계·PR 병합/자동 병합·명시적 배포는 진행하지 않는다.
+
+### 5-C Git 전달·종료 상태
+
+- 검사/전체 근거 [ceffc73](https://github.com/Jubileekim/KEMI/commit/ceffc73)를 커밋·푸시하고 [Draft PR #70](https://github.com/Jubileekim/KEMI/pull/70)을 생성·이 채팅에 연결했다. base는5-B `10e4b02`다. 이번 범위의 독립 묶음은 [5-A #68](https://github.com/Jubileekim/KEMI/pull/68), [5-B #69](https://github.com/Jubileekim/KEMI/pull/69), [5-C #70](https://github.com/Jubileekim/KEMI/pull/70)으로 분리했다. 모두 Draft/open·미병합이며 선행 병합 후 base 조정 검토가 필요하다.
+- **원격 Web CI(로컬과 별도):** 선행4-E [600ce4d/run40426261708](https://github.com/Jubileekim/KEMI/actions/runs/40426261708)는 포맷·단위·빌드 success, 브라우저 in_progress였다. 따라서 최초 JSON 포맷 실패는 수정됐지만 원격 전체 통과는 아니다. 5-A `3e8c98c`는 base 필터 때문에 실행0건이었다. 5-B [10e4b02/run40430076103](https://github.com/Jubileekim/KEMI/actions/runs/40430076103)는 포맷·단위·빌드 success/브라우저 in_progress, 5-C [ceffc73/run40430191777](https://github.com/Jubileekim/KEMI/actions/runs/40430191777)는 포맷·단위 success/빌드 in_progress였다. 최신 문서 전달은 새 CI 대상이므로 최종 원격 결과는 아직 미검증이며 [#70 최신 Checks](https://github.com/Jubileekim/KEMI/pull/70/checks)를 확인한다. 원격 전체316개 통과를 로컬76개로 대체하지 않는다.
+- 로컬 종료 검증: 단위214/214, 연관 E2E76/76, 기본/두flag build:web, 운영 보호/미연결15개·Mock 제외, 토큰·전달 파일 형식/diff PASS. 서버 API/shared·의존성/lockfile·원본 엑셀/PDF/디자인 키트 변경 없음. 기존 outputs/tools는 시작 상태 그대로 미추적·미포함이다. 브라우저/운영 preview 전용5195/4205를 정리했고 다른 기존 프로세스는 종료하지 않았다.
+- 푸시 뒤 원격 추적 ref가 로컬에 없던 상태를 발견해 해당 브랜치들만 명시적으로 fetch하고 로컬/원격 추적/PR head를 대조했다. 마지막 종료 기록은 문서만 추가하며 [#70 커밋 목록](https://github.com/Jubileekim/KEMI/pull/70/commits)에서 최종 전달 SHA를 확인할 수 있다. 새 기능/다음 범위·병합·자동 병합·명시적 배포/재배포는 실행하지 않았다.
