@@ -24,6 +24,7 @@ on:
         feat/frontend-5a-cancellation,
         feat/frontend-5b-refunds-disputes,
         feat/frontend-5c-public-verification,
+        feat/frontend-6a-public-feed,
       ]
   push:
     branches: [main]

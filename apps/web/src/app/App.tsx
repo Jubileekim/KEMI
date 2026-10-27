@@ -8,6 +8,12 @@ import { screens } from "./routes";
 const AuthForm = lazy(() => import("../features/auth/AuthForm"));
 const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
 const ProfilePage = lazy(() => import("../features/profiles/ProfilePage"));
+const CreatorDetailPage = lazy(
+  () => import("../features/profiles/CreatorDetailPage"),
+);
+const DirectRequestForm = lazy(
+  () => import("../features/requests/DirectRequestForm"),
+);
 const FeedPage = lazy(() => import("../features/portfolio/FeedPage"));
 const WorkDetailPage = lazy(
   () => import("../features/portfolio/WorkDetailPage"),
@@ -86,6 +92,12 @@ export default function App() {
                         <GoogleCallback />
                       )}
                       {screen.path === "/me/profile" && <ProfilePage />}
+                      {screen.path === "/creators/:creatorId" && (
+                        <CreatorDetailPage />
+                      )}
+                      {screen.path === "/creators/:creatorId/request" && (
+                        <DirectRequestForm />
+                      )}
                       {screen.path === "/" && <FeedPage />}
                       {screen.path === "/works/:workId" && <WorkDetailPage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
@@ -126,6 +138,8 @@ export default function App() {
                         ...proposalPaths,
                         "/",
                         "/works/:workId",
+                        "/creators/:creatorId",
+                        "/creators/:creatorId/request",
                         "/contracts/:contractId/payment",
                         "/payments/result",
                         "/contracts/:contractId/production",

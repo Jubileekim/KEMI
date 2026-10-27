@@ -3,6 +3,7 @@ import type { AuthUser } from "@kemi/shared";
 import type { Campaign } from "./campaign-model";
 import type { StudioState } from "./studio-model";
 import { recruitmentStatus } from "./discovery-model";
+import { directMetadataSchema } from "./direct-contract";
 
 // D06/D07 candidate limits. These are deliberately not shared API contracts.
 const text = z.string().trim().min(1).max(4000);
@@ -20,7 +21,8 @@ export const proposalInputSchema = z.strictObject({
 });
 export const proposalSchema = z.strictObject({
   id: z.string().uuid(),
-  campaignId: z.string(),
+  campaignId: z.string().nullable(),
+  direct: directMetadataSchema.optional(),
   clientId: z.string(),
   creatorId: z.string(),
   creatorName: text,
@@ -276,6 +278,8 @@ export function changeProposals(
   }
   if (item.contracted)
     throw new ProposalError("확정 계약은 취소 절차를 이용해 주세요.");
+  if (item.direct)
+    throw new ProposalError("직접 의뢰 전용 응답을 이용해 주세요.");
   if (
     cmd.type === "discuss" &&
     user.role === "CLIENT" &&

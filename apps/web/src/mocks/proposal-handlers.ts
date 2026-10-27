@@ -15,6 +15,10 @@ import {
 } from "./proposal-model";
 
 let state = emptyProposals();
+export const readMockProposals = () => state;
+export const writeMockProposals = (next: typeof state) => {
+  state = next;
+};
 export const readMockProposal = (id: string) =>
   state.items.find((item) => item.id === id);
 export function confirmMockContract(id: string) {
@@ -22,7 +26,7 @@ export function confirmMockContract(id: string) {
   if (next === state) return;
   const winner = next.items.find((item) => item.id === id);
   if (!winner) throw new ProposalError("협의가 없어요.", 404);
-  endMockCampaign(winner.campaignId, winner.clientId);
+  if (winner.campaignId) endMockCampaign(winner.campaignId, winner.clientId);
   state = next;
 }
 let scenario = "success";
