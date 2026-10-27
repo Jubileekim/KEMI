@@ -6,9 +6,7 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 
 // KEMI의 현재 운영·공유 Supabase DB는 신규 users 행이 0개여도 운영 DB다.
 // 개발자가 실수로 허용 목록에 이 신원을 적어도 시연 데이터를 만들 수 없게 막는다.
-const FORBIDDEN_SEED_IDENTITIES = new Set([
-  "supabase:nibqyycfknurkncdgqps",
-]);
+const FORBIDDEN_SEED_IDENTITIES = new Set(["supabase:nibqyycfknurkncdgqps"]);
 
 export class SeedTargetError extends Error {
   constructor(message: string) {
