@@ -4,6 +4,7 @@ import Providers from "./providers";
 import Shell from "./layouts/Shell";
 import { Guard, Placeholder } from "./route-pages";
 import { screens } from "./routes";
+import { mockEnabled } from "../features/auth/config";
 
 const AuthForm = lazy(() => import("../features/auth/AuthForm"));
 const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
@@ -132,10 +133,18 @@ export default function App() {
                         <DisputePage />
                       )}
                       {screen.path === "/ops/disputes" && <ReviewPage />}
-                      {screen.path === "/me/activity" && <ActivityLive />}
-                      {screen.path === "/notifications" && (
-                        <NotificationsLive />
-                      )}
+                      {screen.path === "/me/activity" &&
+                        (mockEnabled ? (
+                          <Placeholder screen={screen} />
+                        ) : (
+                          <ActivityLive />
+                        ))}
+                      {screen.path === "/notifications" &&
+                        (mockEnabled ? (
+                          <Placeholder screen={screen} />
+                        ) : (
+                          <NotificationsLive />
+                        ))}
                       {(screen.path === "/campaigns/new" ||
                         screen.path === "/campaigns/:campaignId/edit") && (
                         <CampaignEditor />
