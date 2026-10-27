@@ -8,6 +8,10 @@ import { screens } from "./routes";
 const AuthForm = lazy(() => import("../features/auth/AuthForm"));
 const GoogleCallback = lazy(() => import("../features/auth/GoogleCallback"));
 const ProfilePage = lazy(() => import("../features/profiles/ProfilePage"));
+const FeedPage = lazy(() => import("../features/portfolio/FeedPage"));
+const WorkDetailPage = lazy(
+  () => import("../features/portfolio/WorkDetailPage"),
+);
 const PortfolioPage = lazy(() => import("../features/portfolio/PortfolioPage"));
 const PackagesPage = lazy(() => import("../features/packages/PackagesPage"));
 const CampaignEditor = lazy(
@@ -82,6 +86,8 @@ export default function App() {
                         <GoogleCallback />
                       )}
                       {screen.path === "/me/profile" && <ProfilePage />}
+                      {screen.path === "/" && <FeedPage />}
+                      {screen.path === "/works/:workId" && <WorkDetailPage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
                       {proposalPaths.includes(screen.path) && <ProposalPage />}
@@ -118,6 +124,8 @@ export default function App() {
                       )}
                       {![
                         ...proposalPaths,
+                        "/",
+                        "/works/:workId",
                         "/contracts/:contractId/payment",
                         "/payments/result",
                         "/contracts/:contractId/production",

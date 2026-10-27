@@ -13,7 +13,9 @@ const healthyResponse = {
 test("초기 화면과 화면 경로가 표시된다", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle("작품 피드 | KEMI");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("작품 피드");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "작품에서 시작하는 새로운 연결",
+  );
   await expect(
     page.getByRole("link", { name: "공개 모집", exact: true }),
   ).toBeVisible();
@@ -33,7 +35,9 @@ test("없는 경로를 새로고침해도 안내가 표시되고 홈으로 이�
   );
   await page.getByRole("link", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("작품 피드");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "작품에서 시작하는 새로운 연결",
+  );
 });
 
 test("확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다", async ({
