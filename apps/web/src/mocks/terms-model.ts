@@ -42,13 +42,15 @@ export const emptyTerms: TermsValues = {
   cancellation: "",
 };
 export const termsSourcesSchema = z.strictObject({
-  campaign: z.strictObject({
-    id: z.string(),
-    title: text,
-    product: text,
-    scope: text,
-    budget: text,
-  }),
+  campaign: z
+    .strictObject({
+      id: z.string(),
+      title: text,
+      product: text,
+      scope: text,
+      budget: text,
+    })
+    .nullable(),
   proposal: z.strictObject({
     id: z.string(),
     direction: text,
@@ -82,17 +84,19 @@ export const termsCommandSchema = z.strictObject({
 export type TermsCommand = z.infer<typeof termsCommandSchema>;
 export function referenceSources(
   item: Proposal,
-  campaign: Campaign,
+  campaign: Campaign | null,
   studio: StudioState,
 ): TermsSources {
   return termsSourcesSchema.parse({
-    campaign: {
-      id: campaign.id,
-      title: campaign.title,
-      product: campaign.product,
-      scope: campaign.scope,
-      budget: campaign.budget,
-    },
+    campaign: campaign
+      ? {
+          id: campaign.id,
+          title: campaign.title,
+          product: campaign.product,
+          scope: campaign.scope,
+          budget: campaign.budget,
+        }
+      : null,
     proposal: {
       id: item.id,
       direction: item.direction,
@@ -100,9 +104,11 @@ export function referenceSources(
       days: item.days,
     },
     package:
+      item.direct?.snapshot ??
       studio.packages.find(
         (p) => p.id === studio.primaryId && p.visibility === "PUBLIC",
-      ) ?? null,
+      ) ??
+      null,
   });
 }
 export const missingTerms = (values: TermsValues) =>

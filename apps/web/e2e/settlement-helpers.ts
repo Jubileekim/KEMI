@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { login, navigate } from "./proposal-helpers";
 import { prepareVideo, deliveryRequest } from "./delivery-helpers";
 import { setupPayment, confirm } from "./payments-helpers";
+import { setupDirectPayment } from "./direct-helpers";
 import { settlementViewSchema } from "../src/mocks/settlement-model";
 
 export const settlementPath = (id: string) => `/__mock__/settlements/${id}`;
@@ -16,8 +17,15 @@ export async function settlementScenario(page: Page, value: string) {
     await fetch("/__mock__/settlements/scenario", { method: "POST", body });
   }, value);
 }
-export async function setupSettlement(page: Page, receive = true) {
-  const result = await setupPayment(page);
+export async function setupSettlement(
+  page: Page,
+  receive = true,
+  source = "public",
+) {
+  const result =
+    source === "direct"
+      ? await setupDirectPayment(page)
+      : await setupPayment(page);
   await confirm(page, "테스트 주문 만들기");
   await expect(
     page.getByRole("button", { name: "Mock 테스트 결제 진행", exact: true }),

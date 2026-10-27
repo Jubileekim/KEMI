@@ -84,7 +84,7 @@ export default [
     const item = readMockProposal(String(params.requestId));
     if (!item || !participant(item, user) || !hasRoom(item)) return fail(404);
     const campaign = allCampaigns().find((c) => c.id === item.campaignId);
-    if (!campaign) return fail(404);
+    if (!campaign && !item.direct) return fail(404);
     if (selected === "network") return HttpResponse.error();
     if (["401", "403", "409", "500"].includes(selected))
       return fail(Number(selected));
@@ -92,7 +92,7 @@ export default [
     const stored = documents.get(item.id);
     const sources =
       stored?.sources ??
-      referenceSources(item, campaign, readMockStudio(item.creatorId));
+      referenceSources(item, campaign ?? null, readMockStudio(item.creatorId));
     if (request.method === "GET")
       return HttpResponse.json({
         document: stored ?? { revision: 0, sources, versions: [] },

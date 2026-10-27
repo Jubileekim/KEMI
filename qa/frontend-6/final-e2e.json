@@ -1,0 +1,2674 @@
+{
+  "scope": "Local DEV/MSW Edge only. No live API/DB/provider verification. Whole web suite has336 tests; this covers150 distinct related tests.",
+  "note": "Latest result per test across the150-test run,30-test focused rerun and two2-test production checks; NOT a single150/150 execution. The production.spec.ts logout transition wait was fixed; card work-type/style metadata and the existing creator public-introduction projection were added after the broad run. All affected feature flows were rerun. The existing long production journey reached its final successful assertions at the30s test/teardown boundary, including on the serial check. Only that test's whole-journey budget was then set to60s, consistent with existing long integration tests. Global/action/expect limits, assertions, automatic retries and business deadlines stayed unchanged. The final serial check passed2/2. All run failures, commands and stats are preserved below; earlier aborted artifact-collision work is excluded, not added to counts.",
+  "baseCommit": "8fecb83e06de59e47c1c0c9e317b63f90e51848d",
+  "uniqueTests": 150,
+  "passed": 150,
+  "failed": 0,
+  "runs": [
+    {
+      "label": "150 related tests, including both direct paths and viewport checks",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config",
+        "../../qa/frontend-6/playwright.edge.config.ts",
+        "proposals.spec.ts",
+        "terms.spec.ts",
+        "signatures.spec.ts",
+        "payments.spec.ts",
+        "production.spec.ts",
+        "delivery.spec.ts",
+        "revisions.spec.ts",
+        "final.spec.ts",
+        "settlement.spec.ts",
+        "cancellation.spec.ts",
+        "refunds-disputes.spec.ts",
+        "public-recruitment.spec.ts",
+        "direct-send.spec.ts",
+        "direct-request.spec.ts",
+        "public-feed.spec.ts",
+        "direct-visual.spec.ts",
+        "screen-access.spec.ts",
+        "app.spec.ts"
+      ],
+      "stats": {
+        "startTime": "2026-10-27T01:55:01.606Z",
+        "duration": 1326717.6169999999,
+        "expected": 149,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": 150,
+      "failed": [
+        {
+          "file": "production.spec.ts",
+          "title": "4-A 미결제·위조 필드·권한·알 수 없는 계약·Bearer 차단",
+          "project": "chromium",
+          "ok": false,
+          "results": [
+            {
+              "status": "timedOut",
+              "retry": 0,
+              "duration": 30981,
+              "errors": [
+                "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                "Error: locator.check: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('의뢰인', { exact: true })\u001b[22m\n\n\n  237 |   await page.getByRole(\"button\", { name: \"로그아웃\", exact: true }).click();\n  238 |   await navigate(page, \"/signup\");\n> 239 |   await page.getByLabel(\"의뢰인\", { exact: true }).check();\n      |                                                 ^\n  240 |   await page.getByLabel(\"표시 이름 (필수)\").fill(\"다른 준비 의뢰인\");\n  241 |   await page.getByLabel(\"이메일 (필수)\").fill(\"other-production@example.test\");\n  242 |   await page.getByLabel(\"비밀번호 (필수)\", { exact: true }).fill(\"Kemi1234\");\n    at C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\apps\\web\\e2e\\production.spec.ts:239:49"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "30 affected feature and production checks after final review",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config",
+        "../../qa/frontend-6/playwright.edge.config.ts",
+        "direct-request.spec.ts",
+        "direct-send.spec.ts",
+        "public-feed.spec.ts",
+        "direct-visual.spec.ts",
+        "refunds-disputes.spec.ts",
+        "production.spec.ts",
+        "--grep",
+        "6-|6단계|4-A"
+      ],
+      "stats": {
+        "startTime": "2026-10-27T02:20:41.051Z",
+        "duration": 292938.25700000004,
+        "expected": 29,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": 30,
+      "failed": [
+        {
+          "file": "production.spec.ts",
+          "title": "4-A 공개 제안 통합: 결제→발송·자료→정상 확인→한 번 시작→정정→양측 납기 승인",
+          "project": "mobile-chromium",
+          "ok": false,
+          "results": [
+            {
+              "status": "timedOut",
+              "retry": 0,
+              "duration": 31985,
+              "errors": [
+                "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "2 production integration checks with one worker, unchanged30s limit and no source change",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config",
+        "../../qa/frontend-6/playwright.edge.config.ts",
+        "production.spec.ts",
+        "--grep",
+        "공개 제안 통합",
+        "--workers",
+        "1"
+      ],
+      "stats": {
+        "startTime": "2026-10-27T02:26:57.349Z",
+        "duration": 65034.450999999994,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": 2,
+      "failed": [
+        {
+          "file": "production.spec.ts",
+          "title": "4-A 공개 제안 통합: 결제→발송·자료→정상 확인→한 번 시작→정정→양측 납기 승인",
+          "project": "mobile-chromium",
+          "ok": false,
+          "results": [
+            {
+              "status": "timedOut",
+              "retry": 0,
+              "duration": 32065,
+              "errors": [
+                "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "2 production integration checks after setting only this long journey whole-test budget to60s; action/expect limits and retries unchanged",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Cho\\Desktop\\teamproject 3-5\\KEMI\\node_modules\\@playwright\\test\\cli.js",
+        "test",
+        "--config",
+        "../../qa/frontend-6/playwright.edge.config.ts",
+        "production.spec.ts",
+        "--grep",
+        "공개 제안 통합",
+        "--workers",
+        "1"
+      ],
+      "stats": {
+        "startTime": "2026-10-27T02:30:00.611Z",
+        "duration": 61280.704000000005,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": 2,
+      "failed": []
+    }
+  ],
+  "sources": {
+    "apps/web/e2e/app.spec.ts": "da94f5a75824dde22dfa6590546d8b30b9da2d3d263670e7a5f38b5ea7df2034",
+    "apps/web/e2e/auth.spec.ts": "610bed6ac884d88b88d8f662924e9c3dc1dc0c4f3254d6220a7e8e24cbf7f856",
+    "apps/web/e2e/campaigns.spec.ts": "8474ce929889fba1e3b3c69e54399291e0b22a5ed2a884c37256bb2fe12c4c12",
+    "apps/web/e2e/cancellation-helpers.ts": "ee8ac6bd44d609f66d62328041ae957c96d1a15dc9678028ab781501442f0c97",
+    "apps/web/e2e/cancellation.spec.ts": "9c2fec459953be0d02b35fdd86b86319a17dc38e5c15e9ce03da8d89edacc082",
+    "apps/web/e2e/delivery-helpers.ts": "96ca2a4e31988654e83e9372e93269dcd00dd9cae2c8a736dd4bac0c3d4fd5c5",
+    "apps/web/e2e/delivery.spec.ts": "ccfff96528fb8c044e329bd630d9d27d7f43699222dffe79d4e7f2ace37d3c1a",
+    "apps/web/e2e/direct-helpers.ts": "6653f4fb793a310e4225438194fef6672e083633ca782a2a6e76355ce94871dd",
+    "apps/web/e2e/direct-request.spec.ts": "885b78b8498087491cd53b99f20e8e387c048368cf54b6d1287d8926c5b8fa7c",
+    "apps/web/e2e/direct-send.spec.ts": "a4d2402b58e6c94899a8a3a39cd938ff07b48398e88e422ce78e9d318d8aa328",
+    "apps/web/e2e/direct-visual.spec.ts": "871ffee7014b624b8627116510936c683891975d07d7f4958858afc6e3293c03",
+    "apps/web/e2e/discovery.spec.ts": "d17afdc502196749d1381e688d280eafdae160a036dfcea722132df6007ec523",
+    "apps/web/e2e/final.spec.ts": "fa1bfcae99817221d09de0a83f3bda215e547a7b46b1615734584752ef5f12a7",
+    "apps/web/e2e/fixtures/README.md": "5a5bb9c075d7462f17c9186e742df36661e1adea3810e1f4bfbd719dce0281b3",
+    "apps/web/e2e/fixtures/kemi-final.zip": "a0a607d72ccfefc5a1c89c95e57f5551aa6822e41c51ca9dfa802570f5150032",
+    "apps/web/e2e/fixtures/kemi-review.webm": "309a284b5806e63a4cb10dba5e6a0b1a87341f7535ed81d5af7820847ff524c2",
+    "apps/web/e2e/fixtures/local-preview.webm": "877de05099049a5e2b7fd37fedab2d1d53635152716fc7d16cfefeefa3a063d2",
+    "apps/web/e2e/google.spec.ts": "6866122af248f0997cc4abe2944f7764307f85192233674f6d8b19f0094b0ed7",
+    "apps/web/e2e/payments-helpers.ts": "cc03508d96facd76d0208a2dc4298191e9170d84ae36eda38b59ea1f646678d8",
+    "apps/web/e2e/payments.spec.ts": "5342f07613da819d226b45e67c9b9ee3a9a489b49364f6eb6e5f0fd75e4c448b",
+    "apps/web/e2e/pricing.spec.ts": "a751e3164dc95000401b9f46144043e8cdfcb49a3811439816feefa031e3f763",
+    "apps/web/e2e/production.spec.ts": "7aedabd7e45165b7681d7f4cc724cd8d17244aa352e30c59b4d3f4a5019731c5",
+    "apps/web/e2e/profiles.spec.ts": "303a4d85602fd971c110d4a3e231dbb8e65d75a406c8d0efea4b05ea57466ee1",
+    "apps/web/e2e/proposal-helpers.ts": "2dbd30e2e0bf7659cd33a25234d1b2ee96a1ca7909081ddb08d0c0fd5a05b856",
+    "apps/web/e2e/proposals.spec.ts": "6bc9062d2850724aed5b5382e374d97ad66389a2950ad1a175753a2842044d61",
+    "apps/web/e2e/public-feed.spec.ts": "925e94bde4eeeadec4129f5a255d625680b2d3196228610089973ff46f45cc5a",
+    "apps/web/e2e/public-recruitment.spec.ts": "560a3b0cfa22c663fecd9f6176939b268db9de4a060b7b1800d08007e8511e13",
+    "apps/web/e2e/refunds-disputes.spec.ts": "b6f8ad32d2bd86fcd25f0c9cb17c094e48d61eed84073b1ff216d0c419e6919d",
+    "apps/web/e2e/revisions.spec.ts": "c32936ee20e03d3473082764c2f106f2d479ca71811042f66fb07036b2c615bc",
+    "apps/web/e2e/screen-access.spec.ts": "72fce02177f6be202b74d5c1e7399e5740be6ab1cfddc0b9dab659c6ecb1b074",
+    "apps/web/e2e/settlement-helpers.ts": "6dc5a87ab5a71cf715f330da6a9122d00957c196decf5dad884a8d074fe17fbb",
+    "apps/web/e2e/settlement.spec.ts": "325c914206c26a60d23030ae2e266300886a0bcc2861829011734f588250f9ce",
+    "apps/web/e2e/signatures.spec.ts": "c885dabf61510052ca517e8124de0f695681a0e54517a119d248a2f21605e103",
+    "apps/web/e2e/studio-helpers.ts": "5b531959943b35891c11abc32b08794fe565eaad59539988fca882f25ea26d3f",
+    "apps/web/e2e/studio-packages.spec.ts": "925221d83b8dd4168dae1a7cb0ef83c56372731029c3d1d3c84f322c72640766",
+    "apps/web/e2e/studio-portfolio.spec.ts": "10a694df1e43be32e6f98d9a6f30af85f5d07de1a5d5c62850b8c962658ddd81",
+    "apps/web/e2e/terms.spec.ts": "f5ec2ebb30b86f5f39c600a0bc601fecbf0db194a2cfe84400b30458c7e334b9",
+    "apps/web/src/App.tsx": "70cb9962c8ac3cee73a46ebf535b2b425c15c904e4ad92104ae76c21633e332e",
+    "apps/web/src/app/App.tsx": "e8f65bce395fde620625397263a82a2b10d21e4b06ef53e7efd652def3def93e",
+    "apps/web/src/app/ScreenLinks.tsx": "0e0d8300d7963e06d85f173aa055bb1370bb149f835a5914777e55ff60f11ca9",
+    "apps/web/src/app/UiShowcase.tsx": "cb02b53491a91506e344cee76eee1836ed720965ecc1c8bfc678e9336d6ee357",
+    "apps/web/src/app/layouts/Shell.tsx": "f1a7598099159efc993799af67fc85650351747a8e321afdc8513e018c739482",
+    "apps/web/src/app/providers.tsx": "b059e1857e986d88b1635c28f4b47263575bcd6fe116ea390639f07ad958e3a1",
+    "apps/web/src/app/query-client.ts": "1d4ba45560789d7628f31a506d59ec694f0ad3dee76109181fcc578cc9999782",
+    "apps/web/src/app/route-pages.tsx": "3f84a7341ee26137d1ead553174cfe862508e764032c657426de105b2b77cfe4",
+    "apps/web/src/app/routes.ts": "4f4ba4712277402c0769caf21d934e57f6c2ee0afcd06331a817718eccf23e8e",
+    "apps/web/src/app/session.ts": "870880d12bbdf180bc8fb50cf24f1b31d5fba4e14e0bca16de2e3e6277717730",
+    "apps/web/src/components/kemi/brand.tsx": "ca751a6b4777772663fc67546ad5c54be88886b0d9994f62fcfac50624f93f94",
+    "apps/web/src/components/kemi/empty-state.tsx": "07d8099bea7ffe99f7950c19c6d27965aa6a3813884bccd0004c35948699b2a5",
+    "apps/web/src/components/ui/LICENSE.md": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f",
+    "apps/web/src/components/ui/README.md": "b71fc2fa37c101ede790361cd0118008a8ff48f18c8ae0f885a236674bd1c5ff",
+    "apps/web/src/components/ui/badge.tsx": "f158da9f5fbbe48eb844b97b55c52100c17eeded29b98555f36aca37d3884c58",
+    "apps/web/src/components/ui/button.tsx": "742abc8406ce9decb3649ea3ce44089e1ed19290a5dc416ef472b40250d036fd",
+    "apps/web/src/components/ui/checkbox.tsx": "7f9c6c5958f2905e15a0085ff986f303d66beed55fb7d835519ed402d836884d",
+    "apps/web/src/components/ui/dialog.tsx": "d641c37a8039ca4db8781809f5197315ef63a75e77bc488bad58b88b434c7cb1",
+    "apps/web/src/components/ui/input.tsx": "135bb325b8e899392356c60c092f1fee411cb28bda11b268a415be87d6a67cff",
+    "apps/web/src/components/ui/label.tsx": "eedfb13dfb5cbf2d663d56d28bf34d62ec4f1b3765bc4df4dafb3f120b44c9d9",
+    "apps/web/src/components/ui/select.tsx": "0386eebe5a9f1d595b8def3f8b70a14ef6ff1cdc8c75ddb531ba10c072b2d5b7",
+    "apps/web/src/components/ui/sonner.tsx": "7ea57b2bca9a9a480320c087699195b66c16f4db8bd70621eb9cef71cafcb6f6",
+    "apps/web/src/components/ui/tabs.tsx": "651cdc74d2d3fa165a16f13c11b3dad50781a42cf80d948add1198a39e4dad87",
+    "apps/web/src/components/ui/textarea.tsx": "5d7ba5dbc278299e4839877cf19183e1e3dee880cc5ed67b3b707999bbe8106a",
+    "apps/web/src/design-tokens/README.md": "66c08fcbf6802c90cfbfbceae2837d830389a8359088df1c977da42bf459ead3",
+    "apps/web/src/design-tokens/tokens.css": "e52c832b8aa7c5d1240d995d59f0a09f60a6186b878df49d43a763583ea272fe",
+    "apps/web/src/design-tokens/tokens.json": "654b06cbb8ad0149be5d178642f951ac707c961e1ebc49c1f2d71bbffcb6ce80",
+    "apps/web/src/dev/HealthDiagnostic.tsx": "2d5f89ee1149118f48955243404ea97a3a323c5b335e86b2372fdcb1f9a09850",
+    "apps/web/src/features/auth/AuthForm.tsx": "d8999d315fe2d4d4153ad4e32a50ac553d52b53ab357013e2cd500e5d9121df0",
+    "apps/web/src/features/auth/GoogleButton.tsx": "74bed78eed3b0b4988b05668cdc044196adc50493fc1219dbfc44ec1f49ec747",
+    "apps/web/src/features/auth/GoogleCallback.tsx": "a19f46c7ecdf766a7df8a4c3637d24ba9e070dd53d62a9452d13499c236553c9",
+    "apps/web/src/features/auth/SocialSignupForm.tsx": "2486ee68527599b51ab6b9745ccd2d8ef28770b341fad6d8a79fc749f1f8ba37",
+    "apps/web/src/features/auth/config.ts": "7dc5647f5ca0447a6349728f0b34fab6672e295702e3daad6ce090f809697cb0",
+    "apps/web/src/features/auth/contracts.ts": "591da7680952b117e4460347f8d5dd479872ad6e38c36de166b1414c6409b265",
+    "apps/web/src/features/auth/google.ts": "26157e0934988b0358676a269f684fc989f8723686b474452e2d63a22360a9b4",
+    "apps/web/src/features/auth/redirect.ts": "26a8b9a743292973c2399ce7ab8e45b62214943818d75d4f6df4a8defb35f7f8",
+    "apps/web/src/features/auth/session-controller.ts": "fa12a1a4e015bbacfe8ee297bc4e95846ddd458f4d7fe3874a46018edc5250b2",
+    "apps/web/src/features/campaigns/CampaignBrowsePage.tsx": "c9b4d0e0b694cf4b11c706cfca55165a0f32f9424fb60ef0c53743842fc0b262",
+    "apps/web/src/features/campaigns/CampaignEditor.tsx": "a36d49735f451df6b7d22825147300218016cce75ceca8cdc418a03117240663",
+    "apps/web/src/features/campaigns/ProposalPage.tsx": "db9e49159b2046e1522b476d3f5eaccdaa39eff55dd6f144d289fa601c26ea23",
+    "apps/web/src/features/operations/ReviewPage.tsx": "e296249049c8a9d688ede652343fe71d0ce612dd02de23e8e13f27ca295e044c",
+    "apps/web/src/features/packages/PackagesPage.tsx": "2ebd095f291b501470a350e41adebaaf0a4a18ed9c2dd94042af4598133c1bc2",
+    "apps/web/src/features/payments/PaymentPage.tsx": "6662ed7aa00ceb5bf019cb2dc42e51c2d30c2c0be36e21a467dc5fcb7a343c7f",
+    "apps/web/src/features/payments/PaymentResultPage.tsx": "ab34ff3714e84209201e5fe88e7ac0e4baf4270fe740bbb1f4de869730f50ba2",
+    "apps/web/src/features/portfolio/FeedPage.tsx": "39ca6f3ada1973bd62a1b80b089b9f0b3c69beac1fa15886003b44bbfef81981",
+    "apps/web/src/features/portfolio/PortfolioCard.tsx": "9aa78e47a36e3418ede026cc2ee3200e917e941585ae09877f3693975cd2af3b",
+    "apps/web/src/features/portfolio/PortfolioPage.tsx": "184a4bc5a395c9b955f21742a73cf93ced8c8e9ca3afe6b5bf99ccd83602be9d",
+    "apps/web/src/features/portfolio/WorkDetailPage.tsx": "4140b5743a1179cb528dc19c111699559656adde5d293441ab9cac4d25b1e3d4",
+    "apps/web/src/features/production/DeadlineChangePanel.tsx": "80931e42f2d751a979fcaa112479a70d178c83830bc7e110ecbe9339d00983a8",
+    "apps/web/src/features/production/DeliveryVersions.tsx": "177cc3ac81f7d737a077bb56a756e9e9b691f2f92770310b0981af5039aefd81",
+    "apps/web/src/features/production/FinalReceiptPanel.tsx": "1c48659101a41dfeaf71e955540b057d83c8415071c1066be1e506ad12dd012c",
+    "apps/web/src/features/production/ReadinessPanel.tsx": "b439967e824bc46924e524f5e1ba18e8e4e971529bd047243f31fef3a466a632",
+    "apps/web/src/features/production/ReviewActions.tsx": "4be95922b313c36049cbf1bdd5f1da05e36ecfdf30c019986f4455928ffe7571",
+    "apps/web/src/features/production/ReviewPlayer.tsx": "1f4ce345df89f7f828f25efa1b2fca4208e929fb1f1759e7baa944e093a73c8f",
+    "apps/web/src/features/production/RevisionRequestForm.tsx": "d7a4f9caaf4c0e38d6c55fbc6e745c29b32021ac1b652675751e60a5221442e2",
+    "apps/web/src/features/production/time.ts": "2ba4501218be25f914ca333d67f4763054b548e1597cb2d33d5e19fb0e3a96fe",
+    "apps/web/src/features/profiles/CreatorDetailPage.tsx": "be02e63622dc1bf7acaae846d3abcb7dbeb890db691ce6f3b7b3c26807b68484",
+    "apps/web/src/features/profiles/ProfileForm.tsx": "219a42d0b89d2c8e2d6af7422ba9563bab84488cec77067f59c788733ebfc070",
+    "apps/web/src/features/profiles/ProfilePage.tsx": "69521a2cce15de6cc377a29740a8809961d6b6e746baa9bd925b3f47fd14eaa4",
+    "apps/web/src/features/profiles/api.ts": "68068c7c3a6772cbe6a9c2724cf1754d734b14ae5ec490b10b06d206c8eeea3f",
+    "apps/web/src/features/profiles/contracts.ts": "5450037c7b725fc4978d0097770d05a5472e833b3e6c0a7701f1c8773322cda4",
+    "apps/web/src/features/requests/DirectRequestForm.tsx": "fbf1e8dbb4f0ae3b97960af2b4d8eb13610b07de5779d0e6704ad28b30a71fb0",
+    "apps/web/src/features/requests/RequestInbox.tsx": "4eefe751638c16c338697e8954a8ebace8452b04b901f375cc4f14c204c8f2bc",
+    "apps/web/src/features/resolution/CancellationAgreement.tsx": "b9581e03ede6d4be66fd82d9d19eb557377e72076d38502f83e0544c8a7fbf6b",
+    "apps/web/src/features/resolution/CancellationForm.tsx": "df2588ffcecde12e8ef32f24fd5c1a6017c242d0fd156d8e3e0ca059753d01b7",
+    "apps/web/src/features/resolution/CancellationPage.tsx": "32b19c21cda160077a004511ec144ea85fb26d4749a2c7516c4681b35fb1edf1",
+    "apps/web/src/features/resolution/DisputePage.tsx": "fc8fa522684abd5908c9bbfa9fd505eb1723bb74e4f9330aa166ee52f7f3a6b1",
+    "apps/web/src/features/resolution/DisputePanel.tsx": "cbd862675a45d6464ed39f5b8071567bcfa8fe3c1a20acdadd592703f6e62afd",
+    "apps/web/src/features/resolution/RefundStatusPanel.tsx": "04edef1cf1cf4f9313d53560da4ac886f6f6cc27f35c6e2ec6f043665f2b02b7",
+    "apps/web/src/features/resolution/SettlementSummary.tsx": "6387de10577789534d591c1580f63945531281819aa036ae47d07c3bfc2c7dbe",
+    "apps/web/src/features/terms/SignaturePanel.tsx": "14e8fcdbadedb6ce891df7e397d045f244fa093d43d0fddfdaaacab6d2e5f06d",
+    "apps/web/src/features/terms/TermsEditor.tsx": "d9d3e296e80bbe38cf26e4f664f66a00a9991b1882704fba59a7a05abbad00e8",
+    "apps/web/src/features/terms/TermsVersionView.tsx": "1ebdaf21eba3c553da7c4f6ed16a456815b051ba5a5b82ae9e98b0df57d74bf7",
+    "apps/web/src/lib/api.ts": "8b773cb8e9a374aedd33c8617d62fb74a519537fc05b3688f8eb7d28eec524b5",
+    "apps/web/src/lib/custom-style.ts": "759e22b4c133bfd55c4faa41546b7035a14caf74bb8c483752d27bb2bc3e034d",
+    "apps/web/src/lib/health.ts": "1694fe73158efad4f4987bdc31ea54737e7a6402f6b04ca285da35f9348e1d45",
+    "apps/web/src/lib/utils.ts": "c30bfa7e3877c7dac4454ca14fce2b6a1a1166dc2b695927721d4f91eef82c6c",
+    "apps/web/src/main.tsx": "96242f71f89ac31b0f59b76b3fe21076344e014dba464dd5de8e366c9f2357bc",
+    "apps/web/src/mocks/CampaignFormMock.tsx": "b1f5cd911734d6f6d41d3178f4e5ee9b73364389116cd14e4a4b779c0374372e",
+    "apps/web/src/mocks/CampaignMock.tsx": "bb8f3ec84552b4dd8975833b24450bb5c17d87e4aab0c88d208a13677ac7f72e",
+    "apps/web/src/mocks/CancellationMock.tsx": "486231508561081692726e9f7bf28a8706b53587583114a2eb23dc5ba6566f69",
+    "apps/web/src/mocks/CatalogMock.tsx": "e68fa618bcbd2b0cad7d3087278a1a8a014b627f7460047d57e84e838b948d7b",
+    "apps/web/src/mocks/ChatPanelMock.tsx": "30a8a621490802e5bfb4bf8f04ae160d4049d479ed200d788357521e15553357",
+    "apps/web/src/mocks/CreatorMock.tsx": "e82bb3b3d397bc391a7148e5c046891120a6834717b848495357d656a68834f8",
+    "apps/web/src/mocks/DeliveryMock.tsx": "9288af78bc119c3c8065a49ee66f9a5b1a9c279a0ad49b4ecb7e877a35fc83ce",
+    "apps/web/src/mocks/DeliveryNoticesMock.tsx": "2e58a8fc41963bfb21ede8e80000018436aaaba0ab5d8c857eef3fdf80868dc7",
+    "apps/web/src/mocks/DevTools.tsx": "069aeb1849ac74a60d37d5628e0ef4a20021cdaa589e80e8ded87b3b077325ee",
+    "apps/web/src/mocks/DirectMock.tsx": "6973612ba27948378c96276c2be89b2a70916333d587fcb3b05eaccf91e0a64a",
+    "apps/web/src/mocks/DiscoveryDetailMock.tsx": "779adef38054aabaf166986d1f5836276c62c805a6766b805c48ccbab386db8c",
+    "apps/web/src/mocks/DiscoveryListMock.tsx": "d22bc17340f847ea656262cb20081966d5ddfcccf43cb348cf272b16fd3ef33a",
+    "apps/web/src/mocks/DiscoveryMock.tsx": "37c96ba42b47d57c573a46177068bd90ee7eed670b2df13835a8d820a9628333",
+    "apps/web/src/mocks/DisputeMock.tsx": "81e82d14766a203b57b86bbabb797aa688b59c46c72ecdb5231b5eb61b3fdefa",
+    "apps/web/src/mocks/FinalNoticesMock.tsx": "c7f2e1cb680b24e2a406617789d54d95ae423f9a643540bf1ed8d3ba924edbf7",
+    "apps/web/src/mocks/FinalPanelMock.tsx": "8349772c6437ee38d9e65a765a3d44379f77f7242452ed8e8f239d6cc63f189a",
+    "apps/web/src/mocks/GoogleProvider.tsx": "1da045ac764ff245dde7080ae4bb3902075f8081296e74611654affb7deb77a5",
+    "apps/web/src/mocks/PackageEditorMock.tsx": "efc97b56ccaa286cb733970749d7c15976ea6de04e34e21114f283e3ce45a26e",
+    "apps/web/src/mocks/PaymentMock.tsx": "bf6d6ed3cbc15fe74a5c618b89b0e6e11f4c90baefa05ada90e02234bc5c5bd9",
+    "apps/web/src/mocks/PortfolioManagerMock.tsx": "61929acb45999c5df632bcd7e5894cdeaba4e4dcccb099637e3cd1cc6ef99094",
+    "apps/web/src/mocks/PricingMock.tsx": "af7fcea87cc6ef5eae6ab13210e8e01557acbc4122f89561970792d85b67c8d4",
+    "apps/web/src/mocks/ProductionMock.tsx": "9eb05432d525a0ff92c0eb0fe28bf0056b70a0cd885fbd5eac8cc16a7070fb27",
+    "apps/web/src/mocks/ProfileExtrasMock.tsx": "8d8f491d3ae343393c1ac13f3a3c08dd887caec31a12bfe1fc58b98cff540c54",
+    "apps/web/src/mocks/ProposalCard.tsx": "021d0d0a91e3c8a3906c0df8b6faaaa8531efc3e3c3591e95ab052fefc81aeb5",
+    "apps/web/src/mocks/ProposalConfirm.tsx": "8ec97aba233902c50c1a733ec1a1fd970c7571c4c3c77ded6410643015ad565d",
+    "apps/web/src/mocks/ProposalEditorMock.tsx": "17407c7b1ce7cf764cb399dc5c7ce4fc9d8c1f4218671352a51d419dcb42fbe4",
+    "apps/web/src/mocks/ProposalMock.tsx": "6dcee6f4af7e32ab8fd333c2f6c51ae4dd8c4513a375ae739a99aac4e17843b9",
+    "apps/web/src/mocks/ResolutionWorkflowMock.tsx": "7ba52d5e95b3ff21cdc50ea324890e5258d0d5ae7543b4c6b521f823fa0e6adf",
+    "apps/web/src/mocks/ReviewMock.tsx": "281bbff3a7180ce8f72fdc4886aea03611dc90fc9149230a59fead30197bf99d",
+    "apps/web/src/mocks/RevisionNoticesMock.tsx": "f7f0df0c1df9bd6da60a7f1dab780e940ff77afb43912704c1c57b0473a188a8",
+    "apps/web/src/mocks/RevisionPanelMock.tsx": "711d1dd576586cc5a379aee5c4920e01794754558495cd960e96de8acb89bc21",
+    "apps/web/src/mocks/SettlementMock.tsx": "e98fa03942991c52257e574f0cb2abac2870aba17e4142c8f68cd990ecc78366",
+    "apps/web/src/mocks/SettlementNoticesMock.tsx": "c1b8ecc09487ffe9a70fa8e3d99d68fa2f8c1679a368bd0cfe3b184baa8b881e",
+    "apps/web/src/mocks/StudioMock.tsx": "03ec2af88b4157dd2fdf1db2607e3e22c07bf0289520fa57589b2954607c02a6",
+    "apps/web/src/mocks/TermsMock.tsx": "053d66f97d28371d819c5ae09bfdad4438beca4e597cc6a194dd276bd0cf9b03",
+    "apps/web/src/mocks/WorkEditorMock.tsx": "1203d0e1725e13fb303f039089d21ce0267551847ea2c362c7d9df2971e8661a",
+    "apps/web/src/mocks/WorkNoticesMock.tsx": "67d16bb34264eb41eb03992c90f6e8ff315aa4489839f59673849fcf4c1d347f",
+    "apps/web/src/mocks/assets/README.md": "215536a9b537100d2794f07f3c2a2dcad53ad7472ab90cadf16dda399484986d",
+    "apps/web/src/mocks/assets/catalog-poster.png": "523f0c592e4f91e0596561ddb8456326b475bd52cef0301bff79899bd768e888",
+    "apps/web/src/mocks/assets/catalog-sample.webm": "309a284b5806e63a4cb10dba5e6a0b1a87341f7535ed81d5af7820847ff524c2",
+    "apps/web/src/mocks/auth-handlers.ts": "0904b98181b0f041a43bf0d0b3075336974d1b2068fdca255b18fa07b3b4fe15",
+    "apps/web/src/mocks/browser.ts": "0ebca6da45389d8737e47d20e8e7ecbbc709bdb019eff55f5676728b83c904bc",
+    "apps/web/src/mocks/campaign-api.ts": "e8b1b669dfe152c86c9b2dae5b5a5417a581e3ceb2281c44a72e5b34d8e88fe0",
+    "apps/web/src/mocks/campaign-handlers.ts": "f8a03107fd6d68ea5e93c1ea127a90cd66c0de7fc529a0132981cff503dda7f8",
+    "apps/web/src/mocks/campaign-model.ts": "c8dd37fdeb214463cdb23e790ad7b186608e453417af74b84f87f31c58c15ef0",
+    "apps/web/src/mocks/catalog-api.ts": "40b2eb3f84882d4b33645b96c20a5ece7602313034e219d190029f42734c07b3",
+    "apps/web/src/mocks/catalog-handlers.ts": "49265cb68b990d26789b7c8457ef525fde68304429a4a108f0fb7090c9b9e781",
+    "apps/web/src/mocks/catalog-model.ts": "2d2839d56232a0f2499a92c8498d48490083d7a7cccc0ae856cf7e26cac876b3",
+    "apps/web/src/mocks/delivery-api.ts": "89421d299ffdfbfde41a0d4fba18d5bd2f4c01450326bf91e0bc8389ab36d769",
+    "apps/web/src/mocks/delivery-handlers.ts": "6b07f241bc60703f5da1211ad4ae18f5ae8ecfa1bd466735b2e96d5dd7e4d089",
+    "apps/web/src/mocks/delivery-model.ts": "d5ccad0b76d424da475263aac40718f8bb89779789c04193cbed6f842f3edfcf",
+    "apps/web/src/mocks/direct-api.ts": "67d2a2a7a1bf2e05c4813fce63fcb4a4bcaafa17c9d46c4ccaa10e1db727f041",
+    "apps/web/src/mocks/direct-clock.ts": "2f93063512f15d6cf68c5978dfd07ab520fad05296826927224499d9f8b77f3a",
+    "apps/web/src/mocks/direct-contract.ts": "64a09a1b7a0d618120f3112293f2f6d4e15a0a968da2e7b05bbfd31bdf0b0497",
+    "apps/web/src/mocks/direct-handlers.ts": "ca26f5d0d81bcb273a0ed73c3063926ea3c7f8392f1ab1f4506fd2df8fac966c",
+    "apps/web/src/mocks/direct-model.ts": "fd6894244e2a75ae76698d68c9189dfdb0ba43d454e94b8c8a5c3f42e3d5d4c5",
+    "apps/web/src/mocks/discovery-api.ts": "0acf9c7a3d56cecdcfa96426a4d9b6c282f417faeaca2b3514f4cb8df3faebb6",
+    "apps/web/src/mocks/discovery-model.ts": "8238f62b8b7e92ca090d2e0925ea8ac1ec0496e68f54e072eb06dc188e96fd28",
+    "apps/web/src/mocks/discovery-ui.ts": "2223610f2a45f53c2ae1ca4d039bc09f3a3d33021f5d5cc6a3a90edec29690af",
+    "apps/web/src/mocks/final-model.ts": "d7972b6b44c29fda32cc8db80d0a440f48d6f7d18adf4856945042f53d6a5222",
+    "apps/web/src/mocks/handlers.ts": "1ffcbd546807c9269d586688cfb934ffbb227a254e4110c81f8886aa53795397",
+    "apps/web/src/mocks/payment-api.ts": "b4f1d81829407b7fc221e756af94f94427dfbf9460fe54e1dacde817bc2469e0",
+    "apps/web/src/mocks/payment-handlers.ts": "e826b4b5ec1b83f667c2838e8c9e6852a676fdff4d8b2970eeb932eb9acb0ff1",
+    "apps/web/src/mocks/payment-model.ts": "4884f8f9c51c8627413052bf8c5f2790e544a9759ad32ad17f579808965007fd",
+    "apps/web/src/mocks/portfolio-model.ts": "55fa78bef1de3c12b30e82c86454ece4aa36dbd4653aa179a2ada47c67954fa9",
+    "apps/web/src/mocks/pricing-api.ts": "10634c92a4085b6702f956011053edf6faf7da73180d727331e0924b348cbbd9",
+    "apps/web/src/mocks/pricing-handlers.ts": "4e12b6eec8e3933bfa2a1df32d67d38ff540aca53e287b19440001e58a745626",
+    "apps/web/src/mocks/pricing-model.ts": "7f8a44796c9bae39ff9d96537af5694865124670cbcd130446a78e40a1f3289c",
+    "apps/web/src/mocks/production-api.ts": "d0ea047c5ae2a1526650fb3b33d5d604c54b392035da0d250d6d8eabb67958fd",
+    "apps/web/src/mocks/production-handlers.ts": "72f118a863e411546dd40b0701df2174a1dcf07012d698284ab57e83b012556e",
+    "apps/web/src/mocks/production-model.ts": "a198a339e7bb45f327bb9367bdcd3c18b600aa3cf1a04d55aeadaa025bd0d946",
+    "apps/web/src/mocks/profile-handlers.ts": "38279f37c7554206143b2ad72094ac268e71bf4844be316613d8bc71bb084aa6",
+    "apps/web/src/mocks/proposal-api.ts": "555ea9616250adea465b0973182e81a22661b96853b204c9f4962b5923103c42",
+    "apps/web/src/mocks/proposal-handlers.ts": "52bbeec0a7aa9487ebed31a52725d25e6b9cb7d2a447557a9b9b94ed8462fc80",
+    "apps/web/src/mocks/proposal-model.ts": "ee8770a282a5cb0c7d97688bcf9405a3483570aba3a273d86d9f64166bd788f8",
+    "apps/web/src/mocks/resolution-api.ts": "1f07f069a4cdca7cc6701e08a2517b5406d056bc1991275489e04bf6af94f539",
+    "apps/web/src/mocks/resolution-handlers.ts": "053f0e2618de70a6da6f909d907f42a0c5c867b9661c18147beaa13f0348eaa2",
+    "apps/web/src/mocks/resolution-model.ts": "6ec9d8032d042dc4bb54086f22b61505640039f4e67cf0e6aff29c460fdb6878",
+    "apps/web/src/mocks/resolution-store.ts": "7dd3817d5e8f5fb911590b056d969068daa28c3ad78420c45a631375abcd3ffa",
+    "apps/web/src/mocks/resolution-workflow-model.ts": "9ff2d1975fdbee3059d15f8b8b2eb199fcf4de6bfe28ae4573298a0b392bdcfb",
+    "apps/web/src/mocks/revision-model.ts": "56214c91cae9b6cec0dae066a055134a9fbc22f8d10ade028eb080c3e48c9d90",
+    "apps/web/src/mocks/settlement-api.ts": "27ebd623a3c8e3c389779a65b4b4701aa2bb6f3e6c972667712de6dfd2823d13",
+    "apps/web/src/mocks/settlement-handlers.ts": "d0c6479853f5f281f2646b483b82067fa00f483c2f9feef732b3130dd17cdc19",
+    "apps/web/src/mocks/settlement-model.ts": "c3e67d5c7ff4293d19f6ca97ad0670aa1bf1802f29b9e78a57c2784a07d01f7e",
+    "apps/web/src/mocks/signature-api.ts": "4509e859073f134986701006ca1aeed27f4c6cd406261239f55844c8888e4c30",
+    "apps/web/src/mocks/signature-handlers.ts": "699c9a58f97ac0487a5267a00ee149b40c01db7d80f4e9a4ccb70c666a7111c1",
+    "apps/web/src/mocks/signature-model.ts": "d4bd565cd59c7bf67fb9d37ab78527bfa87e208f2780e51afce6dceef29ec116",
+    "apps/web/src/mocks/studio-api.ts": "f319d6931e170399961c754a064155c62b2b4ea8b23808a2c57a86d4182207e9",
+    "apps/web/src/mocks/studio-handlers.ts": "71c7eea30d79aa4b8c6595c90d21d8d16808fc803fb0df3dafcca97d0b1b3870",
+    "apps/web/src/mocks/studio-model.ts": "3bd899ce973fc364a60ca63245eb401bbe778ffd549e496d97eceb84a7fb8bbb",
+    "apps/web/src/mocks/terms-api.ts": "a7fbe6a549e1e7b223d3c4c89cbb4e6394fbeca443427b91eb8c676f3fbe0ccb",
+    "apps/web/src/mocks/terms-handlers.ts": "0fe143035fcbce1173777123cf18746253c20d8899448a100d460476ff47da97",
+    "apps/web/src/mocks/terms-model.ts": "81425693caaca378ab14e848ed04627d298b095867f5d50e38f3127d6f29e2d5",
+    "apps/web/src/shared/api/client.ts": "0dc852735679f4529579ab40e85d82c8be2452a1822c1eafaa833e63658a2346",
+    "apps/web/src/shared/files/FileUpload.tsx": "8368985f501fe5071961446d4d4d1e2d2cd91b72a49c452336505a2f677c5ca3",
+    "apps/web/src/shared/files/local-preview.ts": "239ce0f78cab739cc65c484a1bdb1a1fb492bc985bacaf53ec5576d5cc1e83c3",
+    "apps/web/src/styles.css": "91a8a8d818c85d8d65843c35065be06c476b706230cf742993294ad55d79551d",
+    "apps/web/src/styles/index.css": "1ad638714d817ff16cf1d6170c51cf60dc266fea1715eafa8849b08265617edf",
+    "apps/web/src/styles/kemi-theme.css": "4e2fd228f9fbe4481c043642de5d97f70b4e36cfa49981b772f8e6ff02e3a275",
+    "apps/web/src/vite-env.d.ts": "5b2668440a21e0650931ca76edcdf3da89224265e5251f614d62cb5d165af04a",
+    "apps/web/test/auth-transport.test.ts": "f4eef84465386089b92c83316395b1272c64a484fad4a851de3fc254b1855d42",
+    "apps/web/test/auth.test.ts": "0898bd0ea36fb9d108acef583fd2d03e2aad6d02177e8715957620e3fc704ce7",
+    "apps/web/test/campaigns.test.ts": "fa0620bb43c70bd52fe6a57b20a136aec4c8f5cc2da8150a476a0237d36c3f8b",
+    "apps/web/test/cancellation.test.ts": "defa2483774513a3846532302e8640bcf1c70d8e61da5a80880bda086f2fda31",
+    "apps/web/test/catalog.test.ts": "a515c62d17d28d341a0147d9822afba387d7074fe96defb3e9a9826773a761af",
+    "apps/web/test/delivery.test.ts": "f3578f663c8bc4c20a2fe0b894a6411c7aa197577278d130b7877e8fad65519a",
+    "apps/web/test/direct.test.ts": "7a2d71f59a3949b8bc65e39cde48dde8c24ba34aac59420041cda95b635b2999",
+    "apps/web/test/discovery.test.ts": "408eef75e4df0cc1e5f94aa3ff7916f35cca730abfe8751c24eebe31fed6a66c",
+    "apps/web/test/final.test.ts": "c22a1964d53acea2ca9b1d2d18aabb12afd4236a9ba753a35255ed62a740d344",
+    "apps/web/test/google.test.ts": "da2d54487975115d16227a1b9cd4d1be1ae530e96ca40bb53e88615ca6a6fefc",
+    "apps/web/test/health.test.ts": "6ab7dd2c13db95cf17c5740a16a4361914f15c781df7b073600c7fe20b2282f5",
+    "apps/web/test/payments.test.ts": "3b564fa61ff07adeced15f65663c9e1686d87deddc3ad567ae24068e449c2a6f",
+    "apps/web/test/pricing.test.ts": "ed563274cda527b703b2aac5c463617947324e9a2224a95337e2664495f4a5d5",
+    "apps/web/test/production.test.ts": "14e2c877c30e7389446a3171e08068b287822d72033ee08ba2cb99250e3f745c",
+    "apps/web/test/profiles.test.ts": "e05bbdc25773f4552f94373a6c8a320e76d45922c432e1110adb8382d3d83677",
+    "apps/web/test/proposals.test.ts": "b36b12e315bc925a1b3f9c39d33a94e874e2d9bc149c5b47c5f218418417f62b",
+    "apps/web/test/resolution-workflow.test.ts": "07c95ce5d9f0fec8b8584ec88e03ea78c789d2b2ee88e88838a340119868b2c8",
+    "apps/web/test/revisions.test.ts": "5253225c472c0e629c19fbfb663883e316d058fbc656c0700e778a61c386fc8d",
+    "apps/web/test/settlement.test.ts": "e3d3d683456900d9e29e732abd9ffa325182566938a7aa5b2ea4c8fcabb012f9",
+    "apps/web/test/signatures.test.ts": "b6fe7741496bc9b6f99db45834a4d7381fc033fb84794366cf6a32e4737a71b0",
+    "apps/web/test/studio-packages.test.ts": "6d76526b69c94e2d38ebb08dd8a794936e5f0beb6967b08da1ce7bf0c2c6fc72",
+    "apps/web/test/studio-portfolio.test.ts": "5e4842e8efb51127059d656b322f7bd4316286eb7bd52b76f6ec1be24a4c0da9",
+    "apps/web/test/terms.test.ts": "e0c04db7e4ff030637af1ed5a048880af0d39fe71de9b95ced36ffd9e6ce698b"
+  },
+  "tests": [
+    {
+      "file": "app.spec.ts",
+      "title": "초기 화면과 화면 경로가 표시된다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10586,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "없는 경로를 새로고침해도 안내가 표시되고 홈으로 이동한다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13206,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10298,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "네트워크 실패 후 다시 확인하면 복구된다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10645,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "HTML 응답을 서버 연결 성공으로 표시하지 않는다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10154,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "서버의 공통 오류 메시지를 표시한다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10066,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "초기 화면과 화면 경로가 표시된다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 9657,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "없는 경로를 새로고침해도 안내가 표시되고 홈으로 이동한다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11599,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 8850,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "네트워크 실패 후 다시 확인하면 복구된다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 8862,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "HTML 응답을 서버 연결 성공으로 표시하지 않는다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 8757,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "app.spec.ts",
+      "title": "서버의 공통 오류 메시지를 표시한다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 8859,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27103,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25601,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 기존 계약 링크→요청→양측 동일 버전 확인, 요청만으로 정산·수령 불가",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26552,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "cancellation.spec.ts",
+      "title": "5-A: 구버전·동의 변조·다른 계약·응답 유실 재조회와 중복 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25612,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 공개 제안 통합: 제작 시작→초안→완성 검토본→이전 버전 재생·같은 방 안내",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26711,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 유실 응답 재조회·동일 제출·ID 충돌·이전 revision·동일 파일 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25710,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 입력·업로드 실패 복구·형식/HTTP 오류·미확정 실패는 안내 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 21584,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 미결제·미시작·의뢰인 쓰기·위조 Bearer·타인 미디어/안내 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17721,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 지연 제출 로그아웃·새로고침은 메모리 복원하지 않음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23216,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 결제 후 미시작·준비 문제 보류는 제출 차단, 기존 영상 접근은 유지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 21343,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 공개 제안 통합: 제작 시작→초안→완성 검토본→이전 버전 재생·같은 방 안내",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 28308,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 유실 응답 재조회·동일 제출·ID 충돌·이전 revision·동일 파일 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25042,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 입력·업로드 실패 복구·형식/HTTP 오류·미확정 실패는 안내 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22684,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 미결제·미시작·의뢰인 쓰기·위조 Bearer·타인 미디어/안내 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18926,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 지연 제출 로그아웃·새로고침은 메모리 복원하지 않음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23553,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "delivery.spec.ts",
+      "title": "4-B 결제 후 미시작·준비 문제 보류는 제출 차단, 기존 영상 접근은 유지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 21205,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 캠페인 없는 직접 의뢰의 양측 서명→결제→제작→검토/파일·수령→정산",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29432,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 최초 수신 거절·정각 만료·수락 재전송·응답 기한 이후 채팅 유지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18885,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 공개 패키지 전체·추가 상품 선택 사본·발송 후 비공개·타회원과 새로고침 경계",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 19312,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 수락 응답 유실 재조회·대화방 하나와 지연 응답 중 로그아웃",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18504,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 캠페인 없는 직접 의뢰의 양측 서명→결제→제작→검토/파일·수령→정산",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29653,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 최초 수신 거절·정각 만료·수락 재전송·응답 기한 이후 채팅 유지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 19203,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 공개 패키지 전체·추가 상품 선택 사본·발송 후 비공개·타회원과 새로고침 경계",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18713,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-request.spec.ts",
+      "title": "6-C 수락 응답 유실 재조회·대화방 하나와 지연 응답 중 로그아웃",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18210,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13995,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 응답 유실 같은ID 복구·타 패키지/역할·Bearer·지연 로그아웃 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 14687,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13572,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-send.spec.ts",
+      "title": "6-B 응답 유실 같은ID 복구·타 패키지/역할·Bearer·지연 로그아웃 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 15441,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-visual.spec.ts",
+      "title": "6단계 실제 라우트 화면·역할 진입과320~1280px 레이아웃",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16298,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "direct-visual.spec.ts",
+      "title": "6단계 실제 라우트 화면·역할 진입과320~1280px 레이아웃",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17270,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 통합: 공개 제안→서명/결제/준비/검토→승인→ZIP 전달→다운로드→전용 수령",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23128,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 유실·조회 실패·같은 ID 재시도는 승인/전달/수령을 중복하지 않는다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22968,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 문제 신고는 수령/덮어쓰기 차단·파일 권한·버전/식별자 충돌 검사",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24024,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 초안 승인 금지·잘못된 전달 URL·새로고침 초기화·지연 로그아웃",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23377,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 수정본 연결 통합: 오류 요청→시정 동의→수정본→최신 버전만 승인",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 21749,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 통합: 공개 제안→서명/결제/준비/검토→승인→ZIP 전달→다운로드→전용 수령",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22862,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 유실·조회 실패·같은 ID 재시도는 승인/전달/수령을 중복하지 않는다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22576,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 문제 신고는 수령/덮어쓰기 차단·파일 권한·버전/식별자 충돌 검사",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23316,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 초안 승인 금지·잘못된 전달 URL·새로고침 초기화·지연 로그아웃",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22829,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "final.spec.ts",
+      "title": "4-D 수정본 연결 통합: 오류 요청→시정 동의→수정본→최신 버전만 승인",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 21251,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 공개 제안 통합: 조건·서명·계약 전액·성공·양측 재조회·같은 방",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18828,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 금액 불일치·불명확은 새 주문 차단, 기존 주문 조회로만 확정",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17276,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 주문 생성·승인 응답 유실: 재조회/같은 ID 재시도, 중복 주문 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17029,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 확정 실패·취소 후 명시적 재시도, 이전 주문 재승인·URL 위조 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 20114,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 잘못된 계약·본문·Bearer, 지연 로그아웃·타인 조회 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 20328,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 조회 오류·malformed는 성공 숨김·재조회, 새로고침 메모리 경계",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 20062,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 공개 제안 통합: 조건·서명·계약 전액·성공·양측 재조회·같은 방",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18231,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 금액 불일치·불명확은 새 주문 차단, 기존 주문 조회로만 확정",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17034,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 주문 생성·승인 응답 유실: 재조회/같은 ID 재시도, 중복 주문 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16365,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 확정 실패·취소 후 명시적 재시도, 이전 주문 재승인·URL 위조 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 17891,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 잘못된 계약·본문·Bearer, 지연 로그아웃·타인 조회 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 19283,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "payments.spec.ts",
+      "title": "3-C 조회 오류·malformed는 성공 숨김·재조회, 새로고침 메모리 경계",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18673,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 공개 제안 통합: 결제→발송·자료→정상 확인→한 번 시작→정정→양측 납기 승인",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29311,
+          "errors": []
+        }
+      ],
+      "finalRun": 4
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 미결제·위조 필드·권한·알 수 없는 계약·Bearer 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 20674,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 유실·동일 요청·충돌·최신 재조회 후 복구",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16316,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 오류 응답·형식·네트워크·로그아웃 지연·새로고침 복원 금지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22166,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 납기 거절·자기 승인·역할 위조·중복 응답·텍스트 이스케이프",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18324,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 공개 제안 통합: 결제→발송·자료→정상 확인→한 번 시작→정정→양측 납기 승인",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29075,
+          "errors": []
+        }
+      ],
+      "finalRun": 4
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 미결제·위조 필드·권한·알 수 없는 계약·Bearer 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16250,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 유실·동일 요청·충돌·최신 재조회 후 복구",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16119,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 오류 응답·형식·네트워크·로그아웃 지연·새로고침 복원 금지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 28634,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "production.spec.ts",
+      "title": "4-A 납기 거절·자기 승인·역할 위조·중복 응답·텍스트 이스케이프",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 18188,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "후보별 응답·방 권한: 두 후보 유지·타후보 메시지 조회/전송 금지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11845,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "2-D 통합: 작성·공개→제안→후보·협의→마감 유지→양방향 대화·읽음→거절·기록",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13534,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "응답 유실: 전송 중 차단·같은 메시지 재시도 중복 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16444,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "무선정 종료: 사유·읽기 전용·새 제안 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10186,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "권한·실패·빈 상태: 타 공고/방·Bearer 없이 조회/변경 금지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10588,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "후보별 응답·방 권한: 두 후보 유지·타후보 메시지 조회/전송 금지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11895,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "2-D 통합: 작성·공개→제안→후보·협의→마감 유지→양방향 대화·읽음→거절·기록",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13772,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "응답 유실: 전송 중 차단·같은 메시지 재시도 중복 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 9881,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "무선정 종료: 사유·읽기 전용·새 제안 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10152,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "proposals.spec.ts",
+      "title": "권한·실패·빈 상태: 타 공고/방·Bearer 없이 조회/변경 금지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4585,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "public-feed.spec.ts",
+      "title": "6-A 비회원 작품→영상, 가격 없음·필터/페이지·뒤로가기·실패 복구",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4262,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "public-feed.spec.ts",
+      "title": "6-A 공개 상태 재검사·서비스 비공개/삭제·조회 실패와 재시도",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 5878,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "public-feed.spec.ts",
+      "title": "6-A 비회원 작품→영상, 가격 없음·필터/페이지·뒤로가기·실패 복구",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4391,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "public-feed.spec.ts",
+      "title": "6-A 공개 상태 재검사·서비스 비공개/삭제·조회 실패와 재시도",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 5709,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "public-recruitment.spec.ts",
+      "title": "5-C 공개 모집 정상 전체 흐름: 실제 메뉴·서명·결제·준비·검토·파일·수령·정산과 취소 역행 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26339,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "public-recruitment.spec.ts",
+      "title": "5-C 공개 모집 오류 경계: 지연 로그아웃·위조 Bearer·타회원·운영 제한·새로고침 초기화",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29641,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "public-recruitment.spec.ts",
+      "title": "5-C 공개 모집 정상 전체 흐름: 실제 메뉴·서명·결제·준비·검토·파일·수령·정산과 취소 역행 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26541,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "public-recruitment.spec.ts",
+      "title": "5-C 공개 모집 오류 경계: 지연 로그아웃·위조 Bearer·타회원·운영 제한·새로고침 초기화",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24174,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 28845,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "6-C 직접 의뢰: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24537,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 전액 환불·미확정·확정 실패·유실 복구·역할 거부·파일 없는 인도와 근거 해제",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24236,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 29472,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "6-C 직접 의뢰: 20만원→분쟁·양측합의→12만원 환불→ZIP 인도/수령→근거 해제→7.2만원 정산",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25028,
+          "errors": []
+        }
+      ],
+      "finalRun": 2
+    },
+    {
+      "file": "refunds-disputes.spec.ts",
+      "title": "5-B: 전액 환불·미확정·확정 실패·유실 복구·역할 거부·파일 없는 인도와 근거 해제",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24682,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 통합: 공개 제안→검토본→2항목 요청→수정본→1회 완료·같은 방 안내",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25757,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 한도 소진은 일반 수정 협의·계약 오류는 합의 후 회차 제외",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24891,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 초안 의견은 조건 한도 없이 요청·연결 제출해도 차감 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 22324,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 유실 요청·수정본 재조회와 동일 ID 충돌·중복 차감 방지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25286,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 권한·위조 토큰·구버전·지연 로그아웃·새로고침 경계",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25732,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 입력 보존·영상 시간/혼합 보류·조회 오류·없는 요청과 버전",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25189,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 통합: 공개 제안→검토본→2항목 요청→수정본→1회 완료·같은 방 안내",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26326,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 한도 소진은 일반 수정 협의·계약 오류는 합의 후 회차 제외",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24841,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 초안 의견은 조건 한도 없이 요청·연결 제출해도 차감 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23262,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 유실 요청·수정본 재조회와 동일 ID 충돌·중복 차감 방지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24491,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 권한·위조 토큰·구버전·지연 로그아웃·새로고침 경계",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26752,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "revisions.spec.ts",
+      "title": "4-C 입력 보존·영상 시간/혼합 보류·조회 오류·없는 요청과 버전",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 24588,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "홈에서 회원가입·로그인과 공개 모집 상세로 이동한다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4064,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4824,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "크리에이터는 홈·프로필에서 제작 관리로 이동하고 의뢰인 경로는 차단된다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4978,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인은 다른 모집에서 크리에이터 전용 제출 행동을 보지 않는다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4588,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "홈에서 회원가입·로그인과 공개 모집 상세로 이동한다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 3961,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4783,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "크리에이터는 홈·프로필에서 제작 관리로 이동하고 의뢰인 경로는 차단된다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 4953,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "screen-access.spec.ts",
+      "title": "의뢰인은 다른 모집에서 크리에이터 전용 제출 행동을 보지 않는다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 3998,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E 통합: 공개 제안→서명·결제·준비·승인·최종 전달·수령→정산·양측·확정 사건 링크",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27111,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 수령 전·문제 보류·금액 불일치는 정산/성공 안내 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 23770,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 처리 중·결과 확인 중·실패는 미완료, 기존 요청 조정·실패 후 새 요청",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 26559,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 응답 유실·재조회·조회 오류·잘못된 정산 링크·객체 권한·초기화",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 32929,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E 통합: 공개 제안→서명·결제·준비·승인·최종 전달·수령→정산·양측·확정 사건 링크",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27078,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 수령 전·문제 보류·금액 불일치는 정산/성공 안내 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 25043,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 처리 중·결과 확인 중·실패는 미완료, 기존 요청 조정·실패 후 새 요청",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 27115,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "settlement.spec.ts",
+      "title": "4-E: 응답 유실·재조회·조회 오류·잘못된 정산 링크·객체 권한·초기화",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 32778,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 통합: 고정 버전·첫 서명·양측 서명 선정·기존 대화·결제 경계",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 14053,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 조건 변경: 기존 서명 보존·구버전 서명 차단·새 버전 재확인",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 12143,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 타후보 확정: 미선정·읽기 전용·타후보 서명 비공개",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 15185,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 만료 정각 차단·새 확인 버전·일반 대화 유지",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 12589,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 응답 유실: 같은 ID 재전송·결과 조회·서명 중복 없음",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13592,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B Bearer·비당사자·지연 로그아웃과 조회 실패 차단",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 14371,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 통합: 고정 버전·첫 서명·양측 서명 선정·기존 대화·결제 경계",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13961,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 조건 변경: 기존 서명 보존·구버전 서명 차단·새 버전 재확인",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 12489,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 타후보 확정: 미선정·읽기 전용·타후보 서명 비공개",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 16297,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 만료 정각 차단·새 확인 버전·일반 대화 유지",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13134,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B 응답 유실: 같은 ID 재전송·결과 조회·서명 중복 없음",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13884,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "signatures.spec.ts",
+      "title": "3-B Bearer·비당사자·지연 로그아웃과 조회 실패 차단",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 14952,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 통합: 패키지 불러오기·최종 값·불완전/새 버전·양측 조회·이전 값·종료 기록",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 13378,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 편집 충돌: 최신 재조회도 입력을 보존하고 명시적 기준 갱신 후 저장",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10444,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 응답 유실: 같은 ID 재전송·재조회·중복 방지·텍스트 이스케이프",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10779,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 조회 실패·잘못된 응답·저장 실패 후 수동 회복과 반응형/키보드",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10965,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 유실된 응답 이후 새 작성본이 있으면 기준을 자동 갱신하지 않는다",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10689,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 권한·지연 로그아웃: Bearer/타방 차단과 계정 변경 후 저장 취소",
+      "project": "chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10294,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 통합: 패키지 불러오기·최종 값·불완전/새 버전·양측 조회·이전 값·종료 기록",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 14150,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 편집 충돌: 최신 재조회도 입력을 보존하고 명시적 기준 갱신 후 저장",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11013,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 응답 유실: 같은 ID 재전송·재조회·중복 방지·텍스트 이스케이프",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10984,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 조회 실패·잘못된 응답·저장 실패 후 수동 회복과 반응형/키보드",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 10902,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 유실된 응답 이후 새 작성본이 있으면 기준을 자동 갱신하지 않는다",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11938,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    },
+    {
+      "file": "terms.spec.ts",
+      "title": "3-A 권한·지연 로그아웃: Bearer/타방 차단과 계정 변경 후 저장 취소",
+      "project": "mobile-chromium",
+      "ok": true,
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 11365,
+          "errors": []
+        }
+      ],
+      "finalRun": 1
+    }
+  ]
+}

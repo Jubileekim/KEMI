@@ -30,6 +30,7 @@ export const catalogRoleLabels: Record<string, string> = {
 export const catalogCreatorSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
+  introduction: z.string().optional(),
   primaryId: z.string().nullable(),
   packages: z.array(packageItemSchema),
   works: z.array(catalogWorkSchema),
@@ -101,6 +102,7 @@ export function publicWorks(
   studio: StudioState,
   id: string,
   name: string,
+  synthetic = false,
 ): CatalogWork[] {
   if (studio.service !== "PUBLIC") return [];
   return studio.works
@@ -119,6 +121,7 @@ export function publicWorks(
       origin: w.origin,
       source: w.source,
       playable:
+        synthetic &&
         id === "mock-creator" &&
         /^sample-work-[1-5]$/.test(w.id) &&
         w.asset?.name === "catalog-sample.webm",
