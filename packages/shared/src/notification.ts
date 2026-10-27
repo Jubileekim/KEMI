@@ -9,6 +9,7 @@ import type { Pagination } from "./application.js";
 // - PROJECT_CLOSED: 지원한 프로젝트의 모집이 마감됨 (대기 중인 크리에이터)
 // - TERMS_SIGNING_REQUESTED: 상대방이 최종 조건서 서명을 요청함 (결정 기록 13장)
 // - CONTRACT_SIGNED: 양측 서명으로 계약이 체결됨 (양측)
+// - PAYMENT_SUCCEEDED: 의뢰인의 테스트 결제가 완료됨 (크리에이터)
 export const NOTIFICATION_TYPES = [
   "APPLICATION_SUBMITTED",
   "APPLICATION_ACCEPTED",
@@ -17,6 +18,7 @@ export const NOTIFICATION_TYPES = [
   "PROJECT_CLOSED",
   "TERMS_SIGNING_REQUESTED",
   "CONTRACT_SIGNED",
+  "PAYMENT_SUCCEEDED",
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;

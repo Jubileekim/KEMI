@@ -6,6 +6,10 @@ import {
   creatorProfileUpdateSchema,
   ERROR_CODES,
   NOTIFICATION_TYPES,
+  PAYMENT_STATUSES,
+  paymentConfirmSchema,
+  paymentCreateSchema,
+  paymentFailSchema,
   loginRequestSchema,
   SOCIAL_CALLBACK_ERRORS,
   SOCIAL_PROVIDER_PATHS,
@@ -189,6 +193,13 @@ const versionNoParam = {
   schema: { type: "string", pattern: "^[1-9]\\d{0,8}$" },
 };
 
+const orderIdParam = {
+  name: "orderId",
+  in: "path",
+  required: true,
+  schema: { type: "string", format: "uuid" },
+};
+
 const termsPartyErrors = {
   ...bearerErrors,
   403: errorResponse("이용 제한·탈퇴 회원 (`FORBIDDEN`)"),
@@ -215,6 +226,11 @@ const openApiDocument = {
     { name: "notifications", description: "인앱 알림" },
     { name: "discovery", description: "프로젝트 북마크·기본 추천" },
     { name: "pricing", description: "AI 제작 단가 분석·예산 입력 보조" },
+    {
+      name: "payments",
+      description:
+        "계약 전액 테스트 결제 (Toss Sandbox, 실제 돈은 움직이지 않음)",
+    },
     {
       name: "terms",
       description:
@@ -879,6 +895,119 @@ const openApiDocument = {
         },
       },
     },
+    "/api/contracts/{contractId}/payments": {
+      get: {
+        tags: ["payments"],
+        summary: "계약의 결제 내역 (PAY-02)",
+        description:
+          "계약 당사자(의뢰인·크리에이터)가 볼 수 있다. 최근 주문부터. 실패·취소된 주문도 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        responses: {
+          200: jsonResponse("결제 내역", "PaymentListResponse"),
+          ...bearerErrors,
+          403: errorResponse("이용 제한·탈퇴 회원 (`FORBIDDEN`)"),
+          404: errorResponse("계약이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+        },
+      },
+      post: {
+        tags: ["payments"],
+        summary: "결제 주문 만들기 (PAY-01)",
+        description:
+          "계약의 의뢰인만 만들 수 있다. 금액은 서명된 계약 금액이다(요청으로 받지 않는다). `commandId`가 Toss `orderId`가 된다. 진행 중이거나 완료된 주문(`READY`·`UNKNOWN`·`SUCCEEDED`)이 있으면 409다. 같은 `commandId`의 재전송은 200으로 기존 주문을 준다. 테스트 시크릿 키가 없으면 503.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("contractId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(paymentCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse(
+            "만든 주문 (Toss 결제창에 orderId·amount를 넘긴다)",
+            "PaymentOrder",
+          ),
+          200: jsonResponse("같은 요청의 재전송 (기존 주문)", "PaymentOrder"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("계약이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "결제할 수 없는 계약, 진행 중·완료된 주문 있음, 다른 계약에서 쓴 식별자 (`CONFLICT`)",
+          ),
+          503: errorResponse("테스트 결제 미설정 (`SERVICE_UNAVAILABLE`)"),
+        },
+      },
+    },
+    "/api/payments/confirm": {
+      post: {
+        tags: ["payments"],
+        summary: "결제 승인 (PAY-01)",
+        description:
+          "Toss successUrl로 돌아온 `paymentKey`·`orderId`·`amount`로 승인한다. `amount`가 저장한 주문 금액과 다르면 Toss를 부르지 않고 400이다. 결과는 주문 상태로 돌려준다: 승인되면 `SUCCEEDED`(크리에이터에게 `PAYMENT_SUCCEEDED` 알림), 거절되면 `FAILED`, 응답을 받지 못하면 `UNKNOWN`(sync로 다시 맞춘다). 같은 승인의 재전송은 이전 결과를 준다. Toss는 결제 요청 뒤 10분 안에 승인해야 한다.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(paymentConfirmSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("승인 결과가 반영된 주문", "PaymentOrder"),
+          400: errorResponse(
+            "입력값 오류, 주문 금액과 다른 금액 (`VALIDATION_FAILED`)",
+          ),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("주문이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("이미 처리된 주문 (`CONFLICT`)"),
+          503: errorResponse("테스트 결제 미설정 (`SERVICE_UNAVAILABLE`)"),
+        },
+      },
+    },
+    "/api/payments/{orderId}/sync": {
+      post: {
+        tags: ["payments"],
+        summary: "결제 결과 다시 확인 (PAY-02)",
+        description:
+          "`READY`·`UNKNOWN` 주문을 Toss 조회 결과로 맞춘다. 계약 당사자 누구나 부를 수 있다. 이미 끝난 주문은 그대로 돌려준다. 브라우저 복귀 값(success·amount·paymentKey)은 결과 증거로 쓰지 않는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [orderIdParam],
+        responses: {
+          200: jsonResponse("최신 주문", "PaymentOrder"),
+          400: errorResponse("주문 번호 형식 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("이용 제한·탈퇴 회원 (`FORBIDDEN`)"),
+          404: errorResponse("주문이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          503: errorResponse("테스트 결제 미설정 (`SERVICE_UNAVAILABLE`)"),
+        },
+      },
+    },
+    "/api/payments/{orderId}/fail": {
+      post: {
+        tags: ["payments"],
+        summary: "결제 취소·실패 기록",
+        description:
+          "Toss failUrl로 돌아온 `code`·`message`를 기록하고, 서버가 Toss 주문 조회로 결과를 확인한다(브라우저 값만으로 닫지 않는다). 결제 기록이 없으면(`NOT_FOUND_PAYMENT`) `PAY_PROCESS_CANCELED`는 `CANCELED`, 그 밖에는 `FAILED`. 주문과 맞는 `ABORTED`·`EXPIRED`는 `FAILED`, 이미 승인(`DONE`)됐으면 `SUCCEEDED`. 조회가 안 되거나 진행 중·불일치·부분 취소면 `UNKNOWN`으로 두어 새 주문을 막는다(나중에 sync). 이미 끝난 주문은 그대로 돌려준다. 의뢰인만 부를 수 있다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [orderIdParam],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(paymentFailSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("닫힌 주문", "PaymentOrder"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("의뢰인이 아님 (`FORBIDDEN`)"),
+          404: errorResponse("주문이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("승인 요청 전 주문이 아님 (`CONFLICT`)"),
+        },
+      },
+    },
     "/api/work-requests/{workRequestId}/terms": {
       get: {
         tags: ["terms"],
@@ -1349,6 +1478,55 @@ const openApiDocument = {
         type: "object",
         required: ["unreadCount"],
         properties: { unreadCount: { type: "integer" } },
+      },
+      PaymentOrder: {
+        type: "object",
+        required: [
+          "orderId",
+          "contractId",
+          "amountKrw",
+          "orderName",
+          "status",
+          "method",
+          "approvedAt",
+          "failureCode",
+          "failureMessage",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          orderId: { type: "string", format: "uuid" },
+          contractId: { type: "string" },
+          amountKrw: { type: "integer" },
+          orderName: { type: "string" },
+          status: { type: "string", enum: [...PAYMENT_STATUSES] },
+          method: { type: ["string", "null"] },
+          approvedAt: { type: ["string", "null"], format: "date-time" },
+          failureCode: { type: ["string", "null"] },
+          failureMessage: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      PaymentListResponse: {
+        type: "object",
+        required: ["contract", "items"],
+        properties: {
+          contract: {
+            type: "object",
+            required: ["id", "amountKrw", "clientId", "creatorId"],
+            properties: {
+              id: { type: "string" },
+              amountKrw: { type: "integer" },
+              clientId: { type: "string" },
+              creatorId: { type: "string" },
+            },
+          },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/PaymentOrder" },
+          },
+        },
       },
       TermsValues: {
         type: "object",

@@ -194,7 +194,9 @@ describe("OpenAPI 문서", () => {
           .replace("{applicationId}", "1")
           .replace("{notificationId}", "1")
           .replace("{workRequestId}", "1")
-          .replace("{versionNo}", "1");
+          .replace("{versionNo}", "1")
+          .replace("{contractId}", "1")
+          .replace("{orderId}", "00000000-0000-4000-8000-000000000000");
         const agent = request(app);
         let res;
         if (method === "get") res = await agent.get(path);

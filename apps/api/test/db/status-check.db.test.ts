@@ -1,5 +1,6 @@
 import {
   CONTRACT_STATUSES,
+  PAYMENT_STATUSES,
   TERMS_VERSION_STATUSES,
   WORK_REQUEST_CLOSED_REASONS,
   WORK_REQUEST_STATUSES,
@@ -58,6 +59,7 @@ describe("DB CHECK 제약과 @kemi/shared 상태값이 같다", () => {
     ["notifications_event_type_check", NOTIFICATION_TYPES],
     ["terms_versions_status_check", TERMS_VERSION_STATUSES],
     ["contracts_status_check", CONTRACT_STATUSES],
+    ["payments_status_check", PAYMENT_STATUSES],
   ])("%s", async (constraintName, sharedValues) => {
     expect((await allowedValues(constraintName)).sort()).toEqual(
       [...sharedValues].sort(),

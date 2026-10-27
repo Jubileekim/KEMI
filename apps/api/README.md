@@ -258,7 +258,7 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `POST /api/notifications/{notificationId}/read`  | 모두       | 하나 읽음                                         |
 | `POST /api/notifications/read-all`               | 모두       | 모두 읽음                                         |
 
-- 알림: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터), 조건서·계약의 `TERMS_SIGNING_REQUESTED`·`CONTRACT_SIGNED`(아래)
+- 알림: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터), 조건서·계약의 `TERMS_SIGNING_REQUESTED`·`CONTRACT_SIGNED`, 결제의 `PAYMENT_SUCCEEDED`(아래)
 - 모집 마감은 스케줄러 없이 처리한다. 지원할 때 마감 시각을 검사하고, 직접 마감하면 대기 지원자에게 알린다. 마감 시각이 지났다는 알림은 보내지 않는다.
 
 ## 최종 조건서·서명·계약 API (TERMS-01~03, CONTRACT-01)
@@ -278,6 +278,22 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - `baseVersionNo`가 마지막 버전과 다르면 `409`다(다른 당사자가 먼저 저장함). 같은 `commandId`·같은 서명의 재전송은 `200`으로 이전 결과를 준다.
 - 두 번째 서명은 한 트랜잭션에서 계약 생성, 요청·프로젝트 `CONTRACTED`, 같은 프로젝트의 다른 활성 지원 `NOT_SELECTED`와 그 조건서 `VOID`, 알림(`CONTRACT_SIGNED`, `APPLICATION_AUTO_REJECTED`)까지 처리한다. 공고당 계약은 하나다.
 - 만료는 스케줄러 없이 처리한다. 기한이 지난 `SIGNING`은 조회할 때 `EXPIRED`로 보이고, 다음 저장 때 `EXPIRED`로 기록된다.
+
+## 테스트 결제 API (PAY-01·02, Toss Sandbox)
+
+자세한 규칙은 [결제 설계](../../docs/decisions/2026-10-26-payments.md)에 있다. 모두 `Authorization: Bearer <accessToken>`이 필요하다. **실제 돈은 움직이지 않는다.** 서버는 Toss 테스트 시크릿 키(`test_sk_`·`test_gsk_`)만 받고, `live_` 키는 서버가 시작하지 않는다.
+
+| 메서드·경로                         | 누가        | 하는 일                                                           |
+| ----------------------------------- | ----------- | ----------------------------------------------------------------- |
+| `GET /api/contracts/{id}/payments`  | 계약 당사자 | 결제 내역 (실패·취소 포함)                                        |
+| `POST /api/contracts/{id}/payments` | 의뢰인      | 계약 전액 주문 `{ commandId }` → `orderId`·금액을 결제창에 넘긴다 |
+| `POST /api/payments/confirm`        | 의뢰인      | successUrl 값 `{ paymentKey, orderId, amount }`로 승인            |
+| `POST /api/payments/{orderId}/sync` | 계약 당사자 | 결과가 불명확한 주문을 Toss 조회로 다시 맞춤                      |
+| `POST /api/payments/{orderId}/fail` | 의뢰인      | failUrl 값 `{ code, message }` 기록 + Toss 조회로 확인 뒤 닫음    |
+
+- 금액은 서명된 계약 금액만 쓴다. 승인 요청의 `amount`가 주문 금액과 다르면 Toss를 부르지 않고 `400`이다.
+- 주문 상태: `READY` → `SUCCEEDED`·`FAILED`·`CANCELED`, 응답을 받지 못하면 `UNKNOWN`(sync로 맞춤). 계약당 진행 중·완료 주문은 하나뿐이다.
+- `TOSS_SECRET_KEY`가 없으면 주문·승인·sync는 `503`이고 내역 조회만 된다.
 
 ## AI 단가 분석 (AI-01·AI-02)
 
@@ -322,6 +338,7 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `KAKAO_CLIENT_SECRET`                      |      |                | 카카오 Client Secret. 앱에서 끈 경우에만 비운다                                                                                 |
 | `AI_PRICING_API_KEY`                       |      |                | 심화 AI 단가 분석 서버 키. 없으면 요청 시 503 (브라우저에 노출 금지)                                                            |
 | `AI_PRICING_MODEL`                         |      | `gpt-4o-mini`  | AI 단가 분석용 Responses API 모델                                                                                               |
+| `TOSS_SECRET_KEY`                          |      |                | 테스트 결제. Toss **테스트** 시크릿 키(`test_sk_`·`test_gsk_`)만. 없으면 결제 경로 503 (브라우저에 노출 금지)                   |
 
 실제 값은 `.env`(커밋 금지)나 Render 대시보드의 Environment에만 넣는다. 저장소에는 `.env.example`만 둔다.
 

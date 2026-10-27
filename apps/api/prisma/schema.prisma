@@ -46,6 +46,7 @@ model User {
   signatures       Signature[]
   clientContracts  Contract[]        @relation("ContractClient")
   creatorContracts Contract[]        @relation("ContractCreator")
+  payments         Payment[]
 
   @@map("users")
 }
@@ -315,6 +316,34 @@ model Contract {
   termsVersion TermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
   client       User         @relation("ContractClient", fields: [clientId], references: [id], onDelete: Restrict)
   creator      User         @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  payments     Payment[]
 
   @@map("contracts")
+}
+
+// ─── 테스트 결제 (PAY-01·02, Toss Sandbox) ─────────────────────
+// 계약 전액을 결제하는 주문. 실패·취소된 주문도 지우지 않고 이력으로 남긴다.
+// 계약당 진행 중이거나 성공한 주문(READY·UNKNOWN·SUCCEEDED)은 하나뿐이다(부분 UNIQUE, 마이그레이션).
+model Payment {
+  id             BigInt    @id @default(autoincrement())
+  contractId     BigInt    @map("contract_id")
+  // Toss orderId. 의뢰인 화면이 만든 요청 식별자(UUID)를 그대로 쓴다.
+  orderId        String    @unique @map("order_id")
+  amountKrw      BigInt    @map("amount_krw")
+  orderName      String    @map("order_name")
+  status         String    @default("READY")
+  paymentKey     String?   @unique @map("payment_key")
+  method         String?
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(3)
+  failureCode    String?   @map("failure_code")
+  failureMessage String?   @map("failure_message")
+  createdBy      BigInt    @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  creator  User     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([contractId, createdAt])
+  @@map("payments")
 }

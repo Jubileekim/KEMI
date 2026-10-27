@@ -109,12 +109,13 @@
 
 ## 2. 열려 있는 PR과 남은 작업
 
-| PR                                                                               | 작성자 | 상태 (2026-10-23 09:20 UTC)           | 남은 작업                                                                                               |
-| -------------------------------------------------------------------------------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint               | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님 | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                                |
-| [#49](https://github.com/Jubileekim/KEMI/pull/49) API 차이 목록·조건서 설계 초안 | 선우님 | 리뷰 요청: 희년님                     | **선정 모델 결정**(지금 accept vs 기능명세서), 결정 기록 13장 7가지 확인                                |
-| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정                    | 희년님 | Web CI 통과. 리뷰 요청 없음           | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가      |
-| [#51](https://github.com/Jubileekim/KEMI/pull/51) 조건서·서명·계약 구현 (Draft)  | 선우님 | 리뷰 요청: 희년님                     | #49 결정에 맞춰 조정 후 병합. 마이그레이션 `20261026090000_terms_contracts`는 병합 뒤 `KEMI-dev`에 적용 |
+| PR                                                                                        | 작성자 | 상태 (2026-10-23 09:20 UTC)                                   | 남은 작업                                                                                                         |
+| ----------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint                        | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님                         | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                                          |
+| [#49](https://github.com/Jubileekim/KEMI/pull/49) API 차이 목록·조건서 설계 초안          | 선우님 | 리뷰 요청: 희년님                                             | **선정 모델 결정**(지금 accept vs 기능명세서), 결정 기록 13장 7가지 확인                                          |
+| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정                             | 희년님 | Web CI 통과. 리뷰 요청 없음                                   | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가                |
+| [#51](https://github.com/Jubileekim/KEMI/pull/51) 조건서·서명·계약 구현 (Draft)           | 선우님 | 리뷰 요청: 희년님                                             | #49 결정에 맞춰 조정 후 병합. 마이그레이션 `20261026090000_terms_contracts`는 병합 뒤 `KEMI-dev`에 적용           |
+| [#53](https://github.com/Jubileekim/KEMI/pull/53) 테스트 결제 구현 (Draft, #51 위에 쌓음) | 선우님 | 희년님 변경 요청 반영(fail 조회 대사·상태 검증) → 재리뷰 요청 | Toss Sandbox. 테스트 키(`TOSS_SECRET_KEY`, `test_` 키만) 발급 담당 정하기. 마이그레이션 `20261026120000_payments` |
 
 **리뷰 기록** (2026-10-23 확인)
 
@@ -174,18 +175,19 @@ npm run build:api                               # 린트 경고가 하나라도 
 
 ### 환경 변수 (값은 이 문서에 적지 않는다)
 
-| 이름                                        | 필요한 곳           | 값을 받는 곳·발급 담당                                                                                                                             |
-| ------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                              | 서버·마이그레이션   | 팀 개발 DB(`KEMI-dev`, 생성 예정) → Connect → Session pooler. Supabase Owner(희년님)에게 비공개 채널로 받는다                                      |
-| `MIGRATION_DATABASE_URL`                    | (선택) 마이그레이션 | 필요할 때만. 현재 쓰지 않는다                                                                                                                      |
-| `JWT_ACCESS_SECRET`                         | 서버                | 로컬은 담당자가 직접 만든다(32자 이상, README의 생성 명령). Render는 `render.yaml`의 `generateValue`로 Render가 만든다                             |
-| `APP_ORIGIN`                                | 서버                | 로컬 `http://localhost:5173`. 배포 값은 Vercel 운영 주소(프론트엔드 담당). **[미확인] Vercel 주소 미정**                                           |
-| `TRUST_PROXY_HOPS`                          | 서버                | 로컬 0. 배포 값은 Render 배포 후 확인해서 정한다(절차서 4장)                                                                                       |
-| `PORT`, `NODE_ENV`, `DATABASE_POOL_MAX`     | 서버                | 기본값 있음. Render는 `PORT`를 자동 지정                                                                                                           |
-| `TEST_DATABASE_URL`                         | DB 테스트           | `.env.test.example`의 로컬 Docker 값. 비밀값 아님                                                                                                  |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`  | 서버 (소셜 로그인)  | Google Cloud Console. **[미확인] 발급 담당 미정**. 둘 중 하나만 넣으면 서버가 시작하지 않는다. 준비 목록은 [연동 문서](2026-10-21-social-login.md) |
-| `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 서버 (소셜 로그인)  | Kakao Developers. **[미확인] 발급 담당 미정**                                                                                                      |
-| `AI_PRICING_API_KEY`, `AI_PRICING_MODEL`    | 서버 (AI 단가 분석) | PR #30. 키가 없으면 그 기능만 503. 실제 연동 테스트를 승인한 뒤에만 Render에 넣는다. **[미확인] 키 발급 담당**                                     |
+| 이름                                        | 필요한 곳           | 값을 받는 곳·발급 담당                                                                                                                                                            |
+| ------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                              | 서버·마이그레이션   | 팀 개발 DB(`KEMI-dev`, 생성 예정) → Connect → Session pooler. Supabase Owner(희년님)에게 비공개 채널로 받는다                                                                     |
+| `MIGRATION_DATABASE_URL`                    | (선택) 마이그레이션 | 필요할 때만. 현재 쓰지 않는다                                                                                                                                                     |
+| `JWT_ACCESS_SECRET`                         | 서버                | 로컬은 담당자가 직접 만든다(32자 이상, README의 생성 명령). Render는 `render.yaml`의 `generateValue`로 Render가 만든다                                                            |
+| `APP_ORIGIN`                                | 서버                | 로컬 `http://localhost:5173`. 배포 값은 Vercel 운영 주소(프론트엔드 담당). **[미확인] Vercel 주소 미정**                                                                          |
+| `TRUST_PROXY_HOPS`                          | 서버                | 로컬 0. 배포 값은 Render 배포 후 확인해서 정한다(절차서 4장)                                                                                                                      |
+| `PORT`, `NODE_ENV`, `DATABASE_POOL_MAX`     | 서버                | 기본값 있음. Render는 `PORT`를 자동 지정                                                                                                                                          |
+| `TEST_DATABASE_URL`                         | DB 테스트           | `.env.test.example`의 로컬 Docker 값. 비밀값 아님                                                                                                                                 |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`  | 서버 (소셜 로그인)  | Google Cloud Console. **[미확인] 발급 담당 미정**. 둘 중 하나만 넣으면 서버가 시작하지 않는다. 준비 목록은 [연동 문서](2026-10-21-social-login.md)                                |
+| `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 서버 (소셜 로그인)  | Kakao Developers. **[미확인] 발급 담당 미정**                                                                                                                                     |
+| `AI_PRICING_API_KEY`, `AI_PRICING_MODEL`    | 서버 (AI 단가 분석) | PR #30. 키가 없으면 그 기능만 503. 실제 연동 테스트를 승인한 뒤에만 Render에 넣는다. **[미확인] 키 발급 담당**                                                                    |
+| `TOSS_SECRET_KEY`                           | 서버 (테스트 결제)  | Toss 개발 연동 체험 상점의 **테스트** 시크릿 키(`test_sk_`·`test_gsk_`)만. live 키는 서버가 시작하지 않는다. **[미확인] 발급 담당**. 클라이언트 키는 프론트엔드(Vercel) 환경 변수 |
 
 - 소셜·AI 키는 비워도 서버가 시작한다. 이때 해당 기능만 동작하지 않는다.
 - 비밀값은 로컬 `apps/api/.env`(커밋 금지)와 Render 대시보드 Environment에만 넣는다. Render에는 관리자(희년님)가 넣는다. 채팅·PR·이슈에 적지 않는다.
