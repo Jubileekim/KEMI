@@ -65,5 +65,4 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
       ).toThrow(SeedTargetError);
     });
   });
-
 });
