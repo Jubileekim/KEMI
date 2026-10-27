@@ -1,8 +1,5 @@
 import { test, expect } from "@playwright/test";
-import {
-  setupSettlement,
-  settlementScenario,
-} from "./settlement-helpers";
+import { setupSettlement, settlementScenario } from "./settlement-helpers";
 import { deliveryRequest } from "./delivery-helpers";
 import { login, navigate } from "./proposal-helpers";
 import {
