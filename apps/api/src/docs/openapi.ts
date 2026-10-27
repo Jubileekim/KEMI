@@ -2335,7 +2335,7 @@ const openApiDocument = {
         tags: ["delivery"],
         summary: "리뷰 작성 (REVIEW-01)",
         description:
-          "완료(COMPLETED)된 거래의 당사자가 상대방을 한 번 평가한다. 평점 1~5 정수 [제안, D14].",
+          "최종 수령 완료(COMPLETED)와 모의 정산 성공(SIMULATED)이 확인된 거래의 당사자가 한 번 평가한다. 평점 1~5 정수, 본문 최대 2000자, 선택 태그 최대 5개·각 30자 [제안, D14]. 동일 내용 재전송은 기존 리뷰를 반환하며 다른 내용은 409다. 받은 리뷰 공개 기준은 유지한다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         requestBody: {

@@ -243,7 +243,7 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
 
     await prisma.project.update({
       where: { id: projectId },
-      data: { status: "CLOSED" },
+      data: { status: "CLOSED", closeReason: "MANUAL" },
     });
     expect((await reportProject()).status).toBe(404);
 
@@ -251,6 +251,8 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
       where: { id: projectId },
       data: {
         status: "OPEN",
+        closeReason: null,
+        createdAt: new Date(Date.now() - 2 * DAY_MS),
         recruitmentEndAt: new Date(Date.now() - DAY_MS),
       },
     });
@@ -260,6 +262,8 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
       where: { id: projectId },
       data: {
         recruitmentEndAt: new Date(Date.now() + 3 * DAY_MS),
+        status: "CLOSED",
+        closeReason: "MANUAL",
         deletedAt: new Date(),
       },
     });
@@ -268,7 +272,7 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
 
     await prisma.project.update({
       where: { id: projectId },
-      data: { deletedAt: null },
+      data: { deletedAt: null, status: "OPEN", closeReason: null },
     });
     const publicReport = await reportProject();
     expect(publicReport.status).toBe(201);
