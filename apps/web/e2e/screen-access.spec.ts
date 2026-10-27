@@ -12,6 +12,8 @@ test("홈에서 회원가입·로그인과 공개 모집 상세로 이동한다"
   await expect(page).toHaveURL("/login");
   await page.getByRole("link", { name: "KEMI 홈" }).click();
   await guide.getByRole("link", { name: /공개 모집 둘러보기/ }).click();
+  await expect(page).toHaveURL("/campaigns");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("공개 모집");
   await page.getByRole("article").first().getByRole("link").click();
   await page.getByRole("link", { name: "제안 제출하기" }).click();
   await expect(page).toHaveURL(/\/login\?returnTo=/);
