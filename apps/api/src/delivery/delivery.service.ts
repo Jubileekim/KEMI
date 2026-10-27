@@ -4,6 +4,7 @@ import {
   type Deliverable,
   type DeliverableKind,
   type Review,
+  type RevisionItem,
   type RevisionRequest,
   type Settlement,
   type SettlementListItem,
@@ -212,6 +213,29 @@ export interface DeliveryService {
   }>;
 }
 
+// 같은 commandId로 다른 내용을 보낸 경우
+function reusedCommand(): AppError {
+  return conflict("같은 요청 식별자로 다른 내용을 보낼 수 없습니다.");
+}
+
+// 파일 ID는 순서·중복과 관계없이 같은 집합인지 본다.
+function sameIds(saved: bigint[], sent: string[]): boolean {
+  const a = [...new Set(saved.map(String))].sort();
+  const b = [...new Set(sent)].sort();
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}
+
+// 저장된 체크리스트와 보낸 체크리스트를 같은 형태로 맞춰 비교한다(위치가 없으면 빈 값).
+function sameItems(saved: unknown, sent: RevisionItem[]): boolean {
+  const parsed = z.array(revisionItemSchema).safeParse(saved);
+  if (!parsed.success) return false;
+  const key = (items: RevisionItem[]) =>
+    JSON.stringify(
+      items.map((item) => [item.position ?? "", item.problem, item.desired]),
+    );
+  return key(parsed.data) === key(sent);
+}
+
 export function createDeliveryService({
   prisma,
   now = () => new Date(),
@@ -310,12 +334,24 @@ export function createDeliveryService({
         requireRole(role, "CREATOR");
         const repeated = await tx.deliverable.findUnique({
           where: { commandId: data.commandId },
-          select: { contractId: true },
+          select: {
+            contractId: true,
+            kind: true,
+            note: true,
+            files: { select: { fileId: true } },
+          },
         });
         if (repeated) {
-          if (repeated.contractId !== contractId) {
-            throw conflict("이미 사용한 요청 식별자입니다.");
-          }
+          // 같은 요청의 재전송만 성공으로 본다. 계약·종류·파일·메모 중 하나라도 다르면 409.
+          const same =
+            repeated.contractId === contractId &&
+            repeated.kind === data.kind &&
+            repeated.note === (data.note ?? null) &&
+            sameIds(
+              repeated.files.map((f) => f.fileId),
+              data.fileIds,
+            );
+          if (!same) throw reusedCommand();
           return toDelivery(production, userId);
         }
         requireInProgress(production);
@@ -407,12 +443,28 @@ export function createDeliveryService({
         requireRole(role, "CLIENT");
         const repeated = await tx.revisionRequest.findUnique({
           where: { commandId: data.commandId },
-          select: { contractId: true },
+          select: {
+            contractId: true,
+            deliverableId: true,
+            type: true,
+            items: true,
+            note: true,
+            files: { select: { fileId: true } },
+          },
         });
         if (repeated) {
-          if (repeated.contractId !== contractId) {
-            throw conflict("이미 사용한 요청 식별자입니다.");
-          }
+          // 같은 요청의 재전송만 성공으로 본다. 대상 버전·종류·항목·파일·메모 중 하나라도 다르면 409.
+          const same =
+            repeated.contractId === contractId &&
+            repeated.deliverableId === deliverableId &&
+            repeated.type === data.type &&
+            repeated.note === (data.note ?? null) &&
+            sameItems(repeated.items, data.items) &&
+            sameIds(
+              repeated.files.map((f) => f.fileId),
+              data.fileIds,
+            );
+          if (!same) throw reusedCommand();
           return toDelivery(production, userId);
         }
         requireInProgress(production);
