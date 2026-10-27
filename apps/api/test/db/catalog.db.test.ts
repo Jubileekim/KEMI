@@ -198,7 +198,7 @@ describe("제작 패키지·서비스 공개 (PACK-01~03)", () => {
 });
 
 describe("작업물 (PORT-01·02)", () => {
-  it("영상·목적·본인 역할이 있어야 공개하고, 고객 의뢰 작업은 고객 동의가 있어야 한다", async () => {
+  it("영상·목적·본인 역할이 있어야 공개하고, 고객 의뢰 작업은 공개할 수 없다", async () => {
     const creator = await signup(app, "CREATOR");
     const other = await signup(app, "CREATOR", 2);
     const video = await portfolioFile(creator, "video/mp4");
@@ -239,11 +239,29 @@ describe("작업물 (PORT-01·02)", () => {
     expect(noRoles.status).toBe(400);
     expect(
       noRoles.body.error.details.map((d: { path: string[] }) => d.path[0]),
-    ).toEqual(["roles", "clientConsent"]);
+    ).toEqual(["roles"]);
 
     await patch(creator.token, `/api/creator/portfolios/${id}`, {
       roles: ["FILMING", "EDITING"],
       clientConsent: true,
+    });
+    // 고객 의뢰 작업물은 크리에이터가 동의를 표시해도 공개할 수 없다(고객 동의 기록 기능 전까지).
+    const clientWork = await publish();
+    expect(clientWork.status).toBe(409);
+    expect(
+      (await prisma.portfolio.findUniqueOrThrow({ where: { id: BigInt(id) } }))
+        .status,
+    ).toBe("DRAFT");
+    // DB도 고객 의뢰 작업물의 공개를 막는다.
+    await expect(
+      prisma.portfolio.update({
+        where: { id: BigInt(id) },
+        data: { status: "PUBLIC" },
+      }),
+    ).rejects.toThrow();
+
+    await patch(creator.token, `/api/creator/portfolios/${id}`, {
+      source: "OWN_WORK",
     });
     const published = await publish();
     expect(published.body).toMatchObject({ status: "PUBLIC" });
@@ -269,14 +287,14 @@ describe("작업물 (PORT-01·02)", () => {
     expect(media.body.video.url).toContain("portfolio/");
     expect(media.body.thumbnail.url).toContain("portfolio/");
 
-    // 공개 중에는 고객 동의를 지울 수 없다. 내리면 공개 조회가 막힌다.
+    // 공개 중에는 고객 의뢰 작업물로 바꿀 수 없다. 내리면 공개 조회가 막힌다.
     expect(
       (
         await patch(creator.token, `/api/creator/portfolios/${id}`, {
-          clientConsent: false,
+          source: "CLIENT_WORK",
         })
       ).status,
-    ).toBe(400);
+    ).toBe(409);
     await post(creator.token, `/api/creator/portfolios/${id}/hide`);
     expect((await request(app).get(`/api/portfolios/${id}`)).status).toBe(404);
   });

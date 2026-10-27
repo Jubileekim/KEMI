@@ -8,7 +8,7 @@ export const CATALOG_STATUSES = ["DRAFT", "PUBLIC", "PRIVATE"] as const;
 export const catalogStatusSchema = z.enum(CATALOG_STATUSES);
 export type CatalogStatus = z.infer<typeof catalogStatusSchema>;
 
-// 작업물 출처: 본인 작업(OWN_WORK), 고객 의뢰 작업(CLIENT_WORK: 고객 공개 동의가 있어야 공개) [제안, D16]
+// 작업물 출처: 본인 작업(OWN_WORK), 고객 의뢰 작업(CLIENT_WORK: 고객 동의 확인 기능 전까지 공개 불가) [D16]
 export const PORTFOLIO_SOURCES = ["OWN_WORK", "CLIENT_WORK"] as const;
 export const portfolioSourceSchema = z.enum(PORTFOLIO_SOURCES);
 export type PortfolioSource = z.infer<typeof portfolioSourceSchema>;

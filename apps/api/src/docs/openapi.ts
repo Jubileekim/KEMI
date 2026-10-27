@@ -1352,7 +1352,7 @@ const openApiDocument = {
         tags: ["catalog"],
         summary: "작업물 공개 (PORT-02)",
         description:
-          "영상·목적·본인 역할(1개 이상)이 있어야 한다. 고객 의뢰 작업(CLIENT_WORK)은 고객 공개 동의가 있어야 한다 [제안, D16]. 고객 납품물은 자동으로 공개되지 않는다.",
+          "영상·목적·본인 역할(1개 이상)이 있어야 한다. 고객 의뢰 작업(CLIENT_WORK)은 고객 동의 확인 기능이 준비될 때까지 공개할 수 없다(409, DB CHECK로도 막음) [D16]. 고객 납품물은 자동으로 공개되지 않는다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("portfolioId")],
         responses: {

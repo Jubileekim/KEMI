@@ -81,13 +81,20 @@ function missingPortfolioFields(row: PortfolioRow): string[] {
     row.videoFileId === null && "videoFileId",
     row.purpose === null && "purpose",
     row.roles.length === 0 && "roles",
-    row.source === "CLIENT_WORK" && !row.clientConsent && "clientConsent",
   ].filter((name): name is string => typeof name === "string");
 }
 
 // 보내지 않은 항목(undefined)은 저장된 값을 쓴다.
 const keep = <T>(value: T | undefined, saved: T): T =>
   value === undefined ? saved : value;
+
+// 고객 의뢰 작업물은 고객의 검증 가능한 동의·범위·철회 기록이 준비될 때까지 공개하지 않는다(#60 리뷰, D16).
+// 크리에이터가 스스로 표시하는 clientConsent만으로는 고객 동의를 증명할 수 없다. DB CHECK로도 막는다.
+function clientWorkNotPublishable(): AppError {
+  return conflict(
+    "고객 의뢰 작업물은 아직 공개할 수 없습니다. 고객 동의 확인 기능이 준비되면 공개할 수 있습니다.",
+  );
+}
 
 function incomplete(fields: string[]): AppError {
   return new AppError(
@@ -438,14 +445,18 @@ export function createCatalogService({
         );
         await requireLinkablePackage(tx, creatorId, data.packageId);
         const next = portfolioData(data);
+        if (
+          row.status === "PUBLIC" &&
+          keep(next.source, row.source) === "CLIENT_WORK"
+        ) {
+          throw clientWorkNotPublishable();
+        }
         if (row.status === "PUBLIC") {
           const missing = missingPortfolioFields({
             ...row,
             videoFileId: keep(next.videoFileId, row.videoFileId),
             purpose: keep(next.purpose, row.purpose),
             roles: keep(next.roles, row.roles),
-            source: keep(next.source, row.source),
-            clientConsent: keep(next.clientConsent, row.clientConsent),
           });
           if (missing.length > 0) throw incomplete(missing);
         }
@@ -455,7 +466,7 @@ export function createCatalogService({
       });
     },
 
-    // PORT-02: 작업물 공개·비공개. 고객 의뢰 작업은 고객 공개 동의가 있어야 공개한다 [제안, D16].
+    // PORT-02: 작업물 공개·비공개. 고객 의뢰 작업은 지금은 공개하지 않는다(clientWorkNotPublishable).
     // 고객 납품물은 자동으로 공개되지 않는다(작업물은 크리에이터가 따로 올리고 공개해야 한다).
     async setPortfolioStatus(user, portfolioId, visible) {
       const creatorId = requireCreator(user);
@@ -464,6 +475,7 @@ export function createCatalogService({
         if (visible) {
           const missing = missingPortfolioFields(row);
           if (missing.length > 0) throw incomplete(missing);
+          if (row.source === "CLIENT_WORK") throw clientWorkNotPublishable();
         }
         return toPortfolio(
           await tx.portfolio.update({
