@@ -48,6 +48,7 @@ model User {
   creatorContracts Contract[]        @relation("ContractCreator")
   payments         Payment[]
   chatMessages     ChatMessage[]
+  files            File[]
   chatReads        ChatRead[]
 
   @@map("users")
@@ -202,6 +203,7 @@ model WorkRequest {
   termsVersions TermsVersion[]
   contract      Contract?
   chatRoom      ChatRoom?
+  files         File[]
 
   @@unique([projectId, creatorId])
   @@index([creatorId, createdAt])
@@ -377,8 +379,9 @@ model ChatMessage {
   dedupeKey String   @map("dedupe_key")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
-  sender User?    @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  room        ChatRoom         @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  sender      User?            @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  attachments ChatAttachment[]
 
   @@unique([roomId, dedupeKey])
   @@index([roomId, id])
@@ -396,4 +399,41 @@ model ChatRead {
 
   @@id([roomId, userId])
   @@map("chat_reads")
+}
+
+// ─── 파일 (FILE-01, 결정 기록 4장) ─────────────────────────────
+// 바이트는 Supabase Storage 비공개 버킷에 있고, 여기에는 소유자·쓰임·확인 상태만 둔다.
+// 거래 파일(채팅 첨부·자료·납품물·수정 첨부)은 work_request_id가 있고 그 요청의 당사자만 볼 수 있다.
+model File {
+  id              BigInt    @id @default(autoincrement())
+  ownerId         BigInt    @map("owner_id")
+  purpose         String
+  mimeType        String    @map("mime_type")
+  fileName        String    @map("file_name")
+  sizeBytes       BigInt    @map("size_bytes")
+  storagePath     String    @unique @map("storage_path")
+  status          String    @default("PENDING")
+  rejectionReason String?   @map("rejection_reason")
+  workRequestId   BigInt?   @map("work_request_id")
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  owner           User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workRequest     WorkRequest?     @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  chatAttachments ChatAttachment[]
+
+  @@index([ownerId, createdAt])
+  @@index([workRequestId])
+  @@map("files")
+}
+
+model ChatAttachment {
+  messageId BigInt @map("message_id")
+  fileId    BigInt @map("file_id")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  file    File        @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@id([messageId, fileId])
+  @@map("chat_attachments")
 }

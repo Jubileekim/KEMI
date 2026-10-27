@@ -38,6 +38,10 @@ const envSchema = z
     // 서버 측 AI 단가 분석 (선택). API 키를 브라우저에 전달하지 않는다.
     AI_PRICING_API_KEY: optionalSecret,
     AI_PRICING_MODEL: z.string().trim().min(1).max(80).default("gpt-4o-mini"),
+    // 파일 저장소(Supabase Storage, 선택). 둘 다 있어야 켜진다. 없으면 업로드·다운로드는 503.
+    SUPABASE_URL: optionalSecret.pipe(z.url().optional()),
+    SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
+    STORAGE_BUCKET: z.string().trim().min(1).max(63).default("kemi-private"),
     // Toss Payments 시크릿 키 (선택). 실제 결제를 막기 위해 테스트 키(test_)만 받는다.
     // 없으면 테스트 결제 경로는 503이고 다른 기능은 그대로 동작한다.
     TOSS_SECRET_KEY: optionalSecret.refine(

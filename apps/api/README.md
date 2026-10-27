@@ -282,6 +282,22 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - 두 번째 서명은 한 트랜잭션에서 계약 생성, 요청·프로젝트 `CONTRACTED`, 같은 프로젝트의 다른 활성 지원 `NOT_SELECTED`와 그 조건서 `VOID`, 알림(`CONTRACT_SIGNED`, `APPLICATION_AUTO_REJECTED`)까지 처리한다. 공고당 계약은 하나다.
 - 만료는 스케줄러 없이 처리한다. 기한이 지난 `SIGNING`은 조회할 때 `EXPIRED`로 보이고, 다음 저장 때 `EXPIRED`로 기록된다.
 
+## 파일 API (FILE-01)
+
+결정 기록 4장의 흐름대로 **브라우저가 Supabase Storage(비공개 버킷)에 직접 올리고** 서버는 권한·확인만 한다.
+
+| 메서드·경로                     | 하는 일                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `POST /api/files`               | 업로드 준비 `{ purpose, fileName, mimeType, sizeBytes, workRequestId? }` → 서명 업로드 URL |
+| `POST /api/files/{id}/complete` | 실제 크기·매직 바이트 확인 → `READY` 또는 `REJECTED`                                       |
+| `GET /api/files/{id}`           | 파일 정보                                                                                  |
+| `GET /api/files/{id}/download`  | 다운로드·재생 서명 URL (10분)                                                              |
+
+- 한도: 영상(MP4·MOV)·ZIP 50MB, 이미지(JPG·PNG·WebP) 10MB. DB CHECK에도 같은 한도가 있다.
+- 거래 파일(`CHAT_ATTACHMENT`·`MATERIAL`·`DELIVERABLE`·`REVISION`)은 요청 당사자만, 프로필·작업물 파일은 올린 사람만 본다.
+- 채팅 메시지에 `attachmentFileIds`(최대 5개)로 확인이 끝난 본인 첨부를 붙인다.
+- `SUPABASE_URL`·`SUPABASE_SERVICE_ROLE_KEY`가 없으면 업로드·다운로드는 503. **[검증 필요] 실제 Supabase 버킷으로는 아직 호출해 보지 않았다.** 버킷은 비공개로 만들고, 버킷에도 같은 크기·MIME 제한을 건다.
+
 ## 요청별 대화 API (CHAT-01~05, WORK-04)
 
 | 메서드·경로                                  | 하는 일                                                             |
@@ -340,22 +356,24 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 
 ## 환경 변수
 
-| 이름                                       | 필수 | 기본값         | 설명                                                                                                                            |
-| ------------------------------------------ | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                                 |      | `development`  | `development` / `test` / `production`                                                                                           |
-| `PORT`                                     |      | `4000`         | Render는 자동으로 지정한다                                                                                                      |
-| `DATABASE_URL`                             | ✅   |                | 실행용 PostgreSQL 주소                                                                                                          |
-| `DATABASE_POOL_MAX`                        |      | `5`            | 서버 한 대의 최대 DB 연결 수                                                                                                    |
-| `MIGRATION_DATABASE_URL`                   |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                                                                                       |
-| `JWT_ACCESS_SECRET`                        | ✅   |                | Access 토큰 서명 키 (32자 이상)                                                                                                 |
-| `APP_ORIGIN`                               | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다                                                                   |
-| `TRUST_PROXY_HOPS`                         |      | `0`            | 앞단 프록시 개수. 요청 제한의 클라이언트 IP 판단에 쓴다. 배포 값은 배포 후 확인해서 정한다 (결정 기록 8장 "클라이언트 IP 판단") |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |      |                | Google 로그인. 둘 다 넣어야 켜진다                                                                                              |
-| `KAKAO_REST_API_KEY`                       |      |                | 카카오 로그인(REST API 키). 넣으면 켜진다                                                                                       |
-| `KAKAO_CLIENT_SECRET`                      |      |                | 카카오 Client Secret. 앱에서 끈 경우에만 비운다                                                                                 |
-| `AI_PRICING_API_KEY`                       |      |                | 심화 AI 단가 분석 서버 키. 없으면 요청 시 503 (브라우저에 노출 금지)                                                            |
-| `AI_PRICING_MODEL`                         |      | `gpt-4o-mini`  | AI 단가 분석용 Responses API 모델                                                                                               |
-| `TOSS_SECRET_KEY`                          |      |                | 테스트 결제. Toss **테스트** 시크릿 키(`test_sk_`·`test_gsk_`)만. 없으면 결제 경로 503 (브라우저에 노출 금지)                   |
+| 이름                                        | 필수 | 기본값         | 설명                                                                                                                            |
+| ------------------------------------------- | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                  |      | `development`  | `development` / `test` / `production`                                                                                           |
+| `PORT`                                      |      | `4000`         | Render는 자동으로 지정한다                                                                                                      |
+| `DATABASE_URL`                              | ✅   |                | 실행용 PostgreSQL 주소                                                                                                          |
+| `DATABASE_POOL_MAX`                         |      | `5`            | 서버 한 대의 최대 DB 연결 수                                                                                                    |
+| `MIGRATION_DATABASE_URL`                    |      | `DATABASE_URL` | 마이그레이션 전용 주소가 따로 필요할 때만                                                                                       |
+| `JWT_ACCESS_SECRET`                         | ✅   |                | Access 토큰 서명 키 (32자 이상)                                                                                                 |
+| `APP_ORIGIN`                                | ✅   |                | 프론트엔드 주소. refresh·logout 요청의 `Origin`과 같아야 한다                                                                   |
+| `TRUST_PROXY_HOPS`                          |      | `0`            | 앞단 프록시 개수. 요청 제한의 클라이언트 IP 판단에 쓴다. 배포 값은 배포 후 확인해서 정한다 (결정 기록 8장 "클라이언트 IP 판단") |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`  |      |                | Google 로그인. 둘 다 넣어야 켜진다                                                                                              |
+| `KAKAO_REST_API_KEY`                        |      |                | 카카오 로그인(REST API 키). 넣으면 켜진다                                                                                       |
+| `KAKAO_CLIENT_SECRET`                       |      |                | 카카오 Client Secret. 앱에서 끈 경우에만 비운다                                                                                 |
+| `AI_PRICING_API_KEY`                        |      |                | 심화 AI 단가 분석 서버 키. 없으면 요청 시 503 (브라우저에 노출 금지)                                                            |
+| `AI_PRICING_MODEL`                          |      | `gpt-4o-mini`  | AI 단가 분석용 Responses API 모델                                                                                               |
+| `TOSS_SECRET_KEY`                           |      |                | 테스트 결제. Toss **테스트** 시크릿 키(`test_sk_`·`test_gsk_`)만. 없으면 결제 경로 503 (브라우저에 노출 금지)                   |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |      |                | 파일 저장소. 개발용 Supabase URL과 service role 키(서버 전용). 없으면 파일 경로 503                                             |
+| `STORAGE_BUCKET`                            |      | `kemi-private` | 비공개 버킷 이름                                                                                                                |
 
 실제 값은 `.env`(커밋 금지)나 Render 대시보드의 Environment에만 넣는다. 저장소에는 `.env.example`만 둔다.
 
