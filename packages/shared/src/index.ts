@@ -8,3 +8,4 @@ export * from "./profile.js";
 export * from "./project-discovery.js";
 export * from "./project.js";
 export * from "./status.js";
+export * from "./terms.js";

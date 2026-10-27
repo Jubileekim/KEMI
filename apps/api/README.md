@@ -258,8 +258,26 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `POST /api/notifications/{notificationId}/read`  | 모두       | 하나 읽음                                         |
 | `POST /api/notifications/read-all`               | 모두       | 모두 읽음                                         |
 
-- 알림 5종: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터)
+- 알림: `APPLICATION_SUBMITTED`(의뢰인), `APPLICATION_ACCEPTED`, `APPLICATION_AUTO_REJECTED`, `APPLICATION_DECLINED`, `PROJECT_CLOSED`(크리에이터), 조건서·계약의 `TERMS_SIGNING_REQUESTED`·`CONTRACT_SIGNED`(아래)
 - 모집 마감은 스케줄러 없이 처리한다. 지원할 때 마감 시각을 검사하고, 직접 마감하면 대기 지원자에게 알린다. 마감 시각이 지났다는 알림은 보내지 않는다.
+
+## 최종 조건서·서명·계약 API (TERMS-01~03, CONTRACT-01)
+
+자세한 규칙은 [결정 기록](../../docs/decisions/2026-10-19-backend-setup.md) 13장에 있다. 모두 `Authorization: Bearer <accessToken>`이 필요하고, 그 요청의 의뢰인·크리에이터만 쓸 수 있다(다른 사람에게는 `404`). 공개 지원의 요청 ID는 지원 ID와 같다.
+
+| 메서드·경로                                                          | 하는 일                                                                          |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `GET /api/work-requests/{id}/terms`                                  | 참조 사본, 모든 버전(값·상태·서명), 계약(있으면)                                 |
+| `POST /api/work-requests/{id}/terms/versions`                        | 새 버전 저장 `{ commandId, baseVersionNo, values }`. 비어 있어도 저장됨          |
+| `POST /api/work-requests/{id}/terms/versions/{versionNo}/signing`    | 서명 요청. 48시간 기한, 금액·조건 7개 필수                                       |
+| `POST /api/work-requests/{id}/terms/versions/{versionNo}/signatures` | 본인 서명 `{ signerName, consent: true, termsHash }`. 두 번째 서명이면 계약 체결 |
+| `GET /api/work-requests/{id}/contract`                               | 계약서 조회                                                                      |
+
+- 협의 중(`DISCUSSING`)인 요청에서만 저장·서명할 수 있다. 모집 마감은 진행 중인 협의를 막지 않는다.
+- 버전 상태: `DRAFT` → `SIGNING`(48시간) → `SIGNED`. 새 버전을 저장하면 이전 버전은 `SUPERSEDED`, 기한이 지나면 `EXPIRED`, 협의가 끝나면 `VOID`. 값과 서명은 지우지 않는다.
+- `baseVersionNo`가 마지막 버전과 다르면 `409`다(다른 당사자가 먼저 저장함). 같은 `commandId`·같은 서명의 재전송은 `200`으로 이전 결과를 준다.
+- 두 번째 서명은 한 트랜잭션에서 계약 생성, 요청·프로젝트 `CONTRACTED`, 같은 프로젝트의 다른 활성 지원 `NOT_SELECTED`와 그 조건서 `VOID`, 알림(`CONTRACT_SIGNED`, `APPLICATION_AUTO_REJECTED`)까지 처리한다. 공고당 계약은 하나다.
+- 만료는 스케줄러 없이 처리한다. 기한이 지난 `SIGNING`은 조회할 때 `EXPIRED`로 보이고, 다음 저장 때 `EXPIRED`로 기록된다.
 
 ## AI 단가 분석 (AI-01·AI-02)
 

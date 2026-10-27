@@ -15,6 +15,8 @@ import type { PricingService } from "./pricing/pricing.service.js";
 import createProjectRouter from "./projects/project.router.js";
 import type { ProjectService } from "./projects/project.service.js";
 import { createHealthRouter, type DatabaseCheck } from "./routes/health.js";
+import createTermsRouter from "./terms/terms.router.js";
+import type { TermsService } from "./terms/terms.service.js";
 
 export interface AppDependencies {
   checkDatabase: DatabaseCheck;
@@ -25,6 +27,7 @@ export interface AppDependencies {
   notificationService: NotificationService;
   projectDiscoveryService: ProjectDiscoveryService;
   pricingService: PricingService;
+  termsService: TermsService;
   // 프론트엔드 주소. 쿠키를 쓰는 인증 요청의 Origin 검사에 쓴다.
   appOrigin: string;
   // 앞단 프록시 개수. 요청 제한에 쓰는 클라이언트 IP(req.ip)를 X-Forwarded-For에서 몇 번째 값으로 읽을지 정한다.
@@ -42,6 +45,7 @@ export function createApp({
   notificationService,
   projectDiscoveryService,
   pricingService,
+  termsService,
   appOrigin,
   trustProxyHops = 0,
   apiDocs = false,
@@ -73,6 +77,8 @@ export function createApp({
   );
   // AI-01·02: 실제 모델 분석은 서버에서만 수행한다. 인증·요청 제한은 라우터에서 처리한다.
   app.use("/api/pricing", createPricingRouter(authService, pricingService));
+  // 최종 조건서·서명·계약 (결정 기록 13장)
+  app.use("/api", createTermsRouter(authService, termsService));
   if (apiDocs) {
     app.use("/api", createDocsRouter());
   }

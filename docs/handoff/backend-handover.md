@@ -1,7 +1,7 @@
 # 백엔드 인수인계서
 
 - 작성: 2026-10-21, 백엔드 담당(jangseonu / GitHub `seonu2070-droid`). 이후 작업할 때마다 갱신한다.
-- 기준: `main` `73057fe` (PR #30 병합, 2026-10-23 09:33 UTC). PR·리뷰·CI·이슈 상태는 2026-10-23 09:35 UTC에 다시 확인했다.
+- 기준: `main` `2ce6e25` (PR #33 병합, 2026-10-26 00:20 UTC). PR·리뷰·CI·이슈 상태는 2026-10-26에 다시 확인했다.
 
 > **상태 표는 작성 시점 기준이다.** PR의 리뷰·병합·CI 상태는 이 문서가 병합된 뒤에도 계속 바뀐다. 작업을 시작하기 전에 GitHub에서 최신 상태를 직접 확인한다. 이 문서와 다르면 GitHub가 맞다.
 >
@@ -78,25 +78,27 @@
 
 ## 1. `main`에 병합된 백엔드 기능
 
-| PR  | 내용                                                                                                                 |
-| --- | -------------------------------------------------------------------------------------------------------------------- |
-| #1  | 백엔드 초기 구성: Express 5, 환경 변수 검증(Zod), `GET /health`·`/health/ready`, Prisma 7, API CI, ESLint(Airbnb+TS) |
-| #3  | Prettier 기본 설정, TypeScript 5.9.3 고정, 테스트 DB·CI 이미지 PostgreSQL 17.11 고정                                 |
-| #4  | 이메일 회원가입·로그인·토큰 갱신·로그아웃·`/api/auth/me`, Refresh 토큰 회전·재사용 감지, 요청 제한(429), 인증 테이블 |
-| #6  | 팀 DB 마이그레이션 적용 전·후 점검과 비상 되돌리기 절차서                                                            |
-| #8  | 인증 테이블 Supabase Data API 차단(RLS, `anon`·`authenticated` 권한 회수, 기본 권한 변경)                            |
-| #9  | `_prisma_migrations`의 Data API 권한 회수                                                                            |
-| #11 | OpenAPI 3.1 문서 `/api/openapi.json`과 Swagger UI `/api/docs` (운영 환경에서는 꺼짐)                                 |
-| #12 | 개발용 Supabase 적용 결과·Data API 꺼짐 확인 기록 (문서)                                                             |
-| #13 | 역할별 본인 프로필 `GET`·`PATCH /api/profiles/me` (PROFILE-01·02의 텍스트·선택 항목), 프로필 테이블 2개              |
-| #14 | Google·카카오 소셜 로그인과 소셜 가입(가입 티켓 10분), 제공자 요청 10초 제한, 시작·콜백 요청 제한 분리. DB 변경 없음 |
-| #17 | 이 인수인계서와 API README의 처음 실행 절차(Prisma Client 생성) (문서)                                               |
-| #18 | 인수인계서 상태 표 기준 안내 (문서)                                                                                  |
-| #19 | 공개 프로젝트 CRUD·탐색·마감·소프트 삭제 (PROJ-01·02). 희년님 작성, `projects` 테이블                                |
-| #20 | 프로젝트 북마크·추천 (BOOK-01). 희년님 작성, `project_bookmarks` 테이블                                              |
-| #22 | 지원·선정·자동 거절·마감과 인앱 알림 5종 (APPLY·STATE·NOTI). `work_requests`·`notifications` 테이블                  |
-| #10 | ERD v0.5 검토 보존본과 2026-10-23 MVP 필드 결정 (`apps/api/prisma/review/`, 실행 기준 아님). 희년님 작성             |
-| #30 | AI 단가 분석 `POST /api/pricing/analyze` (AI-01, 예산 반영은 기존 `budget` 필드로 AI-02). 희년님 작성. DB 변경 없음  |
+| PR  | 내용                                                                                                                                              |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #1  | 백엔드 초기 구성: Express 5, 환경 변수 검증(Zod), `GET /health`·`/health/ready`, Prisma 7, API CI, ESLint(Airbnb+TS)                              |
+| #3  | Prettier 기본 설정, TypeScript 5.9.3 고정, 테스트 DB·CI 이미지 PostgreSQL 17.11 고정                                                              |
+| #4  | 이메일 회원가입·로그인·토큰 갱신·로그아웃·`/api/auth/me`, Refresh 토큰 회전·재사용 감지, 요청 제한(429), 인증 테이블                              |
+| #6  | 팀 DB 마이그레이션 적용 전·후 점검과 비상 되돌리기 절차서                                                                                         |
+| #8  | 인증 테이블 Supabase Data API 차단(RLS, `anon`·`authenticated` 권한 회수, 기본 권한 변경)                                                         |
+| #9  | `_prisma_migrations`의 Data API 권한 회수                                                                                                         |
+| #11 | OpenAPI 3.1 문서 `/api/openapi.json`과 Swagger UI `/api/docs` (운영 환경에서는 꺼짐)                                                              |
+| #12 | 개발용 Supabase 적용 결과·Data API 꺼짐 확인 기록 (문서)                                                                                          |
+| #13 | 역할별 본인 프로필 `GET`·`PATCH /api/profiles/me` (PROFILE-01·02의 텍스트·선택 항목), 프로필 테이블 2개                                           |
+| #14 | Google·카카오 소셜 로그인과 소셜 가입(가입 티켓 10분), 제공자 요청 10초 제한, 시작·콜백 요청 제한 분리. DB 변경 없음                              |
+| #17 | 이 인수인계서와 API README의 처음 실행 절차(Prisma Client 생성) (문서)                                                                            |
+| #18 | 인수인계서 상태 표 기준 안내 (문서)                                                                                                               |
+| #19 | 공개 프로젝트 CRUD·탐색·마감·소프트 삭제 (PROJ-01·02). 희년님 작성, `projects` 테이블                                                             |
+| #20 | 프로젝트 북마크·추천 (BOOK-01). 희년님 작성, `project_bookmarks` 테이블                                                                           |
+| #22 | 지원·선정·자동 거절·마감과 인앱 알림 5종 (APPLY·STATE·NOTI). `work_requests`·`notifications` 테이블                                               |
+| #10 | ERD v0.5 검토 보존본과 2026-10-23 MVP 필드 결정 (`apps/api/prisma/review/`, 실행 기준 아님). 희년님 작성                                          |
+| #30 | AI 단가 분석 `POST /api/pricing/analyze` (AI-01, 예산 반영은 기존 `budget` 필드로 AI-02). 희년님 작성. DB 변경 없음                               |
+| #31 | 실제 라우터 ↔ OpenAPI 경로·메서드 쌍방향 일치 검사 (하위 라우터·`router.all()` 포함). 라우터에 경로를 추가하고 문서를 고치지 않으면 CI가 실패한다 |
+| #33 | 인수인계서 2026-10-23 갱신 (문서)                                                                                                                 |
 
 - 참고: PR #7(`apps/web` 프론트엔드 작업 공간)은 프론트엔드 담당 작업이다.
 - **닫은 PR**
@@ -107,11 +109,12 @@
 
 ## 2. 열려 있는 PR과 남은 작업
 
-| PR                                                                    | 작성자 | 상태 (2026-10-23 09:20 UTC)                                                         | 남은 작업                                                                                          |
-| --------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint    | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님                                               | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                           |
-| [#31](https://github.com/Jubileekim/KEMI/pull/31) OpenAPI 쌍방향 검사 | 선우님 | 희년님 변경 요청(하위 라우터·`router.all()` 누락) → `b238585`에서 반영, 재리뷰 대기 | 리뷰·병합. 병합 뒤에는 라우터에 경로를 추가하고 `openapi.ts`를 고치지 않으면 CI가 실패한다         |
-| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정         | 희년님 | Web CI 통과. 리뷰 요청 없음                                                         | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가 |
+| PR                                                                               | 작성자 | 상태 (2026-10-23 09:20 UTC)           | 남은 작업                                                                                               |
+| -------------------------------------------------------------------------------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [#28](https://github.com/Jubileekim/KEMI/pull/28) Render Blueprint               | 선우님 | CI 통과(`80d7643`). 리뷰 요청: 윤철님 | 리뷰·병합 → `KEMI-dev` 준비 후 희년님이 Render 서비스 생성(절차서 2단계)                                |
+| [#49](https://github.com/Jubileekim/KEMI/pull/49) API 차이 목록·조건서 설계 초안 | 선우님 | 리뷰 요청: 희년님                     | **선정 모델 결정**(지금 accept vs 기능명세서), 결정 기록 13장 7가지 확인                                |
+| [#32](https://github.com/Jubileekim/KEMI/pull/32) Vercel 설정                    | 희년님 | Web CI 통과. 리뷰 요청 없음           | 프론트엔드(윤철님) 리뷰. Render 주소가 정해지면 `/api/:path*` rewrite를 SPA fallback보다 앞에 추가      |
+| [#51](https://github.com/Jubileekim/KEMI/pull/51) 조건서·서명·계약 구현 (Draft)  | 선우님 | 리뷰 요청: 희년님                     | #49 결정에 맞춰 조정 후 병합. 마이그레이션 `20261026090000_terms_contracts`는 병합 뒤 `KEMI-dev`에 적용 |
 
 **리뷰 기록** (2026-10-23 확인)
 
@@ -401,8 +404,8 @@ packages/shared/src/             # 요청 Zod 스키마·응답 타입·상태�
 ## 11. 링크
 
 - **PR**
-  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#31 OpenAPI 쌍방향](https://github.com/Jubileekim/KEMI/pull/31), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32), [#33 이 문서](https://github.com/Jubileekim/KEMI/pull/33)
-  - 병합: #1, #3, #4, #6, #8, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #22, [#30 AI 단가](https://github.com/Jubileekim/KEMI/pull/30)
+  - 열림 (작성 시점): [#28 Render](https://github.com/Jubileekim/KEMI/pull/28), [#32 Vercel](https://github.com/Jubileekim/KEMI/pull/32), [#49 차이 목록·설계](https://github.com/Jubileekim/KEMI/pull/49), [#51 조건서·서명·계약 구현](https://github.com/Jubileekim/KEMI/pull/51)(Draft), 프론트엔드 #34~#48(Draft)
+  - 병합: #1, #3, #4, #6, #8, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #22, [#30 AI 단가](https://github.com/Jubileekim/KEMI/pull/30), [#31 OpenAPI 쌍방향](https://github.com/Jubileekim/KEMI/pull/31), [#33 인수인계서](https://github.com/Jubileekim/KEMI/pull/33)
   - 닫음: [#16 패키지](https://github.com/Jubileekim/KEMI/pull/16)(재설계), #23(취소)
 - **이슈**
   - 열림: [#24 팀 개발 DB](https://github.com/Jubileekim/KEMI/issues/24), [#25 API 명세](https://github.com/Jubileekim/KEMI/issues/25), [#26 프론트 E2E](https://github.com/Jubileekim/KEMI/issues/26), [#27 배포](https://github.com/Jubileekim/KEMI/issues/27), [#29 심화 기능](https://github.com/Jubileekim/KEMI/issues/29)

@@ -192,7 +192,9 @@ describe("OpenAPI 문서", () => {
           .replace("{provider}", "google")
           .replace("{projectId}", "1")
           .replace("{applicationId}", "1")
-          .replace("{notificationId}", "1");
+          .replace("{notificationId}", "1")
+          .replace("{workRequestId}", "1")
+          .replace("{versionNo}", "1");
         const agent = request(app);
         let res;
         if (method === "get") res = await agent.get(path);

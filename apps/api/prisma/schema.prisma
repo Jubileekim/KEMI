@@ -41,6 +41,11 @@ model User {
   creatorRequests  WorkRequest[]     @relation("WorkRequestCreator")
   notifications    Notification[]
   projectBookmarks ProjectBookmark[]
+  termsAuthored    TermsVersion[]    @relation("TermsVersionAuthor")
+  termsRequested   TermsVersion[]    @relation("TermsVersionSigningRequester")
+  signatures       Signature[]
+  clientContracts  Contract[]        @relation("ContractClient")
+  creatorContracts Contract[]        @relation("ContractCreator")
 
   @@map("users")
 }
@@ -161,6 +166,7 @@ model Project {
   workRequests  WorkRequest[]
   notifications Notification[]
   bookmarks     ProjectBookmark[]
+  contract      Contract?
 
   @@index([status, recruitmentEndAt])
   @@index([purpose])
@@ -190,6 +196,8 @@ model WorkRequest {
   creator       User           @relation("WorkRequestCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   project       Project?       @relation(fields: [projectId], references: [id], onDelete: Restrict)
   notifications Notification[]
+  termsVersions TermsVersion[]
+  contract      Contract?
 
   @@unique([projectId, creatorId])
   @@index([creatorId, createdAt])
@@ -231,4 +239,82 @@ model ProjectBookmark {
   @@index([projectId])
   @@index([userId, createdAt(sort: Desc)])
   @@map("project_bookmarks")
+}
+
+// ─── 최종 조건서·서명·계약 (결정 기록 13장) ─────────────────────
+// 조건서는 협의 중인 요청(work_requests) 하나에 붙는다. 값은 처음 저장한 뒤 바꾸지 않고, 바꿀 때는 새 버전을 만든다.
+// 상태 허용 값은 마이그레이션 CHECK와 @kemi/shared TERMS_VERSION_STATUSES가 같다.
+
+model TermsVersion {
+  id                 BigInt    @id @default(autoincrement())
+  workRequestId      BigInt    @map("work_request_id")
+  versionNo          Int       @map("version_no")
+  status             String    @default("DRAFT")
+  amountKrw          BigInt?   @map("amount_krw")
+  specification      String?
+  scope              String?
+  materials          String?
+  deadline           String?
+  revisions          String?
+  usageRights        String?   @map("usage_rights")
+  cancellation       String?
+  // 첫 저장 때 고정한 참조 사본(프로젝트 공개 필드, 그 요청의 지원 내용). 다음 버전에 그대로 복사한다.
+  referenceSnapshot  Json      @map("reference_snapshot")
+  termsHash          String    @map("terms_hash")
+  authorId           BigInt    @map("author_id")
+  commandId          String    @map("command_id") @db.Uuid
+  signingRequestedBy BigInt?   @map("signing_requested_by")
+  signingRequestedAt DateTime? @map("signing_requested_at") @db.Timestamptz(3)
+  signingExpiresAt   DateTime? @map("signing_expires_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  workRequest      WorkRequest @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  author           User        @relation("TermsVersionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  signingRequester User?       @relation("TermsVersionSigningRequester", fields: [signingRequestedBy], references: [id], onDelete: Restrict)
+  signatures       Signature[]
+  contract         Contract?
+
+  @@unique([workRequestId, versionNo])
+  @@unique([workRequestId, commandId])
+  @@map("terms_versions")
+}
+
+model Signature {
+  id             BigInt   @id @default(autoincrement())
+  termsVersionId BigInt   @map("terms_version_id")
+  userId         BigInt   @map("user_id")
+  signerName     String   @map("signer_name")
+  termsHash      String   @map("terms_hash")
+  signedAt       DateTime @default(now()) @map("signed_at") @db.Timestamptz(3)
+
+  termsVersion TermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([termsVersionId, userId])
+  @@map("signatures")
+}
+
+// 같은 버전의 두 번째 서명 때 처음 만든다. project_id UNIQUE로 공고당 계약은 하나다(결정 기록 2장).
+model Contract {
+  id             BigInt   @id @default(autoincrement())
+  workRequestId  BigInt   @unique @map("work_request_id")
+  projectId      BigInt?  @unique @map("project_id")
+  termsVersionId BigInt   @unique @map("terms_version_id")
+  clientId       BigInt   @map("client_id")
+  creatorId      BigInt   @map("creator_id")
+  amountKrw      BigInt   @map("amount_krw")
+  termsHash      String   @map("terms_hash")
+  status         String   @default("SIGNED")
+  signedAt       DateTime @map("signed_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  workRequest  WorkRequest  @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  termsVersion TermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
+  client       User         @relation("ContractClient", fields: [clientId], references: [id], onDelete: Restrict)
+  creator      User         @relation("ContractCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+
+  @@map("contracts")
 }
