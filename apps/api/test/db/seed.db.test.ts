@@ -119,4 +119,25 @@ describe("시연 데이터 (단계 8)", () => {
       SeedTargetError,
     );
   });
+  it("PM이 명시 승인한 시연 데이터는 기존 실사용자를 수정하지 않고 함께 존재한다", async () => {
+    const real = await prisma.user.create({
+      data: { email: "real@example.com", name: "실제 사용자", role: "CLIENT" },
+    });
+    // 기본 차단 유지. 운영 DB 대상 확인을 통과한 1회성 호출만 실사용자 공존 허용.
+    await expect(assertSeedDatabase(prisma)).rejects.toBeInstanceOf(SeedTargetError);
+    await assertSeedDatabase(prisma, { allowExistingUsers: true });
+    const summary = await seedDemo(prisma, { password: PASSWORD });
+    expect(summary.users).toHaveLength(4);
+    expect(await prisma.user.count()).toBe(5);
+    expect(
+      await prisma.user.findUnique({ where: { id: real.id } }),
+    ).toMatchObject({ email: real.email, name: real.name, role: real.role });
+    expect(
+      await prisma.payment.count({ where: { status: "SUCCEEDED" } }),
+    ).toBe(1); // 시연 성공기록 1건이 생성됨을 명시적으로 검증한다.
+    const repeated = await counts();
+    await seedDemo(prisma, { password: PASSWORD });
+    expect(await counts()).toEqual(repeated);
+  });
+
 });
