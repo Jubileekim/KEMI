@@ -5,6 +5,7 @@ import {
   type Portfolio,
   type ServicePackage,
 } from "@kemi/shared";
+import { useEffect } from "react";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -19,6 +20,7 @@ import {
 } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 // 공개 작업물 썸네일. 서명 주소는 만료되므로 화면에서 그때그때 받는다.
 function Thumbnail({ portfolio }: { portfolio: Portfolio }) {
@@ -77,6 +79,9 @@ export function PackageCard({
 
 // FEED-01: 공개 작업물 피드
 function Feed() {
+  useEffect(() => {
+    track("feed_view", "feed");
+  }, []);
   const [params, setParams] = useSearchParams();
   const search = query({
     purpose: params.get("purpose") ?? undefined,
@@ -202,6 +207,7 @@ function WorkDetail({ id }: { id: string }) {
         {media.data?.video ? (
           <video
             controls
+            onPlay={() => track("work_play", w.id)}
             preload="metadata"
             className="aspect-video w-full rounded-xl bg-black"
             src={media.data.video.url}
@@ -248,6 +254,9 @@ function WorkDetail({ id }: { id: string }) {
 // 공개 제작자 페이지(서비스가 공개된 크리에이터만)
 export function CreatorDetailLive() {
   const { creatorId = "" } = useParams();
+  useEffect(() => {
+    if (creatorId) track("creator_view", creatorId);
+  }, [creatorId]);
   const creator = useQuery({
     queryKey: ["creator", creatorId],
     queryFn: ({ signal }) => kemi.creator(creatorId, signal),

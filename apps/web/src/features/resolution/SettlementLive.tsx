@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useSession } from "../../app/session";
@@ -8,6 +8,7 @@ import { kemi } from "../../shared/api/kemi";
 import { dateTime, label, productionStatusLabels, won } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 // SETTLE-01·REVIEW-01: 모의 정산과 상호 리뷰 (실제 API). 실제 지급은 하지 않는다.
 export default function SettlementLive({ contractId }: { contractId: string }) {
@@ -24,6 +25,12 @@ export default function SettlementLive({ contractId }: { contractId: string }) {
       kemi.review(contractId, { rating, ...(comment ? { comment } : {}) }),
     onSuccess: (next) => client.setQueryData(key, next),
   });
+  const completed =
+    delivery.data?.productionStatus === "COMPLETED" &&
+    !!delivery.data.settlement;
+  useEffect(() => {
+    if (completed) track("transaction_completed", contractId);
+  }, [completed, contractId]);
   if (delivery.isPending)
     return <Loading text="정산 정보를 불러오고 있어요." />;
   if (delivery.error) return <Failure error={delivery.error} />;

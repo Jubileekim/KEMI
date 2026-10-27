@@ -155,6 +155,12 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
         (e: { action: string }) => e.action === "APPEAL",
       ),
     ).toHaveLength(1);
+    const filed = await get(creator.token, "/api/reports/me");
+    expect(JSON.stringify(filed.body.reports)).not.toContain(appealBody.note);
+    const replay = await post(creator.token, "/api/reports", body);
+    expect(JSON.stringify(replay.body)).not.toContain(appealBody.note);
+    const adminView = await get(ops.token, "/api/admin/reports");
+    expect(JSON.stringify(adminView.body)).toContain(appealBody.note);
 
     // 해제하면 다시 새 공고를 열 수 있다. 처리 근거가 운영 기록에 남는다.
     await action(ops.token, "RELEASE", "이의 검토 후 해제");
@@ -219,6 +225,41 @@ describe("신고·이용 제한·이의 제기 (OPS-01·02)", () => {
     ]);
     const list = await get(ops.token, "/api/admin/reports");
     expect(list.body.items).toHaveLength(2);
+  });
+
+  it("최근 안내 50건 밖의 이용 제한도 안내와 API에서 유지한다", async () => {
+    const subject = await signup(app, "CLIENT");
+    const reporter = await signup(app, "CREATOR");
+    const ops = await admin();
+    await Array.from({ length: 51 }).reduce(async (previous, _, i) => {
+      await previous;
+      await prisma.report.create({
+        data: {
+          reporterId: reporter.userId,
+          subjectId: subject.userId,
+          targetType: "PROJECT",
+          targetId: 1n,
+          reason: "신고",
+          status: "RESOLVED",
+          limited: i === 0,
+          commandId: randomUUID(),
+          events: {
+            create: {
+              actorId: ops.userId,
+              action: i === 0 ? "LIMIT" : "WARN",
+              note: "검토 결과",
+              commandId: randomUUID(),
+            },
+          },
+        },
+      });
+    }, Promise.resolve());
+    const view = await get(subject.token, "/api/reports/me");
+    expect(view.body.notices).toHaveLength(50);
+    expect(view.body.limited).toBe(true);
+    expect(
+      (await post(subject.token, "/api/projects", projectBody())).status,
+    ).toBe(403);
   });
 });
 

@@ -36,6 +36,7 @@ interface SessionTransport {
   token: () => Promise<string>;
   recover: (token: string) => Promise<void>;
   epoch: () => number;
+  isGuest?: () => boolean;
 }
 let session: SessionTransport | undefined;
 export function connectSession(transport: SessionTransport) {
@@ -54,12 +55,28 @@ function protectedPath(url = "") {
     (url.startsWith("/api/") && !url.startsWith("/api/auth/"))
   );
 }
+// 공개 탐색과 행동 기록은 비회원도 호출할 수 있다. 그 외 경로는 인증을 유지한다.
+function publicPath(url = "", method = "get") {
+  const path = url.split("?")[0] ?? "";
+  if (method.toLowerCase() === "post") return path === "/api/analytics/events";
+  if (method.toLowerCase() !== "get") return false;
+  return (
+    path === "/api/feed" ||
+    path === "/api/projects" ||
+    /^\/api\/(projects|creators|packages|portfolios)\/[1-9]\d*(\/media)?$/.test(
+      path,
+    ) ||
+    /^\/api\/users\/[1-9]\d*\/reviews$/.test(path)
+  );
+}
 api.interceptors.request.use(async (input) => {
   const config = input;
   if (session && protectedPath(config.url)) {
     config.sessionEpoch ??= session.epoch();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();
+    if (session.isGuest?.() && publicPath(config.url, config.method))
+      return config;
     const token = await session.token();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();

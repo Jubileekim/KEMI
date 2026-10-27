@@ -135,9 +135,18 @@ export default function WorkspaceLive({ requestId }: { requestId: string }) {
           <TermsLive requestId={requestId} document={terms.data} />
         )}
       </div>
-      <Button asChild variant="ghost">
-        <Link to="/requests">의뢰 현황으로</Link>
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button asChild variant="ghost">
+          <Link to="/requests">의뢰 현황으로</Link>
+        </Button>
+        <Button asChild variant="ghost">
+          <Link
+            to={`/reports/new?targetType=WORK_REQUEST&targetId=${requestId}`}
+          >
+            이 의뢰 신고
+          </Link>
+        </Button>
+      </div>
     </>
   );
 }

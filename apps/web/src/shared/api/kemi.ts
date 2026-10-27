@@ -1,4 +1,11 @@
 import type {
+  ActivityResponse,
+  AnalyticsBatchRequest,
+  AnalyticsSummary,
+  MySafetyView,
+  ReportActionRequest,
+  ReportCreateRequest,
+  SafetyReport,
   Application,
   CancellationCreateRequest,
   CancellationOverview,
@@ -120,6 +127,30 @@ export const kemi = {
     get<UnreadCountResponse>("/api/notifications/unread-count", signal),
   readNotification: (id: string) => post(`/api/notifications/${enc(id)}/read`),
   readAllNotifications: () => post("/api/notifications/read-all"),
+  readNotifications: (ids: string[]) =>
+    post<UnreadCountResponse>("/api/notifications/read", { ids }),
+
+  // ─── 내 활동 (ACT-01) ───
+  activity: (signal?: AbortSignal) =>
+    get<ActivityResponse>("/api/activity", signal),
+
+  // ─── 신고·이용 제한 (OPS-01·02) ───
+  report: (body: ReportCreateRequest) =>
+    post<SafetyReport>("/api/reports", body),
+  mySafety: (signal?: AbortSignal) =>
+    get<MySafetyView>("/api/reports/me", signal),
+  appeal: (reportId: string, body: { commandId: string; note: string }) =>
+    post<MySafetyView>(`/api/reports/${enc(reportId)}/appeal`, body),
+  adminReports: (signal?: AbortSignal) =>
+    get<{ items: SafetyReport[] }>("/api/admin/reports", signal),
+  actOnReport: (reportId: string, body: ReportActionRequest) =>
+    post<SafetyReport>(`/api/admin/reports/${enc(reportId)}/actions`, body),
+
+  // ─── 행동 기록 (METRIC-01) ───
+  analytics: (body: AnalyticsBatchRequest) =>
+    post<{ accepted: number }>("/api/analytics/events", body),
+  analyticsSummary: (signal?: AbortSignal) =>
+    get<AnalyticsSummary>("/api/admin/analytics", signal),
 
   // ─── 대화 (CHAT) ───
   chatRooms: (signal?: AbortSignal) =>

@@ -257,6 +257,13 @@ function Detail({ id }: { id: string }) {
             )}
           </>
         )}
+        {!owner && (role === "client" || role === "creator") && (
+          <Button asChild variant="ghost">
+            <Link to={`/reports/new?targetType=PROJECT&targetId=${id}`}>
+              신고
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="ghost">
           <Link to="/campaigns">목록으로</Link>
         </Button>

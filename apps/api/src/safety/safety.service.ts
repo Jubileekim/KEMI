@@ -53,6 +53,15 @@ function toReport(row: ReportRow): SafetyReport {
   };
 }
 
+function toFiledReport(row: ReportRow): SafetyReport {
+  const report = toReport(row);
+  return {
+    ...report,
+    // 상대방의 이의 내용은 신고자에게 공개하지 않는다.
+    history: report.history.filter((event) => event.action !== "APPEAL"),
+  };
+}
+
 // 제한 중이면 403 RESTRICTED. 새 공고·지원·직접 의뢰 직전에 부른다.
 export async function requireNotRestricted(
   db: Db,
@@ -156,7 +165,7 @@ export function createSafetyService({
   }
 
   async function view(userId: bigint): Promise<MySafetyView> {
-    const [filed, received] = await Promise.all([
+    const [filed, received, limited] = await Promise.all([
       prisma.report.findMany({
         where: { reporterId: userId },
         include: includeEvents,
@@ -172,10 +181,11 @@ export function createSafetyService({
         orderBy: { id: "desc" },
         take: 50,
       }),
+      prisma.report.count({ where: { subjectId: userId, limited: true } }),
     ]);
     return {
-      limited: received.some((r) => r.limited),
-      reports: filed.map(toReport),
+      limited: limited > 0,
+      reports: filed.map(toFiledReport),
       // 신고자·신고 사유는 대상자에게 보여주지 않는다(운영자 조치와 본인 이의만).
       notices: received.map((r) => ({
         reportId: r.id.toString(),
@@ -206,7 +216,7 @@ export function createSafetyService({
           existing.evidence === data.evidence;
         if (!same)
           throw conflict("같은 요청 식별자로 다른 신고를 보낼 수 없습니다.");
-        return { created: false, report: toReport(existing) };
+        return { created: false, report: toFiledReport(existing) };
       }
       const subjectId = await subjectOf(reporterId, data.targetType, targetId);
       if (subjectId === reporterId) {
@@ -233,7 +243,7 @@ export function createSafetyService({
           },
           include: includeEvents,
         });
-        return { created: true, report: toReport(created) };
+        return { created: true, report: toFiledReport(created) };
       } catch (err) {
         if (
           err instanceof Prisma.PrismaClientKnownRequestError &&

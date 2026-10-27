@@ -17,6 +17,7 @@ connectSession({
   token: session.getToken,
   recover: session.recover,
   epoch: session.epoch,
+  isGuest: () => !session.snapshot().user,
 });
 export function useSession() {
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
