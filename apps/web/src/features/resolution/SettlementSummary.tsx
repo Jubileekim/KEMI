@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useParams } from "react-router";
 import { mockEnabled } from "../auth/config";
+import SettlementLive from "./SettlementLive";
 
 const SettlementMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/SettlementMock"))
@@ -13,13 +14,5 @@ export default function SettlementSummary() {
         <SettlementMock key={contractId} contractId={contractId} />
       </Suspense>
     );
-  return (
-    <section className="showcase-card grid gap-4">
-      <h1 className="type-heading-lg">정산 연결 준비 중</h1>
-      <p>
-        정산·취소·분쟁 보류 API와 금액 정책 조율 후 연결해요. 실제 정산·지급
-        결과는 아직 확인할 수 없어요.
-      </p>
-    </section>
-  );
+  return <SettlementLive key={contractId} contractId={contractId} />;
 }

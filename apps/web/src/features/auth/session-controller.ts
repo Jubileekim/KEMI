@@ -193,12 +193,9 @@ export default function createSessionController(
     input: LoginRequest | SignupRequest,
     signup = false,
   ) {
-    if (!enabled || (signup && !mock))
-      throw new ApiError(
-        0,
-        "CONTRACT_PENDING",
-        "가입 API의 비밀번호 정책 조율이 필요해요.",
-      );
+    // 가입 폼(signupFormSchema)이 API보다 엄격한 비밀번호 규칙을 먼저 검사한다.
+    if (!enabled)
+      throw new ApiError(0, "CONTRACT_PENDING", "인증 연결이 꺼져 있어요.");
     reset();
     const expected = epoch;
     const response = await withCookieLock(() =>
