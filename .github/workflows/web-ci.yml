@@ -25,6 +25,9 @@ on:
         feat/frontend-5b-refunds-disputes,
         feat/frontend-5c-public-verification,
         feat/frontend-6a-public-feed,
+        feat/frontend-6b-direct-send,
+        feat/frontend-7a-activity,
+        feat/frontend-7b-engagement,
       ]
   push:
     branches: [main]

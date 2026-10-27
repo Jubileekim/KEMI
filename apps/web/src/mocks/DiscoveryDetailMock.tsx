@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import BookmarkMock from "./BookmarkMock";
 import { session, useSession } from "../app/session";
 import Button from "../components/ui/button";
 import {
@@ -60,6 +61,7 @@ export default function DiscoveryDetailMock({ id }: { id: string }) {
     <>
       <Link to={`/campaigns?${params}`}>모집 목록으로</Link>
       <h1 className="type-heading-lg">모집 상세</h1>
+      <BookmarkMock key={id} id={id} />
       <Button variant="outline" disabled={busy} onClick={() => query.refetch()}>
         최신 상태 확인
       </Button>

@@ -890,3 +890,13 @@
 - **원격 Web CI(로컬과 별도):** 선행4-E [600ce4d/run40426261708](https://github.com/Jubileekim/KEMI/actions/runs/40426261708)는 포맷·단위·빌드 success, 브라우저 in_progress였다. 따라서 최초 JSON 포맷 실패는 수정됐지만 원격 전체 통과는 아니다. 5-A `3e8c98c`는 base 필터 때문에 실행0건이었다. 5-B [10e4b02/run40430076103](https://github.com/Jubileekim/KEMI/actions/runs/40430076103)는 포맷·단위·빌드 success/브라우저 in_progress, 5-C [ceffc73/run40430191777](https://github.com/Jubileekim/KEMI/actions/runs/40430191777)는 포맷·단위 success/빌드 in_progress였다. 최신 문서 전달은 새 CI 대상이므로 최종 원격 결과는 아직 미검증이며 [#70 최신 Checks](https://github.com/Jubileekim/KEMI/pull/70/checks)를 확인한다. 원격 전체316개 통과를 로컬76개로 대체하지 않는다.
 - 로컬 종료 검증: 단위214/214, 연관 E2E76/76, 기본/두flag build:web, 운영 보호/미연결15개·Mock 제외, 토큰·전달 파일 형식/diff PASS. 서버 API/shared·의존성/lockfile·원본 엑셀/PDF/디자인 키트 변경 없음. 기존 outputs/tools는 시작 상태 그대로 미추적·미포함이다. 브라우저/운영 preview 전용5195/4205를 정리했고 다른 기존 프로세스는 종료하지 않았다.
 - 푸시 뒤 원격 추적 ref가 로컬에 없던 상태를 발견해 해당 브랜치들만 명시적으로 fetch하고 로컬/원격 추적/PR head를 대조했다. 마지막 종료 기록은 문서만 추가하며 [#70 커밋 목록](https://github.com/Jubileekim/KEMI/pull/70/commits)에서 최종 전달 SHA를 확인할 수 있다. 새 기능/다음 범위·병합·자동 병합·명시적 배포/재배포는 실행하지 않았다.
+
+## 7-A 활동 목록·캠페인 저장·추천 (2026-10-27)
+
+- 기존7단계 브랜치/PR 없음 확인. 원본 KEMI의 스테이징된6-C 변경을 보존하고 확인된6-B `8fecb83`에서 `../KEMI-frontend-7` worktree/`feat/frontend-7a-activity`를 분리했다. 6-C 전체 완료를 전제로 하지 않는다.
+- `/me/activity`, `/bookmarks`, `/recommendations`를 기존 역할 가드에 연결했다. 본인 모집·초안·의뢰/계약의 정확한 상세·납품·정산·리뷰 링크, 기존 주 메뉴와 모집 상세 저장 버튼을 연결했다. 크리에이터 저장/해제는 멱등이며 의뢰인·위조Bearer·사용자ID 주입을 처리기에서 차단한다.
+- 변경: `features/activity/ActivityPage.tsx`, `mocks/{activity-model,activity-api,activity-handlers,ActivityMock,BookmarkMock,member-request}`, `profile-handlers`의 내부 프로필 조회, App·Shell·DiscoveryDetailMock·browser, activity 단위/E2E, `docs/frontend-activity-7.md`, QA Edge설정, CI의 stacked base 필터. API/shared·의존성·lockfile·운영 인증/권한은 변경하지 않았다.
+- 로컬 웹 단위221/221·build:web(타입/기존ESLint/운영빌드) exit0, 토큰·전달 파일 Prettier/diff PASS. 새5197·Edge 데스크톱2+모바일2 4/4·실패0·건너뜀0·retry0·exit0. 메뉴→저장/해제→목록→추천/역할 제한, 중복·위조·ID주입·본인 목록, 실제 프로필 분야 변경 후 추천 이유 일치·조회 오류 때 이전 결과 숨김/복구를 확인했다.
+- 초기 lint 규칙 위반·Mock Bearer 누락과 추가 검사의 잘못된 프로필 endpoint를 수정했다. 수정/HMR이 겹친 초기 브라우저 실행2개 및 추가 검사2개 실패는 최종4/4와 합산하지 않는다. 서버 API 보안/실제 API·DB·추천 제공자 검증이 아니다.
+- 추천은 현재 프로필 분야와 캠페인 제품 표현만 비교하는 명시적 개발 예시다. 정보 부족/일치 없음·일정/스타일/가격 적합 미보장 표시. D15 숨김 대상/추천 규칙, 실제 Project와 Mock Campaign ID·DTO 조율·다중탭/영구복원은 남는다. 정상 API 북마크/알림은 존재하지만 현재 모집/거래 Mock과 혼용하지 않는다.
+- 검토: 원본 명세와 최종 코드 품질을 분리해 확인했고 입력/권한/응답 오류·중복·비밀값/외부URL/데이터 노출을 점검했다. 운영 보안 증명은 아니다. 다음 작업 하나는 이번 사용자 지정7-B 알림·리뷰다. 7단계 전체 완료 아님. Git 링크는 후속 전달 기록에 추가한다.

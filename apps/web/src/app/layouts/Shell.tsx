@@ -47,6 +47,8 @@ export default function Shell() {
             )}
             {role === "creator" && (
               <>
+                <NavLink to="/bookmarks">저장한 캠페인</NavLink>
+                <NavLink to="/recommendations">추천 캠페인</NavLink>
                 <NavLink to="/studio/packages">패키지·서비스</NavLink>
                 <NavLink to="/studio/portfolio">작업물 관리</NavLink>
               </>

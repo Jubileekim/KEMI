@@ -8,6 +8,7 @@ import { readMockUser } from "./auth-handlers";
 
 // Contract-shaped UI fixtures, not a server or a permission implementation.
 const profiles = new Map<string, MyProfileResponse>();
+export const readMockProfile = (id: string) => profiles.get(id);
 const serviceStatuses = new Map<string, "DRAFT" | "PUBLIC" | "PRIVATE">();
 export function setMockServiceStatus(
   id: string,
