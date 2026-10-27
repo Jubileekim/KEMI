@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const report = JSON.parse(
-  await readFile(join(tmpdir(), "kemi-6-report.json"), "utf8"),
+  await readFile(
+    process.env.KEMI_QA_REPORT ?? join(tmpdir(), "kemi-6-report.json"),
+    "utf8",
+  ),
 );
 const tests = [];
 function collect(suite) {

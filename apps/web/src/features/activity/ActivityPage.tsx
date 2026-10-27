@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useLocation } from "react-router";
-import { mockEnabled } from "../auth/config";
 import ScreenLinks from "../../app/ScreenLinks";
+import { mockEnabled } from "../auth/config";
 
 const ActivityMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/ActivityMock"))
@@ -9,7 +9,7 @@ const ActivityMock = import.meta.env.DEV
 export default function ActivityPage() {
   const { pathname } = useLocation();
   return (
-    <>
+    <div className="grid gap-6">
       {mockEnabled && ActivityMock ? (
         <Suspense fallback={<p role="status">활동 준비 중…</p>}>
           <ActivityMock key={pathname} />
@@ -21,6 +21,6 @@ export default function ActivityPage() {
         </section>
       )}
       {pathname === "/me/activity" && <ScreenLinks />}
-    </>
+    </div>
   );
 }

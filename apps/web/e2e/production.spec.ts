@@ -126,6 +126,10 @@ async function check(page: Page, key: string, ready = true) {
 test("4-A 공개 제안 통합: 결제→발송·자료→정상 확인→한 번 시작→정정→양측 납기 승인", async ({
   page,
 }, info) => {
+  // This full UI journey includes recruitment, signing, payment, readiness and
+  // two-party deadline changes. Edge traces reached the final assertions at the
+  // old30s test/teardown boundary; action/expect limits and business time stay unchanged.
+  test.setTimeout(60_000);
   const errors: string[] = [];
   const products: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -235,6 +239,10 @@ test("4-A 미결제·위조 필드·권한·알 수 없는 계약·Bearer 차단
   expect((await request(page, contractId, undefined, true)).status).toBe(401);
   expect((await request(page, crypto.randomUUID())).status).toBe(404);
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole("heading", { name: "로그인", exact: true }),
+  ).toBeVisible();
   await navigate(page, "/signup");
   await page.getByLabel("의뢰인", { exact: true }).check();
   await page.getByLabel("표시 이름 (필수)").fill("다른 준비 의뢰인");

@@ -6,6 +6,9 @@ test("6-A 비회원 작품→영상, 가격 없음·필터/페이지·뒤로가�
 }) => {
   await page.goto("/");
   await expect(page.getByRole("article")).toHaveCount(3);
+  await expect(page.getByRole("article").first()).toContainText(
+    "브랜드 영상 · 차분한",
+  );
   await expect(page.getByRole("article").first()).not.toContainText("원");
   await page.getByRole("button", { name: "다음 페이지", exact: true }).click();
   await expect(page).toHaveURL(/page=2/);

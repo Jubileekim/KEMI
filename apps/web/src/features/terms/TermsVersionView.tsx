@@ -11,20 +11,31 @@ export function TermsReferences({ sources }: { sources: TermsSources }) {
     <details className="rounded-xl border p-4">
       <summary>참조 원본 사본 · 최종 조건과 별도</summary>
       <dl className="grid gap-2 break-words">
-        <dt>공고</dt>
-        <dd>
-          {sources.campaign.title} · {sources.campaign.product}
-        </dd>
-        <dt>공고 예산·범위</dt>
-        <dd>
-          {sources.campaign.budget}원 · {sources.campaign.scope}
-        </dd>
-        <dt>제안 견적·기간·방향</dt>
+        {sources.campaign ? (
+          <>
+            <dt>공고</dt>
+            <dd>
+              {sources.campaign.title} · {sources.campaign.product}
+            </dd>
+            <dt>공고 예산·범위</dt>
+            <dd>
+              {sources.campaign.budget}원 · {sources.campaign.scope}
+            </dd>
+          </>
+        ) : (
+          <>
+            <dt>의뢰 경로</dt>
+            <dd>직접 의뢰 · 연결된 공개 공고 없음</dd>
+          </>
+        )}
+        <dt>의뢰 견적·기간·방향</dt>
         <dd>
           {sources.proposal.quote}원 · {sources.proposal.days}일 ·{" "}
           {sources.proposal.direction}
         </dd>
-        <dt>대표 공개 패키지</dt>
+        <dt>
+          {sources.campaign ? "대표 공개 패키지" : "발송 당시 선택 패키지 사본"}
+        </dt>
         <dd>{sources.package?.title ?? "참조 가능한 공개 패키지 없음"}</dd>
         {sources.package &&
           Object.entries(packageFields).map(([key, label]) => (
@@ -37,8 +48,8 @@ export function TermsReferences({ sources }: { sources: TermsSources }) {
           ))}
       </dl>
       <p>
-        첫 작성본 저장 시 사본을 고정해요. 원본 변경은 최종 값과 저장 이력에
-        자동 반영되지 않아요.
+        직접 의뢰는 발송 당시, 공개 제안은 첫 작성본 저장 시 사본을 고정해요.
+        원본 변경은 최종 값과 저장 이력에 자동 반영되지 않아요.
       </p>
     </details>
   );

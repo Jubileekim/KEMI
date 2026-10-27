@@ -41,6 +41,9 @@ export default function CreatorMock() {
           <header className="showcase-card grid gap-4">
             <p className="type-label-md text-primary">CREATOR</p>
             <h1 className="type-heading-lg">{creator.name}</h1>
+            <p className="whitespace-pre-wrap" aria-label="공개 제작자 소개">
+              {creator.introduction || "공개 소개를 아직 등록하지 않았어요."}
+            </p>
             <p>작품으로 먼저 만나고, 원하는 범위는 함께 협의해요.</p>
             <p>후기·거래 실적 없이 공개한 샘플도 볼 수 있어요.</p>
           </header>
