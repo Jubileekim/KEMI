@@ -36,6 +36,7 @@ interface SessionTransport {
   token: () => Promise<string>;
   recover: (token: string) => Promise<void>;
   epoch: () => number;
+  isAuthenticated?: () => boolean;
 }
 let session: SessionTransport | undefined;
 export function connectSession(transport: SessionTransport) {
@@ -54,9 +55,27 @@ function protectedPath(url = "") {
     (url.startsWith("/api/") && !url.startsWith("/api/auth/"))
   );
 }
+// 공개 조회는 비로그인 상태에서도 가능하다. 쓰기·내 정보는 항상 Bearer 검증한다.
+function publicReadPath(url = "", method = "get") {
+  if (method.toLowerCase() !== "get") return false;
+  const path = url.split("?")[0] ?? "";
+  return (
+    path === "/api/feed" ||
+    path === "/api/projects" ||
+    /^\/api\/projects\/[1-9][0-9]*$/.test(path) ||
+    /^\/api\/creators\/[1-9][0-9]*$/.test(path) ||
+    /^\/api\/packages\/[1-9][0-9]*$/.test(path) ||
+    /^\/api\/portfolios\/[1-9][0-9]*(\/media)?$/.test(path)
+  );
+}
 api.interceptors.request.use(async (input) => {
   const config = input;
   if (session && protectedPath(config.url)) {
+    if (
+      publicReadPath(config.url, config.method) &&
+      session.isAuthenticated?.() === false
+    )
+      return config;
     config.sessionEpoch ??= session.epoch();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();
