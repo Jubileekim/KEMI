@@ -9,6 +9,13 @@ import { readMockUser } from "./auth-handlers";
 // Contract-shaped UI fixtures, not a server or a permission implementation.
 const profiles = new Map<string, MyProfileResponse>();
 const serviceStatuses = new Map<string, "DRAFT" | "PUBLIC" | "PRIVATE">();
+// Explicit public-text projection for the DEV catalog, never the full private profile.
+export function readMockPublicIntroduction(id: string) {
+  const profile = profiles.get(id)?.profile;
+  if (serviceStatuses.get(id) !== "PUBLIC" || profile?.type !== "CREATOR")
+    return undefined;
+  return profile.introduction ?? "";
+}
 export function setMockServiceStatus(
   id: string,
   status: "DRAFT" | "PUBLIC" | "PRIVATE",

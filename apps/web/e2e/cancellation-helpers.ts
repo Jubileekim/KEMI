@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { setupPayment, confirm } from "./payments-helpers";
+import { setupDirectPayment } from "./direct-helpers";
 import { navigate } from "./proposal-helpers";
 import { deliveryRequest } from "./delivery-helpers";
 import { resolutionViewSchema } from "../src/mocks/resolution-model";
@@ -15,8 +16,15 @@ export async function resolutionScenario(page: Page, value: string) {
     await fetch("/__mock__/resolution/scenario", { method: "POST", body });
   }, value);
 }
-export async function setupCancellation(page: Page, amount = 100000) {
-  const result = await setupPayment(page, amount);
+export async function setupCancellation(
+  page: Page,
+  amount = 100000,
+  source = "public",
+) {
+  const result =
+    source === "direct"
+      ? await setupDirectPayment(page, amount)
+      : await setupPayment(page, amount);
   await confirm(page, "테스트 주문 만들기");
   await expect(
     page.getByRole("button", { name: "Mock 테스트 결제 진행", exact: true }),

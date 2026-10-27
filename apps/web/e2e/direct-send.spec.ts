@@ -2,20 +2,8 @@ import { test, expect } from "@playwright/test";
 import { login, navigate } from "./proposal-helpers";
 import { deliveryRequest } from "./delivery-helpers";
 
-async function fillDirect(page: import("@playwright/test").Page) {
-  await page
-    .getByLabel("의뢰 제목", { exact: true })
-    .fill("6단계 직접 영상 의뢰");
-  await page
-    .getByLabel("제작 브리프", { exact: true })
-    .fill("개인 프로젝트의 차분한 소개 영상");
-  await page
-    .getByLabel("희망 조건", { exact: true })
-    .fill("일정과 사용권은 함께 협의해요");
-  await page
-    .getByRole("button", { name: "의뢰 내용 검토", exact: true })
-    .click();
-}
+import { fillDirect } from "./direct-helpers";
+
 test("6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송", async ({
   page,
 }) => {

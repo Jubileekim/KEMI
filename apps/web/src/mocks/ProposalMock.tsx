@@ -77,6 +77,7 @@ function Content() {
   const params = new URLSearchParams();
   if (campaignId) params.set("campaignId", campaignId);
   if (workspace && requestId) params.set("roomId", requestId);
+  if (!workspace && requestId) params.set("requestId", requestId);
   const key = ["mock-proposals", session.epoch(), user?.id, params.toString()];
   const query = useQuery({
     queryKey: key,
