@@ -16,6 +16,7 @@ import lockProject from "../projects/project-lock.js";
 import { voidOpenTerms } from "../terms/terms.service.js";
 import { ensureChatRoom } from "../chat/chat.service.js";
 import { requireNotRestricted } from "../safety/safety.service.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -62,7 +63,11 @@ function toApplication(row: ApplicationRow): Application {
 }
 
 function notFound(what: "프로젝트" | "지원"): AppError {
-  return new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  return new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 }
 
 function requireRole(user: AuthUser, role: "CLIENT" | "CREATOR"): bigint {

@@ -22,6 +22,7 @@ import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
 import { postSystemMessage } from "../chat/chat.service.js";
 import { createProductionForContract } from "../production/production.service.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -62,7 +63,11 @@ const referenceSchema = z.object({
 type Reference = z.infer<typeof referenceSchema>;
 
 function notFound(what: "의뢰 요청" | "조건서 버전" | "계약"): AppError {
-  return new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  return new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 }
 
 function conflict(message: string): AppError {

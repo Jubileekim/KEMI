@@ -67,11 +67,15 @@ export default function createSessionController(
     state = next;
     listeners.forEach((fn) => fn());
   };
-  function reset(notice = "", status: SessionState["status"] = "guest") {
+  function reset(
+    notice = "",
+    status: SessionState["status"] = "guest",
+    clearCache = true,
+  ) {
     epoch += 1;
     token = "";
     expiresAt = 0;
-    clearPrivate();
+    if (clearCache) clearPrivate();
     publish({ ...guest, notice, status });
   }
   function accept(result: AuthTokenResponse, expected: number) {
@@ -134,9 +138,12 @@ export default function createSessionController(
     refreshFlight = Promise.resolve(operation)
       .then(() => {})
       .catch((error: unknown) => {
+        // 로그인 세션(토큰·사용자)이 있었을 때만 개인 캐시를 지운다(비로그인 첫 확인은 지울 것이 없다).
         if (expected === epoch)
           reset(
             "로그인이 만료되었거나 세션을 확인하지 못했어요. 다시 로그인해 주세요.",
+            "guest",
+            token !== "" || state.user !== null,
           );
         throw error;
       })
@@ -177,7 +184,10 @@ export default function createSessionController(
         });
       } catch (error) {
         if (axios.isCancel(error)) return;
-        if (error instanceof ApiError && error.status === 401) reset();
+        // 첫 확인에서 로그인 세션이 없으면(401) 지울 개인 데이터도 없다. 이때 모든 조회를 취소하면
+        // 함께 진행 중이던 공개 조회(작품 피드 등)가 취소된 채 다시 불리지 않아 화면이 멈춘다.
+        if (error instanceof ApiError && error.status === 401)
+          reset("", "guest", false);
         else
           reset(
             "세션을 확인하지 못했어요. 다시 확인하거나 로그인해 주세요.",

@@ -25,6 +25,7 @@ import { postSystemMessage } from "../chat/chat.service.js";
 import { requireReadyFiles } from "../files/file.service.js";
 import notify from "../notifications/notify.js";
 import { settleIfReady } from "./settlement.js";
+import withObjectParticle from "../http/korean.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -67,7 +68,11 @@ const revisionItemsSchema = z.array(revisionItemSchema);
 
 const conflict = (message: string) => new AppError(409, "CONFLICT", message);
 const notFound = (what: string) =>
-  new AppError(404, "NOT_FOUND", `${what}을 찾을 수 없습니다.`);
+  new AppError(
+    404,
+    "NOT_FOUND",
+    `${withObjectParticle(what)} 찾을 수 없습니다.`,
+  );
 
 // 일반 수정만 계약 회차에서 차감한다. 초안 의견·계약 오류 시정은 차감하지 않는다.
 const countsTowardLimit = (type: string) => type === "GENERAL";
