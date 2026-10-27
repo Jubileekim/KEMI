@@ -10,7 +10,7 @@ describe("실제 API 비회원 탐색", () => {
       token,
       epoch: () => 0,
       recover: async () => {},
-      isGuest: () => true,
+      isAuthenticated: () => false,
     });
     const adapter = vi.fn(async (config) => ({
       data: {},

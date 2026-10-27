@@ -36,7 +36,7 @@ interface SessionTransport {
   token: () => Promise<string>;
   recover: (token: string) => Promise<void>;
   epoch: () => number;
-  isGuest?: () => boolean;
+  isAuthenticated?: () => boolean;
 }
 let session: SessionTransport | undefined;
 export function connectSession(transport: SessionTransport) {
@@ -63,9 +63,8 @@ function publicPath(url = "", method = "get") {
   return (
     path === "/api/feed" ||
     path === "/api/projects" ||
-    /^\/api\/(projects|creators|packages|portfolios)\/[1-9]\d*(\/media)?$/.test(
-      path,
-    ) ||
+    /^\/api\/(projects|creators|packages)\/[1-9]\d*$/.test(path) ||
+    /^\/api\/portfolios\/[1-9]\d*(\/media)?$/.test(path) ||
     /^\/api\/users\/[1-9]\d*\/reviews$/.test(path)
   );
 }
@@ -75,7 +74,10 @@ api.interceptors.request.use(async (input) => {
     config.sessionEpoch ??= session.epoch();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();
-    if (session.isGuest?.() && publicPath(config.url, config.method))
+    if (
+      session.isAuthenticated?.() === false &&
+      publicPath(config.url, config.method)
+    )
       return config;
     const token = await session.token();
     if (config.sessionEpoch !== session.epoch())

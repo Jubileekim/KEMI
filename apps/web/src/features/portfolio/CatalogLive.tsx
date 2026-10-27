@@ -79,9 +79,6 @@ export function PackageCard({
 
 // FEED-01: 공개 작업물 피드
 function Feed() {
-  useEffect(() => {
-    track("feed_view", "feed");
-  }, []);
   const [params, setParams] = useSearchParams();
   const search = query({
     purpose: params.get("purpose") ?? undefined,
@@ -92,6 +89,9 @@ function Feed() {
     queryFn: ({ signal }) => kemi.feed(search, signal),
   });
   const page = Number(params.get("page") ?? "1");
+  useEffect(() => {
+    if (feed.isSuccess) track("feed_view", "feed");
+  }, [feed.isSuccess]);
   return (
     <>
       <h1 className="type-heading-lg">작품 피드</h1>
@@ -207,7 +207,7 @@ function WorkDetail({ id }: { id: string }) {
         {media.data?.video ? (
           <video
             controls
-            onPlay={() => track("work_play", w.id)}
+            onPlaying={() => track("work_play", w.id)}
             preload="metadata"
             className="aspect-video w-full rounded-xl bg-black"
             src={media.data.video.url}
@@ -254,13 +254,13 @@ function WorkDetail({ id }: { id: string }) {
 // 공개 제작자 페이지(서비스가 공개된 크리에이터만)
 export function CreatorDetailLive() {
   const { creatorId = "" } = useParams();
-  useEffect(() => {
-    if (creatorId) track("creator_view", creatorId);
-  }, [creatorId]);
   const creator = useQuery({
     queryKey: ["creator", creatorId],
     queryFn: ({ signal }) => kemi.creator(creatorId, signal),
   });
+  useEffect(() => {
+    if (creator.isSuccess) track("creator_view", creatorId);
+  }, [creator.isSuccess, creatorId]);
   if (creator.isPending)
     return <Loading text="제작자 정보를 불러오고 있어요." />;
   if (creator.error) return <Failure error={creator.error} />;

@@ -14,6 +14,7 @@ import { kemi } from "../../shared/api/kemi";
 import { label, purposeLabels, styleLabels } from "../live/labels";
 import { Card, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
+import ProjectDraftEditorLive from "./ProjectDraftEditorLive";
 
 // datetime-local 값(브라우저 현지 시각)을 ISO로
 const toIso = (local: string) => (local ? new Date(local).toISOString() : "");
@@ -192,6 +193,7 @@ export default function CampaignEditorLive() {
     enabled: !!campaignId,
     queryFn: ({ signal }) => kemi.project(campaignId ?? "", signal),
   });
+  if (!campaignId) return <ProjectDraftEditorLive />;
   if (campaignId && existing.isPending) return <Loading />;
   if (campaignId && existing.error) return <Failure error={existing.error} />;
   return <Editor key={campaignId ?? "new"} initial={existing.data} />;

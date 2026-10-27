@@ -309,10 +309,45 @@ describe("행동 기록 (METRIC-01)", () => {
 });
 
 describe("내 활동 (ACT-01)·알림 여러 개 읽음 (NOTI-02)", () => {
+  it("정산 없는 완료 표시와 열린 분쟁은 정상 완료로 안내하지 않는다", async () => {
+    const deal = await signedDeal(app, prisma, { paid: true });
+    await prisma.production.update({
+      where: { contractId: BigInt(deal.contractId) },
+      data: {
+        status: "COMPLETED",
+        workingDays: 5,
+        startedAt: new Date(),
+        dueDate: new Date(Date.now() + 5 * DAY_MS),
+      },
+    });
+    expect(
+      (await get(deal.client.token, "/api/activity")).body.requests[0].stage,
+    ).toBe("DELIVERED");
+    await prisma.dispute.create({
+      data: {
+        contractId: BigInt(deal.contractId),
+        openedBy: deal.client.userId,
+        reason: "정산 보류 확인",
+      },
+    });
+    expect(
+      (await get(deal.client.token, "/api/activity")).body.requests[0].stage,
+    ).toBe("DISPUTED");
+  });
   it("요청마다 진행 단계를 계산하고, 내 알림만 골라 읽는다", async () => {
     const deal = await signedDeal(app, prisma, { paid: true });
+    const draft = await post(deal.client.token, "/api/project-drafts", {
+      title: "활동에서 이어 쓸 초안",
+    });
+    expect(draft.status).toBe(201);
     const clientView = await get(deal.client.token, "/api/activity");
     expect(clientView.body.role).toBe("CLIENT");
+    expect(clientView.body.drafts).toEqual([
+      expect.objectContaining({
+        id: draft.body.id,
+        values: expect.objectContaining({ title: "활동에서 이어 쓸 초안" }),
+      }),
+    ]);
     expect(clientView.body.projects[0]).toMatchObject({ applicationCount: 1 });
     expect(clientView.body.requests[0]).toMatchObject({
       id: deal.workRequestId,
@@ -320,6 +355,7 @@ describe("내 활동 (ACT-01)·알림 여러 개 읽음 (NOTI-02)", () => {
       contractId: deal.contractId,
     });
     const creatorView = await get(deal.creator.token, "/api/activity");
+    expect(creatorView.body.drafts).toEqual([]);
     expect(creatorView.body.requests[0]).toMatchObject({
       stage: "PREPARING",
       needsAction: true,

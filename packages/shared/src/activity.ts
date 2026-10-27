@@ -1,3 +1,5 @@
+import type { ProjectDraft } from "./catalog.js";
+
 // 내 활동 묶음 조회 (ACT-01). 화면이 여러 API를 조합하지 않고 한 번에 받는다.
 
 // 요청(공개 모집 지원·직접 의뢰)의 진행 단계. 서버가 계약·결제·제작·정산·취소 상태로 계산한다.
@@ -11,6 +13,7 @@ export const ACTIVITY_STAGES = [
   "DELIVERED",
   "COMPLETED",
   "CANCELED",
+  "DISPUTED",
 ] as const;
 export type ActivityStage = (typeof ACTIVITY_STAGES)[number];
 
@@ -41,6 +44,7 @@ export interface ActivityResponse {
   role: "CLIENT" | "CREATOR";
   // 의뢰인의 모집(크리에이터는 빈 배열)
   projects: ActivityProject[];
+  drafts: ProjectDraft[];
   requests: ActivityRequest[];
   // 크리에이터의 관심 공고 수(의뢰인은 0)
   bookmarkCount: number;

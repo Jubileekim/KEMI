@@ -1,6 +1,113 @@
 import { test, expect, type Page } from "@playwright/test";
 
 const password = "BrowserTest1234";
+
+test("실제 API: 임시 저장 → 활동에서 이어쓰기 → 공개 실패 후 같은 초안 재시도", async ({
+  page,
+  request,
+}, info) => {
+  const email = `draft-${Date.now()}-${info.project.name}@example.test`;
+  const signup = await request.post("/api/auth/signup", {
+    data: { email, password, name: "초안 검증", role: "CLIENT" },
+  });
+  expect(signup.status()).toBe(201);
+  const user = await signup.json();
+  const headers = { Authorization: `Bearer ${user.accessToken}` };
+  await login(page, email);
+  await page.goto("/campaigns/new");
+  const title = `실제 초안 ${info.project.name}`;
+  await page.getByLabel("제목", { exact: true }).fill(title);
+  await page.getByRole("button", { name: "임시 저장", exact: true }).click();
+  await expect(page).toHaveURL(/draft=\d+/);
+  await page.goto("/me/activity");
+  await page
+    .getByRole("link", { name: `${title} · 이어 쓰기`, exact: true })
+    .click();
+  await expect(page.getByLabel("제목", { exact: true })).toHaveValue(title);
+  await page
+    .getByLabel("설명", { exact: true })
+    .fill("임시 저장하고 이어 쓴 실제 API 검증용 영상 제작 공고입니다.");
+  await page.getByLabel("영상 목적", { exact: true }).selectOption("OTHER");
+  await page.getByLabel("예산 (원)", { exact: true }).fill("150000");
+  await page.getByLabel("모집 기간", { exact: true }).selectOption("3");
+  await page
+    .getByLabel("희망 납품일", { exact: true })
+    .fill(new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10));
+  // 스타일이 없으면 공개에 실패하지만 입력과 저장된 초안은 남는다.
+  await page.getByRole("button", { name: "모집 공개", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByLabel("제목", { exact: true })).toHaveValue(title);
+  expect(
+    (await (await request.get("/api/project-drafts", { headers })).json())
+      .items,
+  ).toHaveLength(1);
+  await page.locator("#draft-style-CLEAN").check();
+  await page.getByRole("button", { name: "모집 공개", exact: true }).click();
+  await expect(page).toHaveURL(/\/campaigns\/\d+$/);
+  await expect(
+    page.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  expect(
+    (await (await request.get("/api/project-drafts", { headers })).json())
+      .items,
+  ).toHaveLength(0);
+  await page.goto("/me/activity?stage=COMPLETED");
+  await expect(page.getByLabel("거래 단계")).toHaveValue("COMPLETED");
+  await page.reload();
+  await expect(page.getByLabel("거래 단계")).toHaveValue("COMPLETED");
+});
+
+test("실제 API: 알림 페이지·미확인 필터 URL 복원·읽음·조회 실패 후 재시도", async ({
+  page,
+}, info) => {
+  await login(page, `notices-${info.project.name}@kemi.test`);
+  await page.goto("/notifications?unread=true&page=2");
+  await expect(page.getByLabel("미확인만 보기", { exact: true })).toBeChecked();
+  await expect(
+    page.getByRole("navigation", { name: "알림 페이지", exact: true }),
+  ).toContainText("2 / 2");
+  await page.reload();
+  await expect(
+    page.getByRole("navigation", { name: "알림 페이지", exact: true }),
+  ).toContainText("2 / 2");
+  const choices = page.getByRole("checkbox", {
+    name: /페이지 검증 알림 .* 선택/,
+  });
+  await expect(choices).toHaveCount(20);
+  await choices.first().check();
+  await page
+    .getByRole("button", { name: "선택한 1개 읽음", exact: true })
+    .click();
+  await expect(choices).toHaveCount(19);
+  await page.getByRole("button", { name: "이전 알림", exact: true }).click();
+  await expect(page).toHaveURL(/unread=true.*page=1/);
+  await page.goBack();
+  await expect(
+    page.getByRole("navigation", { name: "알림 페이지", exact: true }),
+  ).toContainText("2 / 2");
+  await page.route("**/api/notifications?**", (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: { code: "INTERNAL_ERROR", message: "테스트 오류" } },
+    }),
+  );
+  await page
+    .getByRole("button", { name: "알림 다시 확인", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(choices).toHaveCount(0);
+  await page.unroute("**/api/notifications?**");
+  await page
+    .getByRole("button", { name: "알림 다시 확인", exact: true })
+    .click();
+  await expect(choices).toHaveCount(19);
+  await page.getByRole("button", { name: "모두 읽음", exact: true }).click();
+  await expect(
+    page.getByText("표시할 알림이 없어요.", { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/unread=true.*page=1/);
+});
+
 async function login(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("이메일 (필수)", { exact: true }).fill(email);
@@ -125,7 +232,10 @@ test("실제 빌드: 비회원 탐색 → 신고 → 운영 제한 → 이의 �
   ).toHaveCount(0);
 
   await page.goto("/notifications");
-  await page.getByRole("checkbox").first().check();
+  await page
+    .getByRole("checkbox", { name: / 선택$/ })
+    .first()
+    .check();
   await page
     .getByRole("button", { name: "선택한 1개 읽음", exact: true })
     .click();

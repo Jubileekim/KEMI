@@ -2994,6 +2994,27 @@ const openApiDocument = {
         type: "object",
         required: ["items", "pagination"],
         properties: {
+          unavailableIds: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "저장 목록에서 삭제된 모집의 ID. 제목 등은 공개하지 않는다.",
+          },
+          recommendation: {
+            type: "object",
+            required: ["basis", "reason"],
+            properties: {
+              basis: {
+                type: "string",
+                enum: [
+                  "PREFERENCES",
+                  "LATEST_NO_PREFERENCES",
+                  "LATEST_NO_MATCHES",
+                ],
+              },
+              reason: { type: "string" },
+            },
+          },
           items: {
             type: "array",
             items: { $ref: "#/components/schemas/Project" },
@@ -3497,11 +3518,16 @@ const openApiDocument = {
         required: [
           "role",
           "projects",
+          "drafts",
           "requests",
           "bookmarkCount",
           "unreadNotifications",
         ],
         properties: {
+          drafts: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ProjectDraft" },
+          },
           role: { type: "string", enum: ["CLIENT", "CREATOR"] },
           projects: {
             type: "array",
@@ -4057,6 +4083,7 @@ const openApiDocument = {
           "revieweeId",
           "rating",
           "comment",
+          "tags",
           "createdAt",
         ],
         properties: {
@@ -4066,6 +4093,11 @@ const openApiDocument = {
           revieweeId: { type: "string" },
           rating: { type: "integer", minimum: 1, maximum: 5 },
           comment: { type: ["string", "null"] },
+          tags: {
+            type: "array",
+            maxItems: 5,
+            items: { type: "string", minLength: 1, maxLength: 30 },
+          },
           createdAt: { type: "string", format: "date-time" },
         },
       },

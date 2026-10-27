@@ -402,9 +402,30 @@ describe("리뷰 (REVIEW-01)", () => {
     const byClient = await post(deal.client.token, reviews, {
       rating: 5,
       comment: "행사에서 모두 울었어요.",
+      tags: ["소통 원활", "납기 준수"],
     });
     expect(byClient.status).toBe(201);
     expect(byClient.body.canReview).toBe(false);
+    const retries = await Promise.all(
+      [1, 2].map(() =>
+        post(deal.client.token, reviews, {
+          rating: 5,
+          comment: "행사에서 모두 울었어요.",
+          tags: ["소통 원활", "납기 준수"],
+        }),
+      ),
+    );
+    expect(retries.map((r) => r.status)).toEqual([201, 201]);
+    expect(retries[0]?.body.reviews).toHaveLength(1);
+    expect(
+      (
+        await post(deal.client.token, reviews, {
+          rating: 5,
+          comment: "행사에서 모두 울었어요.",
+          tags: ["다른 태그"],
+        })
+      ).status,
+    ).toBe(409);
     expect((await post(deal.client.token, reviews, { rating: 4 })).status).toBe(
       409,
     );
@@ -421,6 +442,7 @@ describe("리뷰 (REVIEW-01)", () => {
         expect.objectContaining({
           rating: 5,
           reviewerId: String(deal.client.userId),
+          tags: ["소통 원활", "납기 준수"],
         }),
       ],
     });
@@ -429,6 +451,26 @@ describe("리뷰 (REVIEW-01)", () => {
         where: { eventType: "REVIEW_RECEIVED" },
       }),
     ).toBe(2);
+  });
+  it("완료 표시만 있고 정산이 없으면 리뷰 권한을 주지 않는다", async () => {
+    const deal = await inProduction();
+    await prisma.production.update({
+      where: { contractId: BigInt(deal.contractId) },
+      data: { status: "COMPLETED" },
+    });
+    expect(
+      (await delivery(deal.client.token, deal.contractId)).body.canReview,
+    ).toBe(false);
+    expect(
+      (
+        await post(
+          deal.client.token,
+          `/api/contracts/${deal.contractId}/reviews`,
+          { rating: 5, tags: [] },
+        )
+      ).status,
+    ).toBe(409);
+    expect(await prisma.review.count()).toBe(0);
   });
 });
 

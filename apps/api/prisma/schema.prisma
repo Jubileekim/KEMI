@@ -655,6 +655,7 @@ model Review {
   revieweeId BigInt   @map("reviewee_id")
   rating     Int
   comment    String?
+  tags       String[] @default([])
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   contract Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)

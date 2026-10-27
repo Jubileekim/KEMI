@@ -5,6 +5,7 @@ import type {
   AuthUser,
 } from "@kemi/shared";
 import AppError from "../http/app-error.js";
+import { createProjectDraftService } from "../projects/project-draft.service.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 
 // 내 활동 묶음 조회 (ACT-01). 내 모집·내 요청(공개 모집 지원·직접 의뢰)의 진행 단계를 한 번에 준다.
@@ -19,7 +20,8 @@ const requestInclude = {
       status: true,
       payments: { where: { status: "SUCCEEDED" }, select: { id: true } },
       production: { select: { status: true } },
-      settlement: { select: { contractId: true } },
+      settlement: { select: { contractId: true, status: true } },
+      disputes: { where: { status: "OPEN" }, select: { id: true } },
     },
   },
 } satisfies Prisma.WorkRequestInclude;
@@ -41,8 +43,9 @@ function stageOf(row: RequestRow): ActivityStage {
     if (row.status === "DISCUSSING") return "DISCUSSING";
     return "CLOSED";
   }
+  if (contract.disputes.length > 0) return "DISPUTED";
   if (contract.status === "CANCELED") return "CANCELED";
-  if (contract.settlement) return "COMPLETED";
+  if (contract.settlement?.status === "SIMULATED") return "COMPLETED";
   if (contract.payments.length === 0) return "PAYMENT_PENDING";
   switch (contract.production?.status) {
     case "IN_PROGRESS":
@@ -50,7 +53,7 @@ function stageOf(row: RequestRow): ActivityStage {
     case "DELIVERED":
       return "DELIVERED";
     case "COMPLETED":
-      return "COMPLETED";
+      return "DELIVERED";
     case "CANCELED":
       return "CANCELED";
     default:
@@ -87,7 +90,7 @@ export function createActivityService({
       }
       const userId = BigInt(user.id);
       const isClient = user.role === "CLIENT";
-      const [rows, projects, bookmarkCount, unreadNotifications] =
+      const [rows, projects, bookmarkCount, unreadNotifications, drafts] =
         await Promise.all([
           prisma.workRequest.findMany({
             where: isClient ? { clientId: userId } : { creatorId: userId },
@@ -97,7 +100,7 @@ export function createActivityService({
           }),
           isClient
             ? prisma.project.findMany({
-                where: { clientId: userId },
+                where: { clientId: userId, deletedAt: null },
                 select: {
                   id: true,
                   title: true,
@@ -114,6 +117,9 @@ export function createActivityService({
           prisma.notification.count({
             where: { recipientUserId: userId, readAt: null },
           }),
+          isClient
+            ? createProjectDraftService({ prisma }).list(user)
+            : Promise.resolve({ items: [] }),
         ]);
       const requests: ActivityRequest[] = rows.map((row) => {
         const stage = stageOf(row);
@@ -134,6 +140,7 @@ export function createActivityService({
       });
       return {
         role: isClient ? "CLIENT" : "CREATOR",
+        drafts: drafts.items,
         projects: projects.map((p) => ({
           id: p.id.toString(),
           title: p.title,
