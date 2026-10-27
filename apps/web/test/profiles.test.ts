@@ -39,6 +39,51 @@ const creator: MyProfileResponse = {
 };
 afterEach(() => vi.restoreAllMocks());
 describe("PROFILE-01·02 계약 경계", () => {
+  it("이미지·경력·크리에이터 링크를 변경한 값만 저장하고 삭제할 수 있다", () => {
+    const before = profileValues(creator);
+    const values = {
+      ...before,
+      imageFileId: "17",
+      career: "영상 제작 3년",
+      websiteUrl: "https://portfolio.example.com",
+      socialUrl: "https://social.example.com",
+    };
+    expect(profileFormSchema("CREATOR").safeParse(values).success).toBe(true);
+    expect(profilePatch("CREATOR", values, before)).toEqual({
+      imageFileId: "17",
+      career: "영상 제작 3년",
+      websiteUrl: values.websiteUrl,
+      socialUrl: values.socialUrl,
+    });
+    expect(profilePatch("CREATOR", before, values)).toEqual({
+      imageFileId: null,
+      career: null,
+      websiteUrl: null,
+      socialUrl: null,
+    });
+    expect(
+      profilePatch(
+        "CLIENT",
+        { ...profileValues(client), imageFileId: "17" },
+        profileValues(client),
+      ),
+    ).toEqual({ imageFileId: "17" });
+  });
+  it("추가 필드의 URL·이미지 ID·경력 길이를 검증한다", () => {
+    [
+      { websiteUrl: "ftp://example.com" },
+      { socialUrl: ["javascript", "alert(1)"].join(":") },
+      { imageFileId: "-1" },
+      { career: "가".repeat(2001) },
+    ].forEach((change) => {
+      expect(
+        profileFormSchema("CREATOR").safeParse({
+          ...profileValues(creator),
+          ...change,
+        }).success,
+      ).toBe(false);
+    });
+  });
   it("브랜드 정보가 없는 개인과 미완성 크리에이터를 허용한다", () => {
     expect(
       profileFormSchema("CLIENT").safeParse(profileValues(client)).success,

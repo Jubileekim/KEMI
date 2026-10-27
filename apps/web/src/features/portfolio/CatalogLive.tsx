@@ -79,6 +79,7 @@ export function PackageCard({
 
 // FEED-01: 공개 작업물 피드
 function Feed() {
+  const { role } = useSession();
   const [params, setParams] = useSearchParams();
   const search = query({
     purpose: params.get("purpose") ?? undefined,
@@ -120,7 +121,22 @@ function Feed() {
       {feed.error && <Failure error={feed.error} />}
       {feed.data?.items.length === 0 && (
         <Card>
-          <p>아직 공개된 작품이 없어요.</p>
+          <h2 className="type-heading-md">
+            {params.has("purpose") || page > 1
+              ? "조건에 맞는 작품이 없어요."
+              : "아직 공개된 작품이 없어요."}
+          </h2>
+          {params.has("purpose") || page > 1 ? (
+            <Button variant="outline" onClick={() => setParams({})}>
+              전체 작품 보기
+            </Button>
+          ) : (
+            <p className="text-muted-foreground">
+              {role === "creator"
+                ? "작업물을 공개하고, 패키지 관리에서 공개된 대표 패키지를 지정한 뒤 제작 서비스를 공개하면 피드에 표시돼요."
+                : "공개 모집을 둘러보거나 회원가입 후 의뢰와 작품 등록을 시작해 보세요."}
+            </p>
+          )}
           <ScreenLinks />
         </Card>
       )}
@@ -275,6 +291,32 @@ export function CreatorDetailLive() {
         {c.introduction && (
           <p className="whitespace-pre-wrap">{c.introduction}</p>
         )}
+        {c.image && (
+          <img
+            src={c.image.url}
+            alt={`${c.name} 프로필`}
+            className="h-24 w-24 rounded-xl object-cover"
+          />
+        )}
+        {c.career && <p className="whitespace-pre-wrap">경력: {c.career}</p>}
+        <div className="flex flex-wrap gap-4">
+          {[
+            { url: c.websiteUrl, title: "웹사이트" },
+            { url: c.socialUrl, title: "SNS" },
+          ]
+            .filter((link) => link.url && /^https?:\/\//.test(link.url))
+            .map((link) => (
+              <a
+                key={link.title}
+                href={link.url ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                {link.title}
+              </a>
+            ))}
+        </div>
         <Facts
           items={[
             [

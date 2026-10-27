@@ -102,11 +102,6 @@ export default function ProfilePage() {
           <ExtrasMock key={user?.id} role={role} />
         </Suspense>
       )}
-      {!mockEnabled && (
-        <p className="text-sm text-muted-foreground">
-          로고·프로필 이미지·경력·크리에이터 링크는 저장 계약 준비 중이에요.
-        </p>
-      )}
     </section>
   );
 }

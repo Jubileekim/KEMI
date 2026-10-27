@@ -49,6 +49,54 @@ function patchProfile(accessToken: string, body: object) {
     .send(body);
 }
 
+it.each(["CLIENT", "CREATOR"] as const)(
+  "%s 추가 정보는 DB에 저장되고 재조회·삭제된다",
+  async (role) => {
+    const { accessToken, userId } = await signup(role);
+    const file = await prisma.file.create({
+      data: {
+        ownerId: userId,
+        purpose: "PROFILE_IMAGE",
+        mimeType: "image/png",
+        fileName: "profile.png",
+        sizeBytes: 68n,
+        storagePath: `profiles/${userId}/image.png`,
+        status: "READY",
+      },
+    });
+    const extra =
+      role === "CREATOR"
+        ? {
+            career: "영상 제작 3년",
+            websiteUrl: "https://example.com",
+            socialUrl: "https://social.example.com",
+          }
+        : {};
+    const write = await patchProfile(accessToken, {
+      imageFileId: file.id.toString(),
+      ...extra,
+    });
+    expect(write.status).toBe(200);
+    expect((await getProfile(accessToken)).body.profile).toMatchObject({
+      imageFileId: file.id.toString(),
+      ...extra,
+    });
+    const cleared = await patchProfile(accessToken, {
+      imageFileId: null,
+      ...(role === "CREATOR"
+        ? { career: "", websiteUrl: "", socialUrl: "" }
+        : {}),
+    });
+    expect(cleared.status).toBe(200);
+    expect((await getProfile(accessToken)).body.profile).toMatchObject({
+      imageFileId: null,
+      ...(role === "CREATOR"
+        ? { career: null, websiteUrl: null, socialUrl: null }
+        : {}),
+    });
+  },
+);
+
 describe("프로필 접근 권한", () => {
   it("토큰이 없으면 조회·수정 모두 401", async () => {
     expect((await request(app).get("/api/profiles/me")).status).toBe(401);
@@ -127,6 +175,7 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
       name: "테스트",
       profile: {
         type: "CLIENT",
+        imageFileId: null,
         brandName: null,
         introduction: null,
         industry: null,
@@ -159,6 +208,7 @@ describe("의뢰인 프로필 (PROFILE-01)", () => {
     expect(second.status).toBe(200);
     expect(second.body.profile).toEqual({
       type: "CLIENT",
+      imageFileId: null,
       brandName: "KEMI 코스메틱",
       introduction: "소개",
       industry: "BEAUTY",
@@ -237,6 +287,10 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     expect(res.status).toBe(200);
     expect(res.body.profile).toEqual({
       type: "CREATOR",
+      imageFileId: null,
+      career: null,
+      websiteUrl: null,
+      socialUrl: null,
       introduction: null,
       niche: null,
       contentStyles: [],
@@ -262,6 +316,10 @@ describe("크리에이터 프로필 (PROFILE-02)", () => {
     expect(res.status).toBe(200);
     expect(res.body.profile).toEqual({
       type: "CREATOR",
+      imageFileId: null,
+      career: null,
+      websiteUrl: null,
+      socialUrl: null,
       introduction: "뷰티 숏폼 크리에이터",
       niche: null,
       contentStyles: ["BRIGHT", "MODERN"],

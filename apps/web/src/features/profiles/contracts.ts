@@ -11,6 +11,11 @@ import {
 
 const client = z.object({
   type: z.literal("CLIENT"),
+  imageFileId: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .nullable()
+    .optional(),
   brandName: z.string().nullable(),
   introduction: z.string().nullable(),
   industry: productCategorySchema.nullable(),
@@ -19,6 +24,14 @@ const client = z.object({
 });
 const creator = z.object({
   type: z.literal("CREATOR"),
+  imageFileId: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .nullable()
+    .optional(),
+  career: z.string().nullable().optional(),
+  websiteUrl: z.string().nullable().optional(),
+  socialUrl: z.string().nullable().optional(),
   introduction: z.string().nullable(),
   niche: productCategorySchema.nullable(),
   contentStyles: z.array(contentStyleSchema),
@@ -36,6 +49,8 @@ export type ProfileRole = "CLIENT" | "CREATOR";
 
 const fields = z.object({
   name: z.string(),
+  imageFileId: z.string(),
+  career: z.string(),
   brandName: z.string(),
   introduction: z.string(),
   industry: z.string(),
@@ -51,6 +66,8 @@ const fields = z.object({
 export type ProfileValues = z.infer<typeof fields>;
 export const labels: Record<keyof ProfileValues, string> = {
   name: "표시 이름 (필수)",
+  imageFileId: "프로필 이미지",
+  career: "경력 (선택)",
   brandName: "브랜드명 (선택)",
   introduction: "소개 (선택)",
   industry: "제품 분야 (선택)",
@@ -81,6 +98,8 @@ export const optionLabels: Record<string, string> = {
 export function profileValues(data: MyProfileResponse): ProfileValues {
   const common: ProfileValues = {
     name: data.name,
+    imageFileId: data.profile.imageFileId ?? "",
+    career: "",
     introduction: data.profile.introduction ?? "",
     brandName: "",
     industry: "",
@@ -97,6 +116,7 @@ export function profileValues(data: MyProfileResponse): ProfileValues {
     return {
       ...common,
       ...data.profile,
+      imageFileId: data.profile.imageFileId ?? "",
       introduction: data.profile.introduction ?? "",
       brandName: data.profile.brandName ?? "",
       industry: data.profile.industry ?? "",
@@ -106,6 +126,10 @@ export function profileValues(data: MyProfileResponse): ProfileValues {
   return {
     ...common,
     ...data.profile,
+    imageFileId: data.profile.imageFileId ?? "",
+    career: data.profile.career ?? "",
+    websiteUrl: data.profile.websiteUrl ?? "",
+    socialUrl: data.profile.socialUrl ?? "",
     introduction: data.profile.introduction ?? "",
     niche: data.profile.niche ?? "",
     workMethod: data.profile.workMethod ?? "",
@@ -114,7 +138,11 @@ export function profileValues(data: MyProfileResponse): ProfileValues {
 }
 // Only the logged-in role's supported fields ever reach the product API.
 export function profileInput(role: ProfileRole, values: ProfileValues) {
-  const common = { name: values.name, introduction: values.introduction };
+  const common = {
+    name: values.name,
+    introduction: values.introduction,
+    imageFileId: values.imageFileId || null,
+  };
   if (role === "CLIENT")
     return {
       ...common,
@@ -129,6 +157,9 @@ export function profileInput(role: ProfileRole, values: ProfileValues) {
     contentStyles: values.contentStyles,
     productionRoles: values.productionRoles,
     workMethod: values.workMethod,
+    career: values.career,
+    websiteUrl: values.websiteUrl,
+    socialUrl: values.socialUrl,
     isAvailable: values.isAvailable,
     availableFrom: values.availableFrom || null,
   };

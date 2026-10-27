@@ -527,7 +527,7 @@ export function createCatalogService({
       const user = await prisma.user.findFirst({
         where: { id: userId, role: "CREATOR", ...publicCreator },
         include: {
-          creatorProfile: true,
+          creatorProfile: { include: { image: true } },
           servicePackages: {
             where: { status: "PUBLIC" },
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -549,6 +549,13 @@ export function createCatalogService({
       const total = ratings.reduce((sum, value) => sum + value, 0);
       return {
         userId: user.id.toString(),
+        career: user.creatorProfile.career,
+        websiteUrl: user.creatorProfile.websiteUrl,
+        socialUrl: user.creatorProfile.socialUrl,
+        image:
+          user.creatorProfile.image?.status === "READY" && storage
+            ? await signedUrl(user.creatorProfile.image.storagePath)
+            : null,
         name: user.name,
         introduction: user.creatorProfile.introduction,
         niche: user.creatorProfile.niche,

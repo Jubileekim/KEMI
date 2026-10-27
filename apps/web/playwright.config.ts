@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // 개발용 5173과 분리한다. 기존 서버를 재사용하지 않아 다른 앱을 잘못 검사하지 않는다.
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/production/**",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

@@ -2892,6 +2892,7 @@ const openApiDocument = {
         ],
         properties: {
           type: { const: "CLIENT" },
+          imageFileId: { type: ["string", "null"], pattern: "^[1-9]\\d*$" },
           brandName: { type: ["string", "null"] },
           introduction: { type: ["string", "null"] },
           industry: nullableEnum(PRODUCT_CATEGORIES),
@@ -2914,6 +2915,10 @@ const openApiDocument = {
         ],
         properties: {
           type: { const: "CREATOR" },
+          imageFileId: { type: ["string", "null"], pattern: "^[1-9]\\d*$" },
+          career: { type: ["string", "null"] },
+          websiteUrl: { type: ["string", "null"] },
+          socialUrl: { type: ["string", "null"] },
           introduction: { type: ["string", "null"] },
           niche: nullableEnum(PRODUCT_CATEGORIES),
           contentStyles: {
@@ -3913,6 +3918,17 @@ const openApiDocument = {
           "review",
         ],
         properties: {
+          career: { type: ["string", "null"] },
+          websiteUrl: { type: ["string", "null"] },
+          socialUrl: { type: ["string", "null"] },
+          image: {
+            type: ["object", "null"],
+            required: ["url", "expiresAt"],
+            properties: {
+              url: { type: "string", format: "uri" },
+              expiresAt: { type: "string", format: "date-time" },
+            },
+          },
           userId: { type: "string" },
           name: { type: "string" },
           introduction: { type: ["string", "null"] },

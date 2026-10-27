@@ -103,6 +103,10 @@ export interface Portfolio {
 // 공개 제작자 페이지 (PORT-01, PACK-01)
 export interface CreatorPublicProfile {
   userId: string;
+  career?: string | null;
+  websiteUrl?: string | null;
+  socialUrl?: string | null;
+  image?: { url: string; expiresAt: string } | null;
   name: string;
   introduction: string | null;
   niche: string | null;
