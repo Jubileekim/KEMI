@@ -1,7 +1,8 @@
 import { lazy, Suspense } from "react";
 import { useParams } from "react-router";
 import { mockEnabled } from "../auth/config";
-import PaymentLive from "./PaymentLive";
+
+const PaymentLive = lazy(() => import("./PaymentLive"));
 
 const PaymentMock = import.meta.env.DEV
   ? lazy(() => import("../../mocks/PaymentMock"))
@@ -28,5 +29,9 @@ export default function PaymentPage({
         />
       </Suspense>
     );
-  return <PaymentLive contractId={id} result={result} />;
+  return (
+    <Suspense fallback={<p role="status">결제 화면 준비 중…</p>}>
+      <PaymentLive contractId={id} result={result} />
+    </Suspense>
+  );
 }
