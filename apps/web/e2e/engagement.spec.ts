@@ -127,7 +127,9 @@ test("7-B 정상 거래→부재중 알림→읽음/중복→완료 리뷰 양�
   );
   expect(own.own?.authorId).toBe("mock-creator");
 });
-test("7-B 수령 완료만으로는 리뷰 불가, 정산 실패·UNKNOWN에도 차단", async ({ page }) => {
+test("7-B 수령 완료만으로는 리뷰 불가, 정산 실패·UNKNOWN에도 차단", async ({
+  page,
+}) => {
   const { contractId } = await setupSettlement(page);
   const url = `/__mock__/reviews/${contractId}`;
   const review = { rating: 5, content: "정산 전 작성 시도", tags: [] };
