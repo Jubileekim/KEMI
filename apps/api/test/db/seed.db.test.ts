@@ -119,7 +119,7 @@ describe("시연 데이터 (단계 8)", () => {
       SeedTargetError,
     );
   });
-  it("PM이 명시 승인한 시연 데이터는 기존 실사용자를 수정하지 않고 함께 존재한다", async () => {
+  it("명시 승인: 실사용자 보존과 재실행 멱등성", async () => {
     const real = await prisma.user.create({
       data: { email: "real@example.com", name: "실제 사용자", role: "CLIENT" },
     });
@@ -131,9 +131,12 @@ describe("시연 데이터 (단계 8)", () => {
     const summary = await seedDemo(prisma, { password: PASSWORD });
     expect(summary.users).toHaveLength(4);
     expect(await prisma.user.count()).toBe(5);
-    expect(
-      await prisma.user.findUnique({ where: { id: real.id } }),
-    ).toMatchObject({ email: real.email, name: real.name, role: real.role });
+    const preserved = await prisma.user.findUnique({
+      where: { id: real.id },
+    });
+    expect(preserved?.email).toBe(real.email);
+    expect(preserved?.name).toBe(real.name);
+    expect(preserved?.role).toBe(real.role);
     // 시연 성공결제 기록이 운영 DB에 1건 추가되는 위험을 명시적으로 검증한다.
     expect(
       await prisma.payment.count({ where: { status: "SUCCEEDED" } }),
