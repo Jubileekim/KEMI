@@ -8,6 +8,70 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("인증 Axios 경계", () => {
+  it("비로그인 공개 작품·모집 조회는 토큰 없이 성공하고 비공개 조회·쓰기만 차단한다", async () => {
+    const token = vi.fn(async (): Promise<string> => {
+      throw new Error("AUTH_REQUIRED");
+    });
+    connectSession({
+      token,
+      recover: vi.fn(),
+      epoch: () => 1,
+      isAuthenticated: () => false,
+    });
+    const seen: string[] = [];
+    api.defaults.adapter = async (config) => {
+      seen.push(config.url ?? "");
+      expect(config.headers.get("Authorization")).toBeUndefined();
+      return {
+        data: { items: [] },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      };
+    };
+    for (const path of [
+      "/api/feed?page=1",
+      "/api/projects?page=1",
+      "/api/projects/123",
+      "/api/creators/123",
+      "/api/packages/123",
+      "/api/portfolios/123",
+      "/api/portfolios/123/media",
+    ]) {
+      const response = await api.get(path);
+      expect(response.status).toBe(200);
+    }
+    expect(seen).toHaveLength(7);
+    expect(token).not.toHaveBeenCalled();
+    await expect(api.get("/api/projects/me")).rejects.toThrow("AUTH_REQUIRED");
+    await expect(api.post("/api/projects", {})).rejects.toThrow("AUTH_REQUIRED");
+    expect(seen).toHaveLength(7);
+    expect(token).toHaveBeenCalledTimes(2);
+  });
+
+  it("로그인된 사용자의 공개 상세 조회는 기존 Bearer 권한을 유지한다", async () => {
+    connectSession({
+      token: async () => "signed-in-token",
+      recover: vi.fn(),
+      epoch: () => 1,
+      isAuthenticated: () => true,
+    });
+    api.defaults.adapter = async (config) => {
+      expect(config.headers.get("Authorization")).toBe("Bearer signed-in-token");
+      return {
+        data: { items: [] },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      };
+    };
+    await expect(api.get("/api/projects/123")).resolves.toMatchObject({
+      status: 200,
+    });
+  });
+
   it.each(["get", "post"] as const)(
     "만료된 %s 요청은 조회만 한번 재전송한다",
     async (method) => {
