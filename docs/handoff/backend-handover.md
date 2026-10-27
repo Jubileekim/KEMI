@@ -134,7 +134,8 @@
   - 배포 빌드 HTTP E2E 29건 통과
   - 상세: [배포 전 검증·운영 반영 절차](../runbooks/backend-stack-release.md)
 - **남은 것:**
-  - Toss 테스트 키와 Supabase Storage 키로 결제·환불·파일 실제 호출 검증(현재 미검증)
+  - Toss 테스트 키로 결제·환불 실제 호출 검증(희년님 키 대기, 현재 미검증)
+  - Supabase Storage는 실제 `kemi-files` 비공개 버킷으로 검증 완료(어댑터 13건·HTTP 12건, 2026-10-27)
   - PM 정책 항목별 확정
   - 묶음 병합·운영 마이그레이션(희년님)
 
