@@ -87,7 +87,7 @@ export function changeRevisions(
       throw new ProposalError("수정 식별자 충돌");
     return state;
   }
-  if (!allowed || cmd.revision !== state.revision)
+  if (!allowed || state.final.approval || cmd.revision !== state.revision)
     throw new ProposalError("최신 제작·수정 상태를 확인해 주세요.");
   const next = structuredClone(state);
   if (cmd.type === "policy") {

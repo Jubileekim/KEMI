@@ -8,6 +8,9 @@ import Input from "../components/ui/input";
 import Label from "../components/ui/label";
 import Textarea from "../components/ui/textarea";
 import ReviewPlayer from "../features/production/ReviewPlayer";
+import ReviewActions from "../features/production/ReviewActions";
+import FinalPanelMock from "./FinalPanelMock";
+import type { FinalCommand } from "./final-model";
 import deadlineTime from "../features/production/time";
 import {
   loadDeliveries,
@@ -15,6 +18,7 @@ import {
   saveDelivery,
   uploadDelivery,
   saveRevision,
+  saveFinal,
 } from "./delivery-api";
 import {
   assetSchema,
@@ -81,7 +85,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
   const [description, setDescription] = useState("");
   const [watermark, setWatermark] = useState(false);
   const [pending, setPending] = useState<
-    DeliveryCommand | RevisionCommand | null
+    DeliveryCommand | RevisionCommand | FinalCommand | null
   >(null);
   const [position, setPosition] = useState({
     versionId: "",
@@ -100,15 +104,34 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
     mutationFn: (value: File) => uploadDelivery(contractId, value),
   });
   const submit = useMutation({
-    mutationFn: (value: DeliveryCommand | RevisionCommand) =>
-      "type" in value
-        ? saveRevision(contractId, value)
-        : saveDelivery(contractId, value),
+    mutationFn: (value: DeliveryCommand | RevisionCommand | FinalCommand) => {
+      if (!("type" in value)) return saveDelivery(contractId, value);
+      if (
+        value.type === "approve" ||
+        value.type === "deliver-final" ||
+        value.type === "receive-final" ||
+        value.type === "report-file"
+      )
+        return saveFinal(contractId, value);
+      return saveRevision(contractId, value);
+    },
   });
   const busy = query.isFetching || upload.isPending || submit.isPending;
+  const finalPending =
+    pending &&
+    "type" in pending &&
+    ["approve", "deliver-final", "receive-final", "report-file"].includes(
+      pending.type,
+    );
   const disabled =
     busy || Boolean(query.error) || Boolean(pending) || !query.data?.canSubmit;
   const versions = query.data?.state.versions ?? [];
+  let finalStatus = "";
+  if (query.data?.state.final.approval) finalStatus = "최종 파일 전달 대기";
+  if (query.data?.state.final.delivery) finalStatus = "최종 수령 확인 대기";
+  if (query.data?.state.final.receipt)
+    finalStatus = "수령 확인 기록·정산 미실행";
+  if (query.data?.state.final.problem) finalStatus = "파일 문제 보류";
   const openRequest = query.data?.state.requests.find(
     (r) => !r.resultVersionId,
   );
@@ -134,6 +157,8 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
         });
       else if (pending.type === "request")
         setParams({ version: pending.versionId, request: pending.id });
+      else if (pending.type === "deliver-final")
+        setParams({ version: pending.versionId, final: pending.id });
       setPending(null);
       setAsset(null);
       setFile(null);
@@ -144,7 +169,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
     }
     setNotice("영상 버전을 재조회했어요.");
   };
-  const dispatch = (cmd: DeliveryCommand | RevisionCommand) => {
+  const dispatch = (cmd: DeliveryCommand | RevisionCommand | FinalCommand) => {
     if (busy) return;
     const epoch = session.epoch();
     setPending(cmd);
@@ -163,6 +188,8 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
             });
           else if (cmd.type === "request")
             setParams({ version: cmd.versionId, request: cmd.id });
+          else if (cmd.type === "deliver-final")
+            setParams({ version: cmd.versionId, final: cmd.id });
           setPending(null);
           setAsset(null);
           setFile(null);
@@ -171,7 +198,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
           setWatermark(false);
           setNotice(
             "type" in cmd
-              ? "수정 상태가 모의 기록에 반영됐어요."
+              ? "작업 상태가 모의 기록에 반영됐어요."
               : "영상 제출이 모의 기록에 반영됐어요.",
           );
         }
@@ -219,7 +246,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
       {pending && !busy && (
         <div className="flex flex-wrap gap-3">
           <Button onClick={() => dispatch(pending)}>
-            같은 영상 제출 재시도
+            {finalPending ? "같은 최종 작업 재시도" : "같은 영상 제출 재시도"}
           </Button>
           <Button
             variant="outline"
@@ -243,10 +270,11 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
           <p>
             계약: {contractId} · {!query.data.started && "제작 시작 전"}
             {query.data.started && !query.data.prepared && "준비 문제 보류"}
-            {query.data.prepared &&
-              (versions.some((v) => v.kind === "REVIEW")
-                ? "검토 중"
-                : "제작 중·초안 단계")}{" "}
+            {finalStatus ||
+              (query.data.prepared &&
+                (versions.some((v) => v.kind === "REVIEW")
+                  ? "검토 중"
+                  : "제작 중·초안 단계"))}{" "}
             · 초안·조회·대화는 회차 차감 없음
           </p>
           <div className="flex flex-wrap gap-4">
@@ -428,7 +456,10 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
             >
               <h2 className="type-heading-md">
                 v{version.number} · {deliveryKindLabels[version.kind]}
-                {version.kind !== "DRAFT" && " · 검토 중"}
+                {version.kind !== "DRAFT" &&
+                  (query.data.state.final.approval?.versionId === version.id
+                    ? " · 검토 승인됨"
+                    : " · 검토 중")}
               </h2>
               <p>{version.description}</p>
               {version.kind !== "DRAFT" && (
@@ -451,6 +482,22 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               />
             </section>
           )}
+          <ReviewActions
+            key={version?.id}
+            state={query.data.state}
+            version={version}
+            creator={user?.id === query.data.creatorId}
+            disabled={busy || Boolean(pending) || !query.data.prepared}
+            submit={dispatch}
+          />
+          <FinalPanelMock
+            contractId={contractId}
+            state={query.data.state}
+            creator={user?.id === query.data.creatorId}
+            terms={query.data.fileTerms}
+            disabled={busy || Boolean(pending) || !query.data.prepared}
+            submit={dispatch}
+          />
           <RevisionPanelMock
             state={query.data.state}
             version={version}
@@ -460,6 +507,7 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
               busy ||
               Boolean(query.error) ||
               Boolean(pending) ||
+              Boolean(query.data.state.final.approval) ||
               !query.data.prepared
             }
             position={
@@ -472,7 +520,8 @@ export default function DeliveryMock({ contractId }: { contractId: string }) {
           />
           <p>
             초안 공유·조회·대화는 수정 회차·승인·완료·수령·정산을 변경하지
-            않아요. 승인·최종 전달·수령·정산은 후속 범위예요.
+            않아요. 승인·최종 전달·수령은 각각 전용 행동으로 기록하며 정산은
+            후속 범위예요.
           </p>
         </div>
       )}

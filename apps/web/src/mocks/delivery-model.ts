@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProposalError } from "./proposal-model";
+import { finalStateSchema, emptyFinal } from "./final-model";
 import {
   revisionPolicySchema,
   revisionRequestSchema,
@@ -57,6 +58,7 @@ export const deliveryEventLabels = {
   REVISION: "수정본 제출",
 };
 export const deliveryStateSchema = z.strictObject({
+  final: finalStateSchema,
   revision: z.number().int().nonnegative(),
   versions: z.array(deliveryVersionSchema),
   revisionPolicy: revisionPolicySchema.nullable(),
@@ -78,9 +80,11 @@ export const deliveryViewSchema = z.strictObject({
   started: z.boolean(),
   prepared: z.boolean(),
   revisionTerms: z.string(),
+  fileTerms: z.string(),
   state: deliveryStateSchema,
 });
 export const emptyDelivery = (): DeliveryState => ({
+  final: emptyFinal(),
   revision: 0,
   versions: [],
   revisionPolicy: null,
@@ -105,7 +109,7 @@ export function submitDelivery(
       throw new ProposalError("제출 식별자 충돌");
     return state;
   }
-  if (!allowed || cmd.revision !== state.revision)
+  if (!allowed || state.final.approval || cmd.revision !== state.revision)
     throw new ProposalError("제작 상태와 최신 버전을 확인해 주세요.");
   if (
     !asset ||
