@@ -85,7 +85,7 @@ export default function Shell() {
               public: "함께 만드는 KEMI",
               member: "회원 공간",
               workspace: "작업 공간",
-              ops: "운영 공간 · 권한 정책 D18 확인 필요",
+              ops: "운영 공간",
             }[screen?.layout ?? "public"]
           }
         </p>
@@ -111,7 +111,7 @@ export default function Shell() {
         )}
       </main>
       <footer className="page-container text-sm text-muted-foreground">
-        KEMI · 화면 기반 구성 중
+        KEMI · 함께 만드는 영상
       </footer>
     </>
   );

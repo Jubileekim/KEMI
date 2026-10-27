@@ -131,7 +131,7 @@ model AuthRefreshToken {
 // 회원 1명당 역할에 맞는 프로필 하나. 역할 일치는 서버에서 검사한다.
 // 선택값(분야·스타일·역할·공개 상태)의 허용 목록은 마이그레이션 CHECK와 @kemi/shared가 같게 유지한다.
 
-// 의뢰인 프로필 (PROFILE-01). 브랜드 정보는 모두 선택이다. 로고는 파일 기능에서 추가한다.
+// 의뢰인 프로필 (PROFILE-01). 브랜드 정보는 모두 선택이다.
 model ClientProfile {
   userId       BigInt   @id @map("user_id")
   brandName    String?  @map("brand_name")
@@ -139,6 +139,8 @@ model ClientProfile {
   industry     String?
   websiteUrl   String?  @map("website_url")
   socialUrl    String?  @map("social_url")
+  imageFileId  BigInt?  @map("image_file_id")
+  image        File?    @relation("ClientProfileImage", fields: [imageFileId], references: [id], onDelete: Restrict)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -155,6 +157,11 @@ model CreatorProfile {
   contentStyles   String[]  @default([]) @map("content_styles")
   productionRoles String[]  @default([]) @map("production_roles")
   workMethod      String?   @map("work_method")
+  career          String?
+  websiteUrl      String?   @map("website_url")
+  socialUrl       String?   @map("social_url")
+  imageFileId     BigInt?   @map("image_file_id")
+  image           File?     @relation("CreatorProfileImage", fields: [imageFileId], references: [id], onDelete: Restrict)
   serviceStatus   String    @default("DRAFT") @map("service_status")
   isAvailable     Boolean   @default(false) @map("is_available")
   availableFrom   DateTime? @map("available_from") @db.Date
@@ -444,6 +451,8 @@ model ChatRead {
 // 바이트는 Supabase Storage 비공개 버킷에 있고, 여기에는 소유자·쓰임·확인 상태만 둔다.
 // 거래 파일(채팅 첨부·자료·납품물·수정 첨부)은 work_request_id가 있고 그 요청의 당사자만 볼 수 있다.
 model File {
+  clientProfiles  ClientProfile[]  @relation("ClientProfileImage")
+  creatorProfiles CreatorProfile[] @relation("CreatorProfileImage")
   id              BigInt    @id @default(autoincrement())
   ownerId         BigInt    @map("owner_id")
   purpose         String

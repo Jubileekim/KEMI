@@ -35,6 +35,12 @@ const optionalUrl = z
   .transform((value) => (value === "" ? null : value))
   .nullable();
 
+const imageFileId = z
+  .string()
+  .regex(/^[1-9]\d*$/)
+  .nullable()
+  .optional();
+
 // 같은 값을 두 번 고르지 않게 한다.
 function uniqueList<T extends z.ZodType>(item: T) {
   return z
@@ -48,6 +54,7 @@ function uniqueList<T extends z.ZodType>(item: T) {
 // 의뢰인 프로필 수정 (PROFILE-01). 모든 항목 선택, 보낸 항목만 바꾼다.
 export const clientProfileUpdateSchema = z.strictObject({
   name: displayNameSchema.optional(),
+  imageFileId,
   brandName: optionalText(50).optional(),
   introduction: optionalText(1000).optional(),
   industry: productCategorySchema.nullable().optional(),
@@ -61,6 +68,10 @@ export type ClientProfileUpdateRequest = z.input<
 // 크리에이터 프로필 수정 (PROFILE-02). 미완성 저장 가능. 공개 상태는 여기서 바꾸지 않는다.
 export const creatorProfileUpdateSchema = z.strictObject({
   name: displayNameSchema.optional(),
+  imageFileId,
+  career: optionalText(2000).optional(),
+  websiteUrl: optionalUrl.optional(),
+  socialUrl: optionalUrl.optional(),
   introduction: optionalText(1000).optional(),
   niche: productCategorySchema.nullable().optional(),
   contentStyles: uniqueList(contentStyleSchema).optional(),
@@ -75,6 +86,7 @@ export type CreatorProfileUpdateRequest = z.input<
 
 export interface ClientProfile {
   type: "CLIENT";
+  imageFileId?: string | null;
   brandName: string | null;
   introduction: string | null;
   industry: ProductCategory | null;
@@ -84,6 +96,10 @@ export interface ClientProfile {
 
 export interface CreatorProfile {
   type: "CREATOR";
+  imageFileId?: string | null;
+  career?: string | null;
+  websiteUrl?: string | null;
+  socialUrl?: string | null;
   introduction: string | null;
   niche: ProductCategory | null;
   contentStyles: ContentStyle[];

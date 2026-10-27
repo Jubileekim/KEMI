@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,9 @@ import Input from "../../components/ui/input";
 import Textarea from "../../components/ui/textarea";
 import Label from "../../components/ui/label";
 import { session } from "../../app/session";
+import { mockEnabled } from "../auth/config";
+import { uploadFile } from "../../shared/api/upload";
+import ProfileImageField from "./ProfileImageField";
 import { saveProfile, profileError } from "./api";
 import {
   labels,
@@ -40,6 +43,7 @@ export default function ProfileForm({
     defaultValues: original,
     resolver: zodResolver(profileFormSchema(role)),
   });
+  const imageId = useWatch({ control: form.control, name: "imageFileId" });
   const mutation = useMutation({
     mutationFn: async () => {
       const expected = session.epoch();
@@ -55,7 +59,24 @@ export default function ProfileForm({
       setSaved(true);
     },
   });
-  const busy = mutation.isPending || form.formState.isSubmitting;
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      if (
+        !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+        file.size === 0 ||
+        file.size > 10 * 1024 * 1024
+      ) {
+        throw new Error("PNG·JPG·WebP 이미지(최대 10MB)를 선택해 주세요.");
+      }
+      const expected = session.epoch();
+      const result = await uploadFile(file, "PROFILE_IMAGE");
+      if (expected !== session.epoch()) return;
+      form.setValue("imageFileId", result.id, { shouldDirty: true });
+      setSaved(false);
+    },
+  });
+  const busy =
+    mutation.isPending || form.formState.isSubmitting || upload.isPending;
   const { errors } = form.formState;
   function textField(
     name:
@@ -65,6 +86,7 @@ export default function ProfileForm({
       | "websiteUrl"
       | "socialUrl"
       | "workMethod"
+      | "career"
       | "availableFrom",
     multiline = false,
   ) {
@@ -79,9 +101,17 @@ export default function ProfileForm({
     };
     return (
       <div className="grid gap-2" key={name}>
-        <Label htmlFor={props.id}>{labels[name]}</Label>
+        <Label htmlFor={props.id}>
+          {role === "CREATOR" && name === "websiteUrl"
+            ? "포트폴리오·웹사이트 주소 (선택)"
+            : labels[name]}
+        </Label>
         {multiline ? (
-          <Textarea {...props} maxLength={1000} rows={4} />
+          <Textarea
+            {...props}
+            maxLength={name === "career" ? 2000 : 1000}
+            rows={4}
+          />
         ) : (
           <Input
             {...props}
@@ -167,11 +197,26 @@ export default function ProfileForm({
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit(() => mutation.mutateAsync().catch(() => {}))}
+      onSubmit={form.handleSubmit(async () => {
+        if (!busy) await mutation.mutateAsync().catch(() => {});
+      })}
       className="grid gap-6"
       aria-busy={busy}
     >
       <fieldset disabled={busy} className="grid min-w-0 gap-6">
+        {!mockEnabled && (
+          <ProfileImageField
+            value={imageId}
+            label={role === "CLIENT" ? "로고" : "프로필 이미지"}
+            busy={busy}
+            onSelect={(file) => upload.mutate(file)}
+            onRemove={() => {
+              form.setValue("imageFileId", "", { shouldDirty: true });
+              upload.reset();
+              setSaved(false);
+            }}
+          />
+        )}
         {textField("name")}
         <p className="text-sm text-muted-foreground">
           표시 이름은 2~20자예요. 이메일과 배송지는 이 화면에 표시하지 않아요.
@@ -201,6 +246,17 @@ export default function ProfileForm({
             {choices("contentStyles", CONTENT_STYLES)}
             {choices("productionRoles", PRODUCTION_ROLES)}
             {textField("workMethod", true)}
+            {!mockEnabled && (
+              <>
+                {textField("career", true)}
+                {textField("websiteUrl")}
+                {textField("socialUrl")}
+                <p className="text-sm text-muted-foreground">
+                  제작 서비스를 공개하면 이미지·경력·링크도 제작자 페이지에
+                  표시돼요. 링크는 http:// 또는 https://로 시작해 주세요.
+                </p>
+              </>
+            )}
             <label
               htmlFor="profile-isAvailable"
               className="flex min-h-11 items-center gap-2"
@@ -216,9 +272,6 @@ export default function ProfileForm({
             {textField("availableFrom")}
           </>
         )}
-        <p className="text-sm text-muted-foreground">
-          분야·스타일 선택지는 현재 계약의 임시 값이며 팀 확인이 필요해요.
-        </p>
         <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={!form.formState.isDirty}>
             {busy ? "저장 중…" : "프로필 저장"}
@@ -229,6 +282,7 @@ export default function ProfileForm({
             onClick={() => {
               form.reset(original);
               mutation.reset();
+              upload.reset();
               setSaved(false);
             }}
           >
@@ -236,6 +290,10 @@ export default function ProfileForm({
           </Button>
         </div>
       </fieldset>
+      {upload.isPending && (
+        <p role="status">이미지를 업로드하고 확인하고 있어요.</p>
+      )}
+      {upload.error && <p role="alert">{upload.error.message}</p>}
       {saved && !form.formState.isDirty && (
         <p role="status">프로필을 저장했어요.</p>
       )}

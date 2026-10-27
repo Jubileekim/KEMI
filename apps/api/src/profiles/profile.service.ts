@@ -14,6 +14,7 @@ import AppError from "../http/app-error.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 
 interface ClientProfileRow {
+  imageFileId: bigint | null;
   brandName: string | null;
   introduction: string | null;
   industry: string | null;
@@ -22,6 +23,10 @@ interface ClientProfileRow {
 }
 
 interface CreatorProfileRow {
+  imageFileId: bigint | null;
+  career: string | null;
+  websiteUrl: string | null;
+  socialUrl: string | null;
   introduction: string | null;
   niche: string | null;
   contentStyles: string[];
@@ -34,6 +39,7 @@ interface CreatorProfileRow {
 
 // 아직 저장한 적이 없는 프로필. DB 기본값과 같다.
 const EMPTY_CLIENT_PROFILE: ClientProfileRow = {
+  imageFileId: null,
   brandName: null,
   introduction: null,
   industry: null,
@@ -42,6 +48,10 @@ const EMPTY_CLIENT_PROFILE: ClientProfileRow = {
 };
 
 const EMPTY_CREATOR_PROFILE: CreatorProfileRow = {
+  imageFileId: null,
+  career: null,
+  websiteUrl: null,
+  socialUrl: null,
   introduction: null,
   niche: null,
   contentStyles: [],
@@ -55,6 +65,7 @@ const EMPTY_CREATOR_PROFILE: CreatorProfileRow = {
 function toClientProfile(row: ClientProfileRow): ClientProfile {
   return {
     type: "CLIENT",
+    imageFileId: row.imageFileId?.toString() ?? null,
     brandName: row.brandName,
     introduction: row.introduction,
     industry: productCategorySchema.nullable().parse(row.industry),
@@ -66,6 +77,10 @@ function toClientProfile(row: ClientProfileRow): ClientProfile {
 function toCreatorProfile(row: CreatorProfileRow): CreatorProfile {
   return {
     type: "CREATOR",
+    imageFileId: row.imageFileId?.toString() ?? null,
+    career: row.career,
+    websiteUrl: row.websiteUrl,
+    socialUrl: row.socialUrl,
     introduction: row.introduction,
     niche: productCategorySchema.nullable().parse(row.niche),
     contentStyles: contentStyleSchema.array().parse(row.contentStyles),
@@ -104,6 +119,29 @@ async function updateName(
 }
 
 export function createProfileService({ prisma }: { prisma: PrismaClient }) {
+  async function imageField(
+    tx: Prisma.TransactionClient,
+    userId: bigint,
+    id: string | null | undefined,
+  ) {
+    if (id === undefined || id === null) return id;
+    const file = await tx.file.findUnique({ where: { id: BigInt(id) } });
+    if (
+      !file ||
+      file.ownerId !== userId ||
+      file.purpose !== "PROFILE_IMAGE" ||
+      file.status !== "READY" ||
+      file.workRequestId !== null ||
+      !["image/png", "image/jpeg", "image/webp"].includes(file.mimeType)
+    ) {
+      throw new AppError(
+        400,
+        "VALIDATION_FAILED",
+        "본인이 업로드하고 확인을 마친 프로필 이미지만 사용할 수 있습니다.",
+      );
+    }
+    return file.id;
+  }
   async function getMine(user: AuthUser): Promise<MyProfileResponse> {
     const userId = BigInt(user.id);
     if (profileRoleOf(user) === "CLIENT") {
@@ -127,18 +165,20 @@ export function createProfileService({ prisma }: { prisma: PrismaClient }) {
   ): Promise<MyProfileResponse> {
     const userId = BigInt(user.id);
     if (profileRoleOf(user) === "CLIENT") {
-      const { name, ...data } = clientProfileUpdateSchema.parse(input);
+      const { name, imageFileId, ...data } =
+        clientProfileUpdateSchema.parse(input);
       return prisma.$transaction(async (tx) => {
+        const image = await imageField(tx, userId, imageFileId);
         const displayName = await updateName(tx, user, name);
         const row = await tx.clientProfile.upsert({
           where: { userId },
-          create: { userId, ...data },
-          update: data,
+          create: { userId, ...data, imageFileId: image },
+          update: { ...data, imageFileId: image },
         });
         return { name: displayName, profile: toClientProfile(row) };
       });
     }
-    const { name, availableFrom, ...data } =
+    const { name, availableFrom, imageFileId, ...data } =
       creatorProfileUpdateSchema.parse(input);
     const fields = {
       ...data,
@@ -149,11 +189,12 @@ export function createProfileService({ prisma }: { prisma: PrismaClient }) {
           : new Date(availableFrom),
     };
     return prisma.$transaction(async (tx) => {
+      const image = await imageField(tx, userId, imageFileId);
       const displayName = await updateName(tx, user, name);
       const row = await tx.creatorProfile.upsert({
         where: { userId },
-        create: { userId, ...fields },
-        update: fields,
+        create: { userId, ...fields, imageFileId: image },
+        update: { ...fields, imageFileId: image },
       });
       return { name: displayName, profile: toCreatorProfile(row) };
     });
