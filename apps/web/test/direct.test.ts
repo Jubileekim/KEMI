@@ -51,6 +51,20 @@ describe("6-B 직접 의뢰 발송", () => {
       ),
     ).toThrow();
   });
+  it("같은 요청 ID에서 다른 packageId는 멱등 성공하지 않고 충돌 처리", () => {
+    const state = sendDirect(emptyProposals(), cmd, user, creator, now);
+    expect(sendDirect(state, cmd, user, null, now)).toBe(state);
+    expect(() =>
+      sendDirect(
+        state,
+        { ...cmd, packageId: "different-package" },
+        user,
+        creator,
+        now,
+      ),
+    ).toThrow("발송 식별자가 충돌해요.");
+    expect(state.items).toHaveLength(1);
+  });
   it("타 제작자·비공개·변경 패키지와 역할·비활성 발송을 차단", () => {
     expect(() =>
       sendDirect(emptyProposals(), cmd, { ...user, role: "CREATOR" }, creator),
