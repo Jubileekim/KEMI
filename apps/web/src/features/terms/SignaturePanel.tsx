@@ -323,6 +323,9 @@ export default function SignaturePanel({
             {round.contractId && (
               <>
                 <p>모의 계약 식별: {round.contractId}</p>
+                <Link to={`/contracts/${round.contractId}/cancellation`}>
+                  취소 요청·합의 (Mock)
+                </Link>
                 <p>선정 완료 · 실제 결제 API 미연결 · 제작 시작 전</p>
                 <Link to={`/contracts/${round.contractId}/production`}>
                   제품·자료 준비와 납기 (Mock)

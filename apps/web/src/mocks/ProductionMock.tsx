@@ -397,6 +397,9 @@ export default function ProductionMock({ contractId }: { contractId: string }) {
           <Link to={`/contracts/${contractId}/settlement`}>
             모의 정산 결과 확인
           </Link>
+          <Link to={`/contracts/${contractId}/cancellation`}>
+            취소 요청·합의 (Mock)
+          </Link>
         </>
       )}
       {notice && <p role="status">{notice}</p>}

@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
 import { session } from "../app/session";
+import { resolutionHeld } from "./resolution-store";
 import { readMockUser } from "./auth-handlers";
 import { readMockSignedContract } from "./signature-handlers";
 import { readMockTerms } from "./terms-handlers";
@@ -127,6 +128,7 @@ async function handle({
       const raw: unknown = await request.json();
       const cmd = finalCommandSchema.safeParse(raw);
       if (!cmd.success) return fail(400);
+      if (resolutionHeld(contract.id)) return fail(409);
       if (epoch !== session.epoch() || actor(request)?.id !== user.id)
         return fail(401);
       const owned = [...finalAssets.values()]
