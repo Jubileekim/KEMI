@@ -28,6 +28,7 @@ import {
   createPaymentService,
   type PaymentService,
 } from "../../src/payments/payment.service.js";
+import { createChatService } from "../../src/chat/chat.service.js";
 
 export const TEST_APP_ORIGIN = "http://localhost:5173";
 export const TEST_ACCESS_SECRET = "test-access-secret-at-least-32-characters";
@@ -158,6 +159,7 @@ export function createTestApp({
     // 조건서 경로도 인증을 먼저 하므로, DB 없는 단위 테스트에서는 쿼리 전에 끝난다.
     termsService: termsService ?? createTermsService({ prisma: client }),
     paymentService: paymentService ?? createPaymentService({ prisma: client }),
+    chatService: createChatService({ prisma: client }),
     appOrigin: TEST_APP_ORIGIN,
     trustProxyHops,
     apiDocs,

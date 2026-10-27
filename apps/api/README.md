@@ -282,6 +282,20 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 - 두 번째 서명은 한 트랜잭션에서 계약 생성, 요청·프로젝트 `CONTRACTED`, 같은 프로젝트의 다른 활성 지원 `NOT_SELECTED`와 그 조건서 `VOID`, 알림(`CONTRACT_SIGNED`, `APPLICATION_AUTO_REJECTED`)까지 처리한다. 공고당 계약은 하나다.
 - 만료는 스케줄러 없이 처리한다. 기한이 지난 `SIGNING`은 조회할 때 `EXPIRED`로 보이고, 다음 저장 때 `EXPIRED`로 기록된다.
 
+## 요청별 대화 API (CHAT-01~05, WORK-04)
+
+| 메서드·경로                                  | 하는 일                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /api/chat/rooms`                        | 내 대화방 목록 (최근 메시지 순, 미확인 수, 읽기 전용 여부)          |
+| `GET /api/work-requests/{id}/chat/messages`  | 메시지 (기본 최신 50개, `before`·`after`·`limit`)                   |
+| `POST /api/work-requests/{id}/chat/messages` | 텍스트 메시지 `{ clientMessageId, body }` (4,000자, 재전송은 한 번) |
+| `POST /api/work-requests/{id}/chat/read`     | 읽음 위치 `{ lastReadMessageId }` (뒤로 가지 않음)                  |
+
+- 방은 협의 요청 때 생기고, 계약 뒤에도 같은 방·기록을 쓴다. 당사자만 볼 수 있다(후보별 방은 서로 보이지 않음).
+- 거절·철회·미선정된 협의의 방은 읽기만 된다. 모집 마감·조건서 만료만으로는 닫히지 않는다.
+- 서명 요청·계약 체결·결제 완료는 `SYSTEM` 메시지로 남는다(WORK-04). 대화·첨부만으로 계약·납품 상태가 바뀌지 않는다.
+- 실시간 전송은 없다. 화면이 `after`로 새 메시지를 다시 받는다(D07 결정 대기).
+
 ## 테스트 결제 API (PAY-01·02, Toss Sandbox)
 
 자세한 규칙은 [결제 설계](../../docs/decisions/2026-10-26-payments.md)에 있다. 모두 `Authorization: Bearer <accessToken>`이 필요하다. **실제 돈은 움직이지 않는다.** 서버는 Toss 테스트 시크릿 키(`test_sk_`·`test_gsk_`)만 받고, `live_` 키는 서버가 시작하지 않는다.

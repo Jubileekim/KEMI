@@ -20,6 +20,7 @@ import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
+import { postSystemMessage } from "../chat/chat.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -485,6 +486,12 @@ export function createTermsService({
             workRequestId,
           },
         ]);
+        await postSystemMessage(
+          tx,
+          workRequestId,
+          `terms:${version.id}:signing-requested`,
+          `조건서 ${versionNo}번 버전의 서명이 요청되었습니다. ${TERMS_SIGNING_HOURS}시간 안에 양측이 서명해야 계약이 체결됩니다.`,
+        );
         return toVersion(updated, at);
       });
     },
@@ -639,6 +646,12 @@ export function createTermsService({
           })),
         ]);
 
+        await postSystemMessage(
+          tx,
+          workRequestId,
+          `contract:${contract.id}:signed`,
+          `조건서 ${versionNo}번 버전에 양측이 서명해 계약이 체결되었습니다.`,
+        );
         const signed = await findVersion(tx, workRequestId, versionNo);
         return {
           created: true,

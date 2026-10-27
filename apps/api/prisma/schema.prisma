@@ -47,6 +47,8 @@ model User {
   clientContracts  Contract[]        @relation("ContractClient")
   creatorContracts Contract[]        @relation("ContractCreator")
   payments         Payment[]
+  chatMessages     ChatMessage[]
+  chatReads        ChatRead[]
 
   @@map("users")
 }
@@ -199,6 +201,7 @@ model WorkRequest {
   notifications Notification[]
   termsVersions TermsVersion[]
   contract      Contract?
+  chatRoom      ChatRoom?
 
   @@unique([projectId, creatorId])
   @@index([creatorId, createdAt])
@@ -346,4 +349,51 @@ model Payment {
 
   @@index([contractId, createdAt])
   @@map("payments")
+}
+
+// ─── 요청별 대화 (CHAT-01~05, WORK-04) ─────────────────────────
+// 요청 하나에 방 하나. 협의 요청 때 만들고, 계약 뒤에도 같은 방을 쓴다.
+// 읽기 전용 여부는 요청 상태(거절·철회·미선정)로 판단한다(저장하지 않음).
+model ChatRoom {
+  id            BigInt   @id @default(autoincrement())
+  workRequestId BigInt   @unique @map("work_request_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  workRequest WorkRequest   @relation(fields: [workRequestId], references: [id], onDelete: Restrict)
+  messages    ChatMessage[]
+  reads       ChatRead[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        BigInt   @id @default(autoincrement())
+  roomId    BigInt   @map("room_id")
+  kind      String   @default("USER")
+  // SYSTEM 메시지는 보낸 사람이 없다.
+  senderId  BigInt?  @map("sender_id")
+  body      String
+  // USER: 화면이 만든 식별자(재전송 중복 방지). SYSTEM: 사건 키(같은 사건 한 번).
+  dedupeKey String   @map("dedupe_key")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  sender User?    @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@unique([roomId, dedupeKey])
+  @@index([roomId, id])
+  @@map("chat_messages")
+}
+
+model ChatRead {
+  roomId            BigInt   @map("room_id")
+  userId            BigInt   @map("user_id")
+  lastReadMessageId BigInt   @map("last_read_message_id")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  user User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([roomId, userId])
+  @@map("chat_reads")
 }
