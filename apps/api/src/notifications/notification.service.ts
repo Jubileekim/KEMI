@@ -5,6 +5,7 @@ import {
   notificationListQuerySchema,
   notificationTypeSchema,
   type UnreadCountResponse,
+  notificationReadManySchema,
 } from "@kemi/shared";
 import AppError from "../http/app-error.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
@@ -38,6 +39,7 @@ export interface NotificationService {
   unreadCount(user: AuthUser): Promise<UnreadCountResponse>;
   markRead(user: AuthUser, notificationId: bigint): Promise<Notification>;
   markAllRead(user: AuthUser): Promise<UnreadCountResponse>;
+  markManyRead(user: AuthUser, input: unknown): Promise<UnreadCountResponse>;
 }
 
 // 인앱 알림 조회·읽음 처리 (NOTI-01). 본인 알림만 다룬다.
@@ -99,6 +101,30 @@ export function createNotificationService({
         throw new AppError(404, "NOT_FOUND", "알림을 찾을 수 없습니다.");
       }
       return toNotification(row);
+    },
+
+    // NOTI-02: 고른 알림만 읽음. 남의 알림이 섞이면 404이고 아무것도 바꾸지 않는다(존재를 드러내지 않음).
+    async markManyRead(user, input) {
+      const { ids } = notificationReadManySchema.parse(input);
+      const recipientUserId = BigInt(user.id);
+      const unique = [...new Set(ids)].map(BigInt);
+      return prisma.$transaction(async (tx) => {
+        const owned = await tx.notification.count({
+          where: { id: { in: unique }, recipientUserId },
+        });
+        if (owned !== unique.length) {
+          throw new AppError(404, "NOT_FOUND", "알림을 찾을 수 없습니다.");
+        }
+        await tx.notification.updateMany({
+          where: { id: { in: unique }, recipientUserId, readAt: null },
+          data: { readAt: now() },
+        });
+        return {
+          unreadCount: await tx.notification.count({
+            where: { recipientUserId, readAt: null },
+          }),
+        };
+      });
     },
 
     async markAllRead(user) {

@@ -138,6 +138,11 @@ export interface ProjectSummary {
 }
 
 export interface ProjectListResponse {
+  unavailableIds?: string[];
+  recommendation?: {
+    basis: "PREFERENCES" | "LATEST_NO_PREFERENCES" | "LATEST_NO_MATCHES";
+    reason: string;
+  };
   items: ProjectSummary[];
   pagination: {
     page: number;

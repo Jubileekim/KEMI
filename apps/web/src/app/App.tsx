@@ -44,6 +44,8 @@ const CancellationPage = lazy(
 const DisputePage = lazy(() => import("../features/resolution/DisputePage"));
 const ReviewPage = lazy(() => import("../features/operations/ReviewPage"));
 const ActivityLive = lazy(() => import("../features/activity/ActivityLive"));
+const SafetyLive = lazy(() => import("../features/operations/SafetyLive"));
+const activityPaths = ["/me/activity", "/bookmarks", "/recommendations"];
 const NotificationsLive = lazy(() =>
   import("../features/activity/ActivityLive").then((m) => ({
     default: m.NotificationsLive,
@@ -133,11 +135,24 @@ export default function App() {
                         <DisputePage />
                       )}
                       {screen.path === "/ops/disputes" && <ReviewPage />}
-                      {screen.path === "/me/activity" &&
+                      {activityPaths.includes(screen.path) &&
                         (mockEnabled ? (
                           <Placeholder screen={screen} />
                         ) : (
                           <ActivityLive />
+                        ))}
+                      {(screen.path === "/reports/new" ||
+                        screen.path === "/ops/reports") &&
+                        (mockEnabled ? (
+                          <Placeholder screen={screen} />
+                        ) : (
+                          <SafetyLive />
+                        ))}
+                      {screen.path === "/contracts/:contractId/review" &&
+                        (mockEnabled ? (
+                          <Placeholder screen={screen} />
+                        ) : (
+                          <SettlementSummary />
                         ))}
                       {screen.path === "/notifications" &&
                         (mockEnabled ? (
@@ -167,8 +182,11 @@ export default function App() {
                         "/contracts/:contractId/cancellation",
                         "/disputes/:disputeId",
                         "/ops/disputes",
-                        "/me/activity",
+                        ...activityPaths,
                         "/notifications",
+                        "/reports/new",
+                        "/ops/reports",
+                        "/contracts/:contractId/review",
                         "/login",
                         "/signup",
                         "/auth/social/callback",

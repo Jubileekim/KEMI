@@ -126,8 +126,70 @@ describe("프로젝트 북마크와 기본 추천", () => {
       .get("/api/recommendations/projects")
       .set(auth(creator));
     expect(response.status).toBe(200);
+    expect(response.body.recommendation.basis).toBe("PREFERENCES");
     expect(response.body.items.map((item: { id: string }) => item.id)).toEqual([
       recommendedId,
     ]);
+  });
+  it("추천 조건이 없거나 일치하는 모집이 없으면 최신 목록이라는 근거를 제공한다", async () => {
+    const client = await signup("CLIENT");
+    const creator = await signup("CREATOR");
+    await createProject(
+      client,
+      projectBody("SNS 제작 모집", "SNS_SHORTFORM", ["TRENDY"]),
+    );
+    const list = () =>
+      request(app).get("/api/recommendations/projects").set(auth(creator));
+    expect((await list()).body.recommendation.basis).toBe(
+      "LATEST_NO_PREFERENCES",
+    );
+    const favorite = await createProject(
+      client,
+      projectBody("가족 성장 영상", "CHILD_FAMILY", ["EMOTIONAL"]),
+    );
+    await request(app)
+      .put(`/api/bookmarks/projects/${favorite}`)
+      .set(auth(creator));
+    const fallback = await list();
+    expect(fallback.body.recommendation.basis).toBe("LATEST_NO_MATCHES");
+    expect(fallback.body.items).toHaveLength(1);
+  });
+  it("종료한 저장 공고는 상태를 보여주고 삭제한 공고는 제목 없이 해제할 수 있다", async () => {
+    const client = await signup("CLIENT");
+    const creator = await signup("CREATOR");
+    const id = await createProject(
+      client,
+      projectBody("삭제되면 숨겨야 하는 제목", "OTHER", ["CLEAN"]),
+    );
+    const path = `/api/bookmarks/projects/${id}`;
+    await request(app).put(path).set(auth(creator));
+    await prisma.project.update({
+      where: { id: BigInt(id) },
+      data: { status: "CLOSED", closeReason: "MANUAL" },
+    });
+    const closed = await request(app)
+      .get("/api/bookmarks/projects")
+      .set(auth(creator));
+    expect(closed.body.items[0].status).toBe("CLOSED");
+    await prisma.project.update({
+      where: { id: BigInt(id) },
+      data: { deletedAt: new Date() },
+    });
+    const hidden = await request(app)
+      .get("/api/bookmarks/projects")
+      .set(auth(creator));
+    expect(hidden.body).toMatchObject({
+      items: [],
+      unavailableIds: [id],
+      pagination: { total: 1 },
+    });
+    expect(JSON.stringify(hidden.body)).not.toContain("숨겨야");
+    expect((await request(app).delete(path).set(auth(creator))).status).toBe(
+      204,
+    );
+    expect(
+      (await request(app).get("/api/bookmarks/projects").set(auth(creator)))
+        .body.pagination.total,
+    ).toBe(0);
   });
 });

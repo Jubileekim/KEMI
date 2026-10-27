@@ -5,6 +5,7 @@ import {
   type Portfolio,
   type ServicePackage,
 } from "@kemi/shared";
+import { useEffect } from "react";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -19,6 +20,7 @@ import {
 } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 // 공개 작업물 썸네일. 서명 주소는 만료되므로 화면에서 그때그때 받는다.
 function Thumbnail({ portfolio }: { portfolio: Portfolio }) {
@@ -87,6 +89,9 @@ function Feed() {
     queryFn: ({ signal }) => kemi.feed(search, signal),
   });
   const page = Number(params.get("page") ?? "1");
+  useEffect(() => {
+    if (feed.isSuccess) track("feed_view", "feed");
+  }, [feed.isSuccess]);
   return (
     <>
       <h1 className="type-heading-lg">작품 피드</h1>
@@ -202,6 +207,7 @@ function WorkDetail({ id }: { id: string }) {
         {media.data?.video ? (
           <video
             controls
+            onPlaying={() => track("work_play", w.id)}
             preload="metadata"
             className="aspect-video w-full rounded-xl bg-black"
             src={media.data.video.url}
@@ -252,6 +258,9 @@ export function CreatorDetailLive() {
     queryKey: ["creator", creatorId],
     queryFn: ({ signal }) => kemi.creator(creatorId, signal),
   });
+  useEffect(() => {
+    if (creator.isSuccess) track("creator_view", creatorId);
+  }, [creator.isSuccess, creatorId]);
   if (creator.isPending)
     return <Loading text="제작자 정보를 불러오고 있어요." />;
   if (creator.error) return <Failure error={creator.error} />;

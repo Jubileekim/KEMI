@@ -55,30 +55,30 @@ function protectedPath(url = "") {
     (url.startsWith("/api/") && !url.startsWith("/api/auth/"))
   );
 }
-// 공개 조회는 비로그인 상태에서도 가능하다. 쓰기·내 정보는 항상 Bearer 검증한다.
-function publicReadPath(url = "", method = "get") {
-  if (method.toLowerCase() !== "get") return false;
+// 공개 탐색과 행동 기록은 비회원도 호출할 수 있다. 그 외 경로는 인증을 유지한다.
+function publicPath(url = "", method = "get") {
   const path = url.split("?")[0] ?? "";
+  if (method.toLowerCase() === "post") return path === "/api/analytics/events";
+  if (method.toLowerCase() !== "get") return false;
   return (
     path === "/api/feed" ||
     path === "/api/projects" ||
-    /^\/api\/projects\/[1-9][0-9]*$/.test(path) ||
-    /^\/api\/creators\/[1-9][0-9]*$/.test(path) ||
-    /^\/api\/packages\/[1-9][0-9]*$/.test(path) ||
-    /^\/api\/portfolios\/[1-9][0-9]*(\/media)?$/.test(path)
+    /^\/api\/(projects|creators|packages)\/[1-9]\d*$/.test(path) ||
+    /^\/api\/portfolios\/[1-9]\d*(\/media)?$/.test(path) ||
+    /^\/api\/users\/[1-9]\d*\/reviews$/.test(path)
   );
 }
 api.interceptors.request.use(async (input) => {
   const config = input;
   if (session && protectedPath(config.url)) {
-    if (
-      publicReadPath(config.url, config.method) &&
-      session.isAuthenticated?.() === false
-    )
-      return config;
     config.sessionEpoch ??= session.epoch();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();
+    if (
+      session.isAuthenticated?.() === false &&
+      publicPath(config.url, config.method)
+    )
+      return config;
     const token = await session.token();
     if (config.sessionEpoch !== session.epoch())
       throw new axios.CanceledError();

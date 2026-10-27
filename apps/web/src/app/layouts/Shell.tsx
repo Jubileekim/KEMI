@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, matchRoutes, useLocation } from "react-router";
 import Brand from "@/components/kemi/brand";
 import { screens } from "../routes";
-import { session, useSession } from "../session";
+import { mockEnabled, session, useSession } from "../session";
+import { NotificationLink } from "../../features/activity/ActivityLive";
+import { RestrictionNotice } from "../../features/operations/SafetyLive";
 import Button from "../../components/ui/button";
 
 export default function Shell() {
@@ -33,20 +35,29 @@ export default function Shell() {
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
             {role === "ops" && (
-              <NavLink to="/ops/disputes">분쟁·보류 검토</NavLink>
+              <>
+                <NavLink to="/ops/disputes">분쟁·보류 검토</NavLink>
+                {!mockEnabled && <NavLink to="/ops/reports">신고 검토</NavLink>}
+              </>
             )}
             {role === "client" && (
               <NavLink to="/campaigns/new">캠페인 작성</NavLink>
             )}
             <NavLink to="/me/activity">내 활동</NavLink>
             {(role === "client" || role === "creator") && (
-              <NavLink to="/me/profile">내 프로필</NavLink>
+              <>
+                {!mockEnabled && <NotificationLink />}
+                <NavLink to="/me/profile">내 프로필</NavLink>
+              </>
             )}
             {(role === "client" || role === "creator") && (
               <NavLink to="/requests">내 제안·협의</NavLink>
             )}
             {role === "creator" && (
               <>
+                {!mockEnabled && (
+                  <NavLink to="/recommendations">추천 캠페인</NavLink>
+                )}
                 <NavLink to="/studio/packages">패키지·서비스</NavLink>
                 <NavLink to="/studio/portfolio">작업물 관리</NavLink>
               </>
@@ -92,7 +103,11 @@ export default function Shell() {
             )}
           </section>
         ) : (
-          <Outlet />
+          <>
+            {/* 실제 API 모드에서만: 이용 제한 중이면 안내를 먼저 보여준다(개발 Mock 화면은 그대로). */}
+            {!mockEnabled && <RestrictionNotice />}
+            <Outlet />
+          </>
         )}
       </main>
       <footer className="page-container text-sm text-muted-foreground">

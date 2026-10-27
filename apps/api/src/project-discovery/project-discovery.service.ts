@@ -133,7 +133,6 @@ export function createProjectDiscoveryService({
       const query = projectDiscoveryQuerySchema.parse(input);
       const where: Prisma.ProjectBookmarkWhereInput = {
         userId,
-        project: { deletedAt: null },
       };
       const [bookmarks, total] = await prisma.$transaction([
         prisma.projectBookmark.findMany({
@@ -145,11 +144,18 @@ export function createProjectDiscoveryService({
         }),
         prisma.projectBookmark.count({ where }),
       ]);
-      return responseOf(
-        bookmarks.map(({ project }) => project),
-        total,
-        query,
-      );
+      return {
+        ...responseOf(
+          bookmarks
+            .filter(({ project }) => project.deletedAt === null)
+            .map(({ project }) => project),
+          total,
+          query,
+        ),
+        unavailableIds: bookmarks
+          .filter(({ project }) => project.deletedAt !== null)
+          .map(({ projectId }) => projectId.toString()),
+      };
     },
 
     async addBookmark(user, projectId) {
@@ -248,7 +254,22 @@ export function createProjectDiscoveryService({
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       });
-      return responseOf(rows, total, query);
+      let recommendation: NonNullable<ProjectListResponse["recommendation"]> = {
+        basis: "LATEST_NO_PREFERENCES",
+        reason: "프로필·저장 이력이 부족해 최신 모집을 보여드려요.",
+      };
+      if (hasPreferences && preferredTotal > 0)
+        recommendation = {
+          basis: "PREFERENCES",
+          reason:
+            "프로필 또는 저장한 공고의 목적·스타일 중 일치하는 조건이 있어요.",
+        };
+      else if (hasPreferences)
+        recommendation = {
+          basis: "LATEST_NO_MATCHES",
+          reason: "일치하는 모집이 없어 최신 모집을 보여드려요.",
+        };
+      return { ...responseOf(rows, total, query), recommendation };
     },
   };
 }

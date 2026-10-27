@@ -134,6 +134,7 @@ function toReview(row: ReviewRow): Review {
     revieweeId: row.revieweeId.toString(),
     rating: row.rating,
     comment: row.comment,
+    tags: row.tags,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -155,6 +156,7 @@ function toDelivery(row: ProductionRow, userId: bigint): Delivery {
     reviews: row.contract.reviews.map(toReview),
     canReview:
       row.status === "COMPLETED" &&
+      row.contract.settlement?.status === "SIMULATED" &&
       !row.contract.reviews.some((r) => r.reviewerId === userId),
   };
 }
@@ -607,8 +609,23 @@ export function createDeliveryService({
       const data = reviewCreateSchema.parse(input);
       return inTransaction(async (tx) => {
         const { userId, role, production } = await lock(tx, user, contractId);
-        if (production.status !== "COMPLETED") {
+        if (
+          production.status !== "COMPLETED" ||
+          production.contract.settlement?.status !== "SIMULATED"
+        ) {
           throw conflict("완료된 거래에만 리뷰를 남길 수 있습니다.");
+        }
+        const prior = production.contract.reviews.find(
+          (r) => r.reviewerId === userId,
+        );
+        if (prior) {
+          if (
+            prior.rating !== data.rating ||
+            prior.comment !== (data.comment ?? null) ||
+            JSON.stringify(prior.tags) !== JSON.stringify(data.tags)
+          )
+            throw conflict("이 거래에는 이미 다른 내용의 리뷰를 남겼습니다.");
+          return reload(tx, contractId, userId);
         }
         const revieweeId =
           role === "CLIENT"
@@ -622,6 +639,7 @@ export function createDeliveryService({
               revieweeId,
               rating: data.rating,
               comment: data.comment ?? null,
+              tags: data.tags,
             },
           });
         } catch (err) {

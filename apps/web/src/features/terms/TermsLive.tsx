@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
@@ -16,6 +16,7 @@ import { kemi, newCommandId } from "../../shared/api/kemi";
 import { dateTime, label, termsStatusLabels, won } from "../live/labels";
 import { Card, Facts, Field } from "../live/ui";
 import { errorText } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 const fieldLabels: Record<(typeof TERMS_TEXT_FIELDS)[number], string> = {
   specification: "영상 사양",
@@ -213,6 +214,9 @@ export default function TermsLive({
   });
   const latest = document.versions.at(-1);
   const { contract } = document;
+  useEffect(() => {
+    if (contract) track("contract_confirmed", contract.id);
+  }, [contract]);
   if (contract)
     return (
       <Card title="계약">

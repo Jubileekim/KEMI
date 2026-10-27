@@ -17,3 +17,6 @@ export * from "./project-discovery.js";
 export * from "./project.js";
 export * from "./status.js";
 export * from "./terms.js";
+export * from "./activity.js";
+export * from "./analytics.js";
+export * from "./safety.js";

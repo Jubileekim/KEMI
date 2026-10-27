@@ -25,6 +25,9 @@ import { createDeliveryService } from "./delivery/delivery.service.js";
 import { createCatalogService } from "./catalog/catalog.service.js";
 import { createProjectDraftService } from "./projects/project-draft.service.js";
 import { createDirectRequestService } from "./direct/direct.service.js";
+import { createSafetyService } from "./safety/safety.service.js";
+import { createAnalyticsService } from "./safety/analytics.service.js";
+import { createActivityService } from "./safety/activity.service.js";
 import { createFeedService } from "./direct/feed.service.js";
 import { createCancelService } from "./cancel/cancel.service.js";
 import { createSupabaseStorage } from "./files/storage.js";
@@ -99,6 +102,9 @@ function start(env: Env) {
       toss,
     }),
     cancelService: createCancelService({ prisma, toss }),
+    safetyService: createSafetyService({ prisma }),
+    analyticsService: createAnalyticsService({ prisma }),
+    activityService: createActivityService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     apiDocs: env.NODE_ENV !== "production",

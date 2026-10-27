@@ -40,6 +40,10 @@ export const NOTIFICATION_TYPES = [
   "REFUND_SUCCEEDED",
   "DISPUTE_OPENED",
   "DISPUTE_RESOLVED",
+  "SAFETY_WARNED",
+  "SAFETY_LIMITED",
+  "SAFETY_RELEASED",
+  "REPORT_RESOLVED",
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
@@ -51,6 +55,17 @@ const pageQuery = (max: number) =>
     .transform(Number)
     .pipe(z.number().int().min(1).max(max))
     .optional();
+
+// 여러 알림 한 번에 읽음(NOTI-02). 본인 알림이 아닌 ID가 하나라도 있으면 404이고 아무것도 바꾸지 않는다.
+export const notificationReadManySchema = z.strictObject({
+  ids: z
+    .array(z.string().regex(/^[1-9]\d*$/))
+    .min(1)
+    .max(200),
+});
+export type NotificationReadManyRequest = z.input<
+  typeof notificationReadManySchema
+>;
 
 export const notificationListQuerySchema = z.strictObject({
   unread: z.enum(["true", "false"]).optional(),

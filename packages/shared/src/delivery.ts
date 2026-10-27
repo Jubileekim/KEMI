@@ -96,7 +96,8 @@ export type RevisionRequestCreateRequest = z.input<
 // REVIEW-01: 정상 완료 거래의 당사자별 리뷰 1회
 export const reviewCreateSchema = z.strictObject({
   rating: z.int().min(REVIEW_RATING_MIN).max(REVIEW_RATING_MAX),
-  comment: text(1000).optional(),
+  comment: text(2000).optional(),
+  tags: z.array(text(30)).max(5).default([]),
 });
 export type ReviewCreateRequest = z.input<typeof reviewCreateSchema>;
 
@@ -145,6 +146,7 @@ export interface Review {
   revieweeId: string;
   rating: number;
   comment: string | null;
+  tags: string[];
   createdAt: string;
 }
 

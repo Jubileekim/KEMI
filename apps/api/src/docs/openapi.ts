@@ -1,4 +1,14 @@
 import {
+  ACTIVITY_STAGES,
+  ANALYTICS_EVENT_NAMES,
+  analyticsBatchSchema,
+  notificationReadManySchema,
+  REPORT_STATUSES,
+  REPORT_TARGET_TYPES,
+  reportActionSchema,
+  reportAppealSchema,
+  reportCreateSchema,
+  SAFETY_ACTIONS,
   applicationCreateSchema,
   CHAT_MESSAGE_KINDS,
   chatMessageCreateSchema,
@@ -979,6 +989,175 @@ const openApiDocument = {
         responses: {
           200: jsonResponse("미확인 개수", "UnreadCountResponse"),
           ...bearerErrors,
+        },
+      },
+    },
+    "/api/notifications/read": {
+      post: {
+        tags: ["notifications"],
+        summary: "고른 알림 여러 개 읽음 (NOTI-02)",
+        description:
+          "본인 알림 ID 1~200개. 남의 알림이 하나라도 섞이면 404이고 아무것도 바꾸지 않는다. 이미 읽은 알림은 처음 읽은 시각을 유지한다.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(notificationReadManySchema),
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse("남은 미확인 개수", "UnreadCountResponse"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          404: errorResponse("본인 알림이 아닌 ID가 있음 (`NOT_FOUND`)"),
+        },
+      },
+    },
+    "/api/activity": {
+      get: {
+        tags: ["activity"],
+        summary: "내 활동 묶음 조회 (ACT-01)",
+        description:
+          "의뢰인: 내 모집(지원 수·검토 대기 수)과 내 요청. 크리에이터: 내 지원·직접 의뢰와 관심 공고 수. 요청마다 진행 단계(stage)를 계약·결제·제작·정산·취소 상태로 계산해 준다. 미확인 알림 수 포함.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("내 활동", "ActivityResponse"),
+          ...bearerErrors,
+          403: errorResponse("회원(의뢰인·크리에이터)이 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/reports": {
+      post: {
+        tags: ["safety"],
+        summary: "신고 (OPS-01) [제안, D18]",
+        description:
+          "회원. 공개 모집(PROJECT) 또는 본인이 당사자인 의뢰(WORK_REQUEST)를 신고한다. 신고만으로 제재하지 않는다. 같은 commandId·같은 내용 재전송은 처음 접수(200), 다른 내용이면 409. 본인 신고는 403.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(reportCreateSchema) },
+          },
+        },
+        responses: {
+          201: jsonResponse("접수된 신고", "SafetyReport"),
+          200: jsonResponse("이미 접수된 같은 신고", "SafetyReport"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("회원이 아니거나 본인 신고 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("같은 식별자로 다른 신고 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/reports/me": {
+      get: {
+        tags: ["safety"],
+        summary: "내 신고·제한 안내 (OPS-01·02)",
+        description:
+          "내가 낸 신고의 진행 상태와, 나를 대상으로 한 경고·제한·해제 안내. 대상자에게는 신고자·신고 사유를 보여주지 않는다. limited가 true면 새 공고·지원·직접 의뢰가 403 `RESTRICTED`다(진행 중인 거래는 계속).",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("내 신고·제한 안내", "MySafetyView"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/reports/{reportId}/appeal": {
+      post: {
+        tags: ["safety"],
+        summary: "이의 제기 (OPS-02)",
+        description:
+          "제한된 본인만. 같은 commandId·같은 내용 재전송은 한 번만 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("reportId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(reportAppealSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("내 신고·제한 안내", "MySafetyView"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          404: errorResponse("본인이 대상인 신고가 아님 (`NOT_FOUND`)"),
+          409: errorResponse("제한 중이 아니거나 식별자 충돌 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/admin/reports": {
+      get: {
+        tags: ["safety"],
+        summary: "신고 목록 (운영자)",
+        description: "운영자. 처리 전 신고부터 최근 100건.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("신고 목록", "SafetyReportList"),
+          ...bearerErrors,
+          403: errorResponse("운영자가 아님 (`FORBIDDEN`)"),
+        },
+      },
+    },
+    "/api/admin/reports/{reportId}/actions": {
+      post: {
+        tags: ["safety"],
+        summary: "신고 조치 (운영자, OPS-01)",
+        description:
+          "REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(note)가 운영 기록에 남고, 대상자에게 경고·제한·해제 알림, 신고자에게 처리 완료 알림이 간다. 같은 commandId 재전송은 한 번만 처리된다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("reportId")],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(reportActionSchema) },
+          },
+        },
+        responses: {
+          200: jsonResponse("처리된 신고", "SafetyReport"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("운영자가 아님 (`FORBIDDEN`)"),
+          404: errorResponse("신고가 없음 (`NOT_FOUND`)"),
+          409: errorResponse(
+            "제한 중이 아닌데 해제하거나 식별자 충돌 (`CONFLICT`)",
+          ),
+        },
+      },
+    },
+    "/api/analytics/events": {
+      post: {
+        tags: ["analytics"],
+        summary: "행동 기록 (METRIC-01) [제안, D22]",
+        description:
+          "로그인 없이도 보낼 수 있다(토큰이 있으면 사용자와 연결). 이벤트 이름·공개 대상 ID·발생 시각만 받는다(개인 입력값 없음). 요청 발송·계약 확정·거래 완료는 사용자별 대상당 한 번만 센다. 시연 계정 이벤트는 집계에서 빠진다. IP당 분당 60회.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: requestSchema(analyticsBatchSchema) },
+          },
+        },
+        responses: {
+          202: jsonResponse("저장된 이벤트 수", "AnalyticsAccepted"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          401: errorResponse("토큰이 잘못됨 (`UNAUTHENTICATED`)"),
+          429: errorResponse("요청이 너무 많음 (`RATE_LIMITED`)"),
+        },
+      },
+    },
+    "/api/admin/analytics": {
+      get: {
+        tags: ["analytics"],
+        summary: "행동 집계 (운영자)",
+        description: "최근 30일, 시연 계정 제외, 이벤트별 건수와 사용자 수.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("집계", "AnalyticsSummary"),
+          ...bearerErrors,
+          403: errorResponse("운영자가 아님 (`FORBIDDEN`)"),
         },
       },
     },
@@ -2156,7 +2335,7 @@ const openApiDocument = {
         tags: ["delivery"],
         summary: "리뷰 작성 (REVIEW-01)",
         description:
-          "완료(COMPLETED)된 거래의 당사자가 상대방을 한 번 평가한다. 평점 1~5 정수 [제안, D14].",
+          "최종 수령 완료(COMPLETED)와 모의 정산 성공(SIMULATED)이 확인된 거래의 당사자가 한 번 평가한다. 평점 1~5 정수, 본문 최대 2000자, 선택 태그 최대 5개·각 30자 [제안, D14]. 동일 내용 재전송은 기존 리뷰를 반환하며 다른 내용은 409다. 받은 리뷰 공개 기준은 유지한다.",
         security: [{ bearerAuth: [] }],
         parameters: [idParam("contractId")],
         requestBody: {
@@ -2815,6 +2994,27 @@ const openApiDocument = {
         type: "object",
         required: ["items", "pagination"],
         properties: {
+          unavailableIds: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "저장 목록에서 삭제된 모집의 ID. 제목 등은 공개하지 않는다.",
+          },
+          recommendation: {
+            type: "object",
+            required: ["basis", "reason"],
+            properties: {
+              basis: {
+                type: "string",
+                enum: [
+                  "PREFERENCES",
+                  "LATEST_NO_PREFERENCES",
+                  "LATEST_NO_MATCHES",
+                ],
+              },
+              reason: { type: "string" },
+            },
+          },
           items: {
             type: "array",
             items: { $ref: "#/components/schemas/Project" },
@@ -3223,6 +3423,189 @@ const openApiDocument = {
             items: { $ref: "#/components/schemas/Dispute" },
           },
           settlementHold: { type: ["string", "null"] },
+        },
+      },
+      SafetyReport: {
+        type: "object",
+        required: [
+          "id",
+          "reporterId",
+          "subjectId",
+          "targetType",
+          "targetId",
+          "reason",
+          "evidence",
+          "status",
+          "limited",
+          "history",
+          "createdAt",
+        ],
+        properties: {
+          id: { type: "string" },
+          reporterId: { type: "string" },
+          subjectId: { type: "string" },
+          targetType: { type: "string", enum: [...REPORT_TARGET_TYPES] },
+          targetId: { type: "string" },
+          reason: { type: "string" },
+          evidence: { type: "string" },
+          status: { type: "string", enum: [...REPORT_STATUSES] },
+          limited: { type: "boolean" },
+          history: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["id", "actorId", "action", "note", "createdAt"],
+              properties: {
+                id: { type: "string" },
+                actorId: { type: "string" },
+                action: { type: "string", enum: [...SAFETY_ACTIONS] },
+                note: { type: "string" },
+                createdAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      SafetyReportList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SafetyReport" },
+          },
+        },
+      },
+      MySafetyView: {
+        type: "object",
+        required: ["limited", "reports", "notices"],
+        properties: {
+          limited: { type: "boolean" },
+          reports: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SafetyReport" },
+          },
+          notices: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["reportId", "limited", "history"],
+              properties: {
+                reportId: { type: "string" },
+                limited: { type: "boolean" },
+                history: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["id", "actorId", "action", "note", "createdAt"],
+                    properties: {
+                      id: { type: "string" },
+                      actorId: { type: "string" },
+                      action: { type: "string", enum: [...SAFETY_ACTIONS] },
+                      note: { type: "string" },
+                      createdAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      ActivityResponse: {
+        type: "object",
+        required: [
+          "role",
+          "projects",
+          "drafts",
+          "requests",
+          "bookmarkCount",
+          "unreadNotifications",
+        ],
+        properties: {
+          drafts: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ProjectDraft" },
+          },
+          role: { type: "string", enum: ["CLIENT", "CREATOR"] },
+          projects: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "id",
+                "title",
+                "status",
+                "applicationCount",
+                "pendingCount",
+              ],
+              properties: {
+                id: { type: "string" },
+                title: { type: "string" },
+                status: { type: "string" },
+                applicationCount: { type: "integer" },
+                pendingCount: { type: "integer" },
+              },
+            },
+          },
+          requests: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "id",
+                "type",
+                "title",
+                "counterpartName",
+                "status",
+                "stage",
+                "contractId",
+                "needsAction",
+                "updatedAt",
+              ],
+              properties: {
+                id: { type: "string" },
+                type: {
+                  type: "string",
+                  enum: ["PROJECT_APPLICATION", "DIRECT_REQUEST"],
+                },
+                title: { type: "string" },
+                counterpartName: { type: "string" },
+                status: { type: "string" },
+                stage: { type: "string", enum: [...ACTIVITY_STAGES] },
+                contractId: { type: ["string", "null"] },
+                needsAction: { type: "boolean" },
+                updatedAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+          bookmarkCount: { type: "integer" },
+          unreadNotifications: { type: "integer" },
+        },
+      },
+      AnalyticsAccepted: {
+        type: "object",
+        required: ["accepted"],
+        properties: { accepted: { type: "integer" } },
+      },
+      AnalyticsSummary: {
+        type: "object",
+        required: ["days", "counts"],
+        properties: {
+          days: { type: "integer" },
+          counts: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["name", "total", "users"],
+              properties: {
+                name: { type: "string", enum: [...ANALYTICS_EVENT_NAMES] },
+                total: { type: "integer" },
+                users: { type: "integer" },
+              },
+            },
+          },
         },
       },
       OperationRecordList: {
@@ -3700,6 +4083,7 @@ const openApiDocument = {
           "revieweeId",
           "rating",
           "comment",
+          "tags",
           "createdAt",
         ],
         properties: {
@@ -3709,6 +4093,11 @@ const openApiDocument = {
           revieweeId: { type: "string" },
           rating: { type: "integer", minimum: 1, maximum: 5 },
           comment: { type: ["string", "null"] },
+          tags: {
+            type: "array",
+            maxItems: 5,
+            items: { type: "string", minLength: 1, maxLength: 30 },
+          },
           createdAt: { type: "string", format: "date-time" },
         },
       },

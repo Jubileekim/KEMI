@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { reviewCreateSchema } from "@kemi/shared";
 import { useSession } from "../../app/session";
 import Button from "../../components/ui/button";
 import Textarea from "../../components/ui/textarea";
+import Input from "../../components/ui/input";
 import { kemi } from "../../shared/api/kemi";
 import { dateTime, label, productionStatusLabels, won } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 // SETTLE-01·REVIEW-01: 모의 정산과 상호 리뷰 (실제 API). 실제 지급은 하지 않는다.
 export default function SettlementLive({ contractId }: { contractId: string }) {
@@ -20,10 +23,26 @@ export default function SettlementLive({ contractId }: { contractId: string }) {
   });
   const [rating, setRating] = useState(5);
   const review = useMutation({
-    mutationFn: (comment: string) =>
-      kemi.review(contractId, { rating, ...(comment ? { comment } : {}) }),
+    mutationFn: ({ comment, tags }: { comment: string; tags: string }) =>
+      kemi.review(
+        contractId,
+        reviewCreateSchema.parse({
+          rating,
+          ...(comment ? { comment } : {}),
+          tags: tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        }),
+      ),
     onSuccess: (next) => client.setQueryData(key, next),
   });
+  const completed =
+    delivery.data?.productionStatus === "COMPLETED" &&
+    delivery.data.settlement?.status === "SIMULATED";
+  useEffect(() => {
+    if (completed) track("transaction_completed", contractId);
+  }, [completed, contractId]);
   if (delivery.isPending)
     return <Loading text="정산 정보를 불러오고 있어요." />;
   if (delivery.error) return <Failure error={delivery.error} />;
@@ -58,14 +77,23 @@ export default function SettlementLive({ contractId }: { contractId: string }) {
         </p>
       </Card>
       <Card title="리뷰">
+        <Button
+          variant="outline"
+          disabled={delivery.isFetching}
+          onClick={() => delivery.refetch()}
+        >
+          리뷰 상태 다시 확인
+        </Button>
         {theirs && (
           <p>
             상대방 리뷰: {"★".repeat(theirs.rating)} {theirs.comment ?? ""}
+            {theirs.tags?.map((tag) => ` #${tag}`).join("")}
           </p>
         )}
         {mine && (
           <p>
             내 리뷰: {"★".repeat(mine.rating)} {mine.comment ?? ""}
+            {mine.tags?.map((tag) => ` #${tag}`).join("")}
           </p>
         )}
         {!mine && d.canReview && (
@@ -73,11 +101,11 @@ export default function SettlementLive({ contractId }: { contractId: string }) {
             className="grid gap-3"
             onSubmit={(event) => {
               event.preventDefault();
-              review.mutate(
-                String(
-                  new FormData(event.currentTarget).get("comment") ?? "",
-                ).trim(),
-              );
+              const data = new FormData(event.currentTarget);
+              review.mutate({
+                comment: String(data.get("comment") ?? "").trim(),
+                tags: String(data.get("tags") ?? ""),
+              });
             }}
           >
             <Field id="review-rating" label="별점">
@@ -99,8 +127,14 @@ export default function SettlementLive({ contractId }: { contractId: string }) {
                 id="review-comment"
                 name="comment"
                 rows={3}
-                maxLength={1000}
+                maxLength={2000}
               />
+            </Field>
+            <Field
+              id="review-tags"
+              label="리뷰 태그 (선택, 쉼표로 구분 · 최대 5개, 각 30자)"
+            >
+              <Input id="review-tags" name="tags" />
             </Field>
             {review.error && (
               <p role="alert">

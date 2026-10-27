@@ -9,6 +9,7 @@ import { kemi } from "../../shared/api/kemi";
 import { label, purposeLabels, won } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
+import track from "../../shared/analytics/track";
 
 // DIRECT-01: 공개 패키지로 직접 의뢰 보내기(실제 API). 크리에이터가 48시간 안에 수락하면 협의가 시작된다.
 export default function DirectRequestLive() {
@@ -28,7 +29,10 @@ export default function DirectRequestLive() {
       eventDate?: string;
     }) =>
       kemi.sendDirectRequest(packageId, directRequestCreateSchema.parse(body)),
-    onSuccess: (request) => navigate(`/requests/${request.id}`),
+    onSuccess: (request) => {
+      track("request_sent", request.id);
+      navigate(`/requests/${request.id}`);
+    },
   });
   if (creator.isPending) return <Loading />;
   if (creator.error) return <Failure error={creator.error} />;

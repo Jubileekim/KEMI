@@ -11,6 +11,7 @@ import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { ensureChatRoom } from "../chat/chat.service.js";
 import notify from "../notifications/notify.js";
 import { voidOpenTerms } from "../terms/terms.service.js";
+import { requireNotRestricted } from "../safety/safety.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -159,6 +160,8 @@ export function createDirectRequestService({
       const clientId = BigInt(user.id);
       const data = directRequestCreateSchema.parse(input);
       return inTransaction(async (tx) => {
+        // 이용 제한 중이면 새 직접 의뢰를 보낼 수 없다(OPS-02).
+        await requireNotRestricted(tx, clientId);
         const pkg = await tx.servicePackage.findFirst({
           where: {
             id: packageId,

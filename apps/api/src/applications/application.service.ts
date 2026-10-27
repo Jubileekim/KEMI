@@ -15,6 +15,7 @@ import notify from "../notifications/notify.js";
 import lockProject from "../projects/project-lock.js";
 import { voidOpenTerms } from "../terms/terms.service.js";
 import { ensureChatRoom } from "../chat/chat.service.js";
+import { requireNotRestricted } from "../safety/safety.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -160,6 +161,8 @@ export function createApplicationService({
       const creatorId = requireRole(user, "CREATOR");
       const data = applicationCreateSchema.parse(input);
       return inTransaction(async (tx) => {
+        // 이용 제한 중이면 새 지원을 할 수 없다(OPS-02).
+        await requireNotRestricted(tx, creatorId);
         const project = await lockProject(tx, projectId);
         if (!project || project.deletedAt) throw notFound("프로젝트");
         // 이용 제한·탈퇴 의뢰인의 프로젝트는 공개 목록·상세에 없으므로, ID로 직접 지원해도 없는 것처럼 404다(#22 리뷰).

@@ -1,4 +1,11 @@
 import type {
+  ActivityResponse,
+  AnalyticsBatchRequest,
+  AnalyticsSummary,
+  MySafetyView,
+  ReportActionRequest,
+  ReportCreateRequest,
+  SafetyReport,
   Application,
   CancellationCreateRequest,
   CancellationOverview,
@@ -33,6 +40,9 @@ import type {
   ProjectCreateRequest,
   ProjectListResponse,
   ProjectSummary,
+  ProjectDraft,
+  ProjectDraftValues,
+  ReviewCreateRequest,
   Review,
   RevisionRequestCreateRequest,
   ServicePackage,
@@ -87,12 +97,28 @@ export const kemi = {
     post<ProjectSummary>(`/api/projects/${enc(id)}/close`),
   endWithoutSelection: (id: string) =>
     post<ProjectSummary>(`/api/projects/${enc(id)}/end-without-selection`),
-  bookmarks: (signal?: AbortSignal) =>
-    get<ProjectListResponse>("/api/bookmarks/projects", signal),
+  bookmarks: (signal?: AbortSignal, page = 1) =>
+    get<ProjectListResponse>(
+      `/api/bookmarks/projects?page=${page}&pageSize=20`,
+      signal,
+    ),
   bookmark: (id: string) => put(`/api/bookmarks/projects/${enc(id)}`),
   unbookmark: (id: string) => del(`/api/bookmarks/projects/${enc(id)}`),
-  recommendations: (signal?: AbortSignal) =>
-    get<ProjectListResponse>("/api/recommendations/projects", signal),
+  recommendations: (signal?: AbortSignal, page = 1) =>
+    get<ProjectListResponse>(
+      `/api/recommendations/projects?page=${page}&pageSize=20`,
+      signal,
+    ),
+  drafts: (signal?: AbortSignal) =>
+    get<{ items: ProjectDraft[] }>("/api/project-drafts", signal),
+  saveDraft: (body: ProjectDraftValues, id?: string) =>
+    id
+      ? patch<ProjectDraft>(`/api/project-drafts/${enc(id)}`, body)
+      : post<ProjectDraft>("/api/project-drafts", body),
+  publishDraft: (id: string) =>
+    post<{ draft: ProjectDraft; project: ProjectSummary }>(
+      `/api/project-drafts/${enc(id)}/publish`,
+    ),
 
   // ─── 지원·협의 (APPLY) ───
   apply: (
@@ -120,6 +146,30 @@ export const kemi = {
     get<UnreadCountResponse>("/api/notifications/unread-count", signal),
   readNotification: (id: string) => post(`/api/notifications/${enc(id)}/read`),
   readAllNotifications: () => post("/api/notifications/read-all"),
+  readNotifications: (ids: string[]) =>
+    post<UnreadCountResponse>("/api/notifications/read", { ids }),
+
+  // ─── 내 활동 (ACT-01) ───
+  activity: (signal?: AbortSignal) =>
+    get<ActivityResponse>("/api/activity", signal),
+
+  // ─── 신고·이용 제한 (OPS-01·02) ───
+  report: (body: ReportCreateRequest) =>
+    post<SafetyReport>("/api/reports", body),
+  mySafety: (signal?: AbortSignal) =>
+    get<MySafetyView>("/api/reports/me", signal),
+  appeal: (reportId: string, body: { commandId: string; note: string }) =>
+    post<MySafetyView>(`/api/reports/${enc(reportId)}/appeal`, body),
+  adminReports: (signal?: AbortSignal) =>
+    get<{ items: SafetyReport[] }>("/api/admin/reports", signal),
+  actOnReport: (reportId: string, body: ReportActionRequest) =>
+    post<SafetyReport>(`/api/admin/reports/${enc(reportId)}/actions`, body),
+
+  // ─── 행동 기록 (METRIC-01) ───
+  analytics: (body: AnalyticsBatchRequest) =>
+    post<{ accepted: number }>("/api/analytics/events", body),
+  analyticsSummary: (signal?: AbortSignal) =>
+    get<AnalyticsSummary>("/api/admin/analytics", signal),
 
   // ─── 대화 (CHAT) ───
   chatRooms: (signal?: AbortSignal) =>
@@ -247,7 +297,7 @@ export const kemi = {
     post<Delivery>(
       `/api/contracts/${enc(contractId)}/deliverables/${enc(deliverableId)}/receive`,
     ),
-  review: (contractId: string, body: { rating: number; comment?: string }) =>
+  review: (contractId: string, body: ReviewCreateRequest) =>
     post<Delivery>(`/api/contracts/${enc(contractId)}/reviews`, body),
   mySettlements: (signal?: AbortSignal) =>
     get<{ items: SettlementListItem[] }>("/api/settlements/me", signal),
