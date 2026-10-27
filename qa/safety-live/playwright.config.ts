@@ -3,9 +3,18 @@ import { resolveTestDatabaseUrl } from "../../apps/api/test/support/test-db-guar
 
 // 명시적으로 지정한 로컬 *_test DB만 허용한다. 운영/개발 .env를 읽지 않는다.
 const database = resolveTestDatabaseUrl(process.env);
+const device = process.env.KEMI_TEST_DEVICE ?? "desktop";
+if (!["desktop", "mobile"].includes(device))
+  throw new Error("KEMI_TEST_DEVICE must be desktop or mobile");
 export default defineConfig({
   testDir: ".",
-  testMatch: "flow.spec.ts",
+  testMatch: [
+    "flow.spec.ts",
+    "onboarding.spec.ts",
+    "contract.spec.ts",
+    "public-session.spec.ts",
+  ],
+  forbidOnly: Boolean(process.env.CI),
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -17,9 +26,12 @@ export default defineConfig({
     trace: "retain-on-failure",
     channel: process.env.KEMI_BROWSER_CHANNEL,
   },
+  // Each device runs with a fresh API rate-limit store (separate CI job).
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    {
+      name: device,
+      use: { ...devices[device === "desktop" ? "Desktop Chrome" : "Pixel 7"] },
+    },
   ],
   webServer: [
     {

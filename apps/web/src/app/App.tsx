@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Providers from "./providers";
 import Shell from "./layouts/Shell";
 import { Guard, Placeholder } from "./route-pages";
@@ -101,6 +101,9 @@ export default function App() {
                         <GoogleCallback />
                       )}
                       {screen.path === "/me/profile" && <ProfilePage />}
+                      {screen.path === "/onboarding" && (
+                        <Navigate replace to="/me/profile" />
+                      )}
                       {screen.path === "/creators/:creatorId" && (
                         <CreatorDetailPage />
                       )}
@@ -191,6 +194,7 @@ export default function App() {
                         "/signup",
                         "/auth/social/callback",
                         "/me/profile",
+                        "/onboarding",
                         "/studio/packages",
                         "/studio/portfolio",
                         "/campaigns",

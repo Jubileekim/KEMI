@@ -1,0 +1,63 @@
+name: Web Live API CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [desktop, mobile]
+    name: Real API (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_USER: kemi_test
+          POSTGRES_PASSWORD: kemi_test
+          POSTGRES_DB: kemi_browser_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kemi_test -d kemi_browser_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      KEMI_TEST_DEVICE: ${{ matrix.device }}
+      TEST_DATABASE_URL: postgresql://kemi_test:kemi_test@127.0.0.1:5432/kemi_browser_test
+      VITE_ENABLE_AUTH_API: "true"
+      VITE_ENABLE_MOCKS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build:api
+      - name: Migrate isolated browser database
+        run: node --import tsx qa/safety-live/setup-db.ts
+      - run: npm run build:web
+      - run: npm exec -w @kemi/web -- playwright install --with-deps chromium
+      - name: Real API browser flows (not external OAuth, payment or Storage)
+        run: npm exec -w @kemi/web -- playwright test --config ../../qa/safety-live/playwright.config.ts
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: live-api-browser-results-${{ matrix.device }}
+          path: test-results/safety-live/
+          retention-days: 7

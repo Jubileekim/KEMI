@@ -25,6 +25,20 @@
   });
   const passwordHash = await bcrypt.hash("BrowserTest1234", 12);
   for (const device of ["desktop", "mobile"]) {
+    // Contract tests start from existing accounts; signup is covered separately.
+    // Keep the production signup rate limit intact when all suites run together.
+    for (const role of ["CLIENT", "CREATOR"]) {
+      await prisma.user.upsert({
+        where: { email: `contract-${role.toLowerCase()}-${device}@kemi.test` },
+        update: {},
+        create: {
+          email: `contract-${role.toLowerCase()}-${device}@kemi.test`,
+          name: role === "CLIENT" ? "계약 의뢰인" : "계약 제작자",
+          role,
+          passwordHash,
+        },
+      });
+    }
     const user = await prisma.user.upsert({
       where: { email: `notices-${device}@kemi.test` },
       update: {},
