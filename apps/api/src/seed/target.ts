@@ -4,6 +4,12 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 // 시드 실행 대상 확인 (#64 리뷰). 실행자의 NODE_ENV는 DB가 무엇인지 말해주지 않으므로, 접속 주소에서
 // DB 신원을 뽑아 허용 목록·명시적 확인값과 맞춰 보고, 실제 사용자가 있는 DB는 거부한다(fail-closed).
 
+// KEMI의 현재 운영·공유 Supabase DB는 신규 users 행이 0개여도 운영 DB다.
+// 개발자가 실수로 허용 목록에 이 신원을 적어도 시연 데이터를 만들 수 없게 막는다.
+const FORBIDDEN_SEED_IDENTITIES = new Set([
+  "supabase:nibqyycfknurkncdgqps",
+]);
+
 export class SeedTargetError extends Error {
   constructor(message: string) {
     super(message);
@@ -54,6 +60,11 @@ export function checkSeedTarget(env: SeedTargetEnv): string {
     );
   }
   const identity = databaseIdentity(env.DATABASE_URL);
+  if (FORBIDDEN_SEED_IDENTITIES.has(identity)) {
+    throw new SeedTargetError(
+      "KEMI 운영·공유 Supabase DB에는 시연 데이터를 넣을 수 없습니다.",
+    );
+  }
   const allowed = (env.SEED_ALLOWED_TARGETS ?? "")
     .split(",")
     .map((value) => value.trim())

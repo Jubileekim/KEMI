@@ -48,4 +48,22 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
       expect(() => checkSeedTarget(env)).toThrow(SeedTargetError);
     });
   });
+  it("KEMI 운영 DB는 허용 목록에 넣고 직접 확인해도 시드 차단", () => {
+    const productionIdentity = "supabase:nibqyycfknurkncdgqps";
+    const productionUrls = [
+      "postgresql://postgres:pw@db.nibqyycfknurkncdgqps.supabase.co:5432/postgres",
+      "postgresql://postgres.nibqyycfknurkncdgqps:pw@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres",
+    ];
+    productionUrls.forEach((DATABASE_URL) => {
+      expect(() =>
+        checkSeedTarget({
+          DATABASE_URL,
+          NODE_ENV: "development",
+          SEED_ALLOWED_TARGETS: productionIdentity,
+          SEED_CONFIRM_TARGET: productionIdentity,
+        }),
+      ).toThrow(SeedTargetError);
+    });
+  });
+
 });
