@@ -4,6 +4,8 @@
 **/playwright-report/
 **/test-results/
 apps/api/src/generated/
+# OpenAPI에서 만드는 API 명세서(npm run docs:api -w @kemi/api)
+docs/api-spec.md
 package-lock.json
 
 KEMI-Design-System/
