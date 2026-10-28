@@ -112,14 +112,28 @@
 .landing-highlight-0 {
   grid-column: 1 / -1;
 }
-.landing-highlight > img {
+.landing-highlight > img,
+.landing-highlight > video,
+.landing-highlight > div {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform var(--motion-slow);
 }
-.landing-highlight:hover > img {
+.landing-highlight:hover > img,
+.landing-highlight:hover > video {
   transform: scale(1.035);
+}
+.landing-hero-state {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  color: var(--text-secondary);
+  text-align: center;
 }
 .landing-play {
   position: absolute;
@@ -145,6 +159,10 @@
   padding: var(--space-1) var(--space-3);
   font-size: var(--font-label-sm);
   color: var(--kemi-white);
+  max-width: calc(100% - 80px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .landing-works {
   padding-top: var(--space-4);

@@ -2,6 +2,20 @@
 
 final result: passed
 
+## Current revision: existing public works and videos
+
+- Both hero and grid now read the same existing public feed API. The hero uses the first three unfiltered records; filters only change the grid. Clicking a hero opens its actual work ID.
+- Both sections reuse the unchanged `Thumbnail` / `AutoplayVideo` component. The checked-in existing behavior plays muted video while visible (IntersectionObserver), pauses offscreen and honors reduced motion; this revision does not introduce a separate hover implementation.
+- Removed fixed hero image references from product code. Generated images are now QA-only assets under `qa/landing/assets`, outside `public`, and are not shipped with the page.
+- Verified against the existing public API on 2026-10-28: feed returned 16 works; hero links were `/works/16`, `/works/15`, `/works/14`; creators came from the server (`[시연] 노을숏폼랩`). All three hero videos had readyState 4, paused=false, and progressing currentTime (observed 7.6607s / 7.013s / 6.6315s). No signed media tokens were saved in this report.
+- Real SNS filter returned IDs 16, 10, 8 while hero IDs stayed 16, 15, 14. The grid displays nine records on the initial page; more links to the existing full feed.
+- Current evidence: [live desktop](qa/landing/live-desktop.jpg). Layout was compared to the selected source and the earlier hero detail; only artwork/data ownership changed. The first three server works replace the fixed illustrative collage while retaining its composition. No actionable P0/P1/P2 visual drift found. The earlier mobile layout capture remains historical evidence; a requested viewport override did not change the current browser's width during this revision, so no new live-mobile capture is claimed.
+- Before live verification, the revised local video fixture also rendered twelve video elements, with all three visible hero videos playing. Empty/error/retry states remain explicit, including hero fetch states.
+- `qa/landing/live-vite.config.ts` is an optional read-only preview against the existing upstream. It changes upstream Host/SNI only in this QA config; product Vite/deployment configuration remains untouched. It rejects non-GET and non-public API paths. Run `npm run dev --workspace @kemi/web -- --config ../../qa/landing/live-vite.config.ts --host 127.0.0.1`.
+- Final application build/typecheck/lint and all 246 existing web tests passed after the product-code change. No database or production data was changed. Preview deployment itself remains subject to Vercel CI.
+
+## Initial implementation record (before existing-data correction)
+
 Scope: add the selected merged KEMI landing page to the existing React + Vite app at `/landing`. Existing `/` remains the original work feed. Base: origin/main `76e2f0d`; implementation branch: `feat/landing-page`.
 
 ## Evidence and comparison

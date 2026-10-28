@@ -8,24 +8,6 @@ import { Failure } from "../live/ui";
 import { Thumbnail } from "../portfolio/CatalogLive";
 import "./landing.css";
 
-const highlights = [
-  {
-    image: "rainy-cafe",
-    alt: "비 오는 밤, 카페 창가에서 음악을 듣는 사람",
-    purpose: "SNS_SHORTFORM",
-  },
-  {
-    image: "sunset-couple",
-    alt: "노을이 지는 바닷가를 함께 걷는 두 사람",
-    purpose: "TRAVEL_DAILY",
-  },
-  {
-    image: "espresso",
-    alt: "따뜻한 빛 아래 에스프레소를 추출하는 장면",
-    purpose: "OTHER",
-  },
-];
-
 export default function LandingPage() {
   const [params, setParams] = useSearchParams();
   const purpose =
@@ -34,6 +16,12 @@ export default function LandingPage() {
   const feed = useQuery({
     queryKey: ["feed", search],
     queryFn: ({ signal }) => kemi.feed(search, signal),
+  });
+  // Keep the hero stable while filtering the grid. With no filter this shares
+  // the existing feed query/cache; media uses the same signed URLs as the feed.
+  const featured = useQuery({
+    queryKey: ["feed", ""],
+    queryFn: ({ signal }) => kemi.feed("", signal),
   });
   const browse = (value: string) => {
     setParams(value ? { purpose: value } : {}, { preventScrollReset: true });
@@ -68,31 +56,52 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-        <div className="landing-collage" aria-label="영상 카테고리 둘러보기">
-          {highlights.map((item, index) => (
-            <a
-              key={item.image}
-              className={`landing-highlight landing-highlight-${index}`}
-              href="#landing-works"
-              onClick={() => browse(item.purpose)}
-              aria-label={`${purposeLabels[item.purpose]} 작품 둘러보기`}
-            >
-              <img
-                src={`/landing/${item.image}.png`}
-                alt={item.alt}
-                fetchPriority={index === 0 ? "high" : "auto"}
-                width={index === 0 ? 1536 : 1024}
-                height={index === 0 ? 864 : 768}
-              />
-              <span className="landing-play">
-                <Play size={17} fill="currentColor" aria-hidden="true" />
-              </span>
-              <span className="landing-highlight-label">
-                {purposeLabels[item.purpose]}{" "}
-                <ArrowRight size={16} aria-hidden="true" />
-              </span>
-            </a>
-          ))}
+        <div
+          className="landing-collage"
+          aria-label="공개 작품 미리보기"
+          aria-busy={featured.isFetching}
+        >
+          {featured.isPending && (
+            <p className="landing-hero-state" role="status">
+              대표 작품을 불러오고 있어요.
+            </p>
+          )}
+          {featured.isError && (
+            <div className="landing-hero-state">
+              <Failure error={featured.error} />
+              <button
+                className="landing-button landing-button-outline"
+                type="button"
+                disabled={featured.isFetching}
+                onClick={() => featured.refetch()}
+              >
+                대표 작품 다시 불러오기
+              </button>
+            </div>
+          )}
+          {featured.isSuccess && featured.data.items.length === 0 && (
+            <p className="landing-hero-state">
+              함께할 크리에이터의 새로운 작품을 기다리고 있어요.
+            </p>
+          )}
+          {featured.isSuccess &&
+            featured.data.items.slice(0, 3).map((item, index) => (
+              <Link
+                key={item.portfolio.id}
+                className={`landing-highlight landing-highlight-${index}`}
+                to={`/works/${item.portfolio.id}`}
+                aria-label={`${item.portfolio.title} 작품 보기`}
+              >
+                <Thumbnail portfolio={item.portfolio} autoplay />
+                <span className="landing-play">
+                  <Play size={17} fill="currentColor" aria-hidden="true" />
+                </span>
+                <span className="landing-highlight-label">
+                  {item.portfolio.title}{" "}
+                  <ArrowRight size={16} aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
         </div>
       </section>
 

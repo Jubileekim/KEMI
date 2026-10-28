@@ -1,6 +1,8 @@
 // Local, disposable visual-QA data. Never imported by the app or deployed.
 // Run: node qa/landing/preview-api.cjs (Vite's default /api proxy uses port 4000).
 const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
 const rows = [
   ["비 오는 밤 창가", "SNS_SHORTFORM", "rainy-cafe", "노을숏폼랩", 120000],
   ["파도 위를 걷는 둘", "TRAVEL_DAILY", "sunset-couple", "노을숏폼랩", 120000],
@@ -38,6 +40,30 @@ http
     }
     if (req.method !== "GET")
       return json({ error: { code: "NOT_FOUND" } }, 404);
+    if (url.pathname === "/__fixture/video.webm") {
+      res.writeHead(200, { "Content-Type": "video/webm" });
+      return fs
+        .createReadStream(
+          path.join(
+            __dirname,
+            "../../apps/web/src/mocks/assets/catalog-sample.webm",
+          ),
+        )
+        .pipe(res);
+    }
+    const poster = url.pathname.match(/^\/__fixture\/posters\/([1-9]\d*)$/);
+    if (poster && rows[Number(poster[1]) - 1]) {
+      res.writeHead(200, { "Content-Type": "image/png" });
+      return fs
+        .createReadStream(
+          path.join(
+            __dirname,
+            "assets",
+            `${rows[Number(poster[1]) - 1][2]}.png`,
+          ),
+        )
+        .pipe(res);
+    }
     if (url.pathname === "/api/feed") {
       if (state === "error")
         return json({ error: { code: "SERVICE_UNAVAILABLE" } }, 503);
@@ -50,7 +76,7 @@ http
             title,
             purpose: category,
             thumbnailFileId: String(i + 201),
-            videoFileId: null,
+            videoFileId: String(i + 301),
             packageId: null,
             description: "로컬 화면 검증 데이터",
             styles: [],
@@ -75,11 +101,13 @@ http
     }
     const media = url.pathname.match(/^\/api\/portfolios\/([1-9]\d*)\/media$/);
     if (media && rows[Number(media[1]) - 1]) {
-      const image = rows[Number(media[1]) - 1][2];
       return json({
-        video: null,
+        video: {
+          url: "http://127.0.0.1:4000/__fixture/video.webm",
+          expiresAt: "2099-01-01T00:00:00Z",
+        },
         thumbnail: {
-          url: `/landing/${image}.png`,
+          url: `http://127.0.0.1:4000/__fixture/posters/${media[1]}`,
           expiresAt: "2099-01-01T00:00:00Z",
         },
       });
