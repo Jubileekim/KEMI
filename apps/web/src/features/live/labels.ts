@@ -150,8 +150,12 @@ export const stageLabels: Record<ActivityStage, string> = {
   DISPUTED: "분쟁 처리 중",
 };
 // 계약 전에는 요청 상태(거절·철회·미선정처럼 자세한 값), 계약 뒤에는 거래 진행 단계를 보여 준다.
-export function requestProgress(status: string, stage: ActivityStage) {
-  return ["PENDING", "DISCUSSING", "CLOSED"].includes(stage)
+// 진행 단계를 아직 주지 않는 응답(이전 서버·시연 데이터)은 요청 상태로 보여 준다.
+export function requestProgress(
+  status: string,
+  stage: ActivityStage | undefined,
+) {
+  return !stage || ["PENDING", "DISCUSSING", "CLOSED"].includes(stage)
     ? label(requestStatusLabels, status)
     : stageLabels[stage];
 }
