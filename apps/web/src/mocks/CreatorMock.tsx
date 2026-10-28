@@ -21,7 +21,7 @@ export default function CreatorMock() {
         개발용 Mock · 공개 프로필의 검토 예시예요. 실제 API·거래 실적은
         미연결이에요.
       </p>
-      <Link to="/">작품에서 찾아보기</Link>
+      <Link to="/works">작품에서 찾아보기</Link>
       <Button
         variant="outline"
         disabled={query.isFetching}

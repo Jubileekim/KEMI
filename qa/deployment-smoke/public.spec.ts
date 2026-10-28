@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 
 for (const entry of [
-  { path: "/", api: "/api/feed", heading: "작품 피드" },
+  {
+    path: "/",
+    api: "/api/feed",
+    heading: "당신의 이야기에, 딱 맞는 크리에이터.",
+  },
+  { path: "/works", api: "/api/feed", heading: "작품 피드" },
   { path: "/campaigns", api: "/api/projects", heading: "공개 모집" },
 ]) {
   test(`배포 공개 조회: ${entry.heading}`, async ({ page }) => {
@@ -23,7 +28,7 @@ for (const entry of [
     ).toBeVisible();
     await expect(
       page.getByText(
-        entry.path === "/"
+        entry.api === "/api/feed"
           ? "작품을 불러오고 있어요."
           : "모집 목록을 불러오고 있어요.",
         { exact: true },

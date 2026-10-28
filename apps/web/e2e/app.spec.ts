@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { HealthResponse } from "@kemi/shared";
+import { login } from "./proposal-helpers";
 
 const healthRoute = (url: URL) => url.pathname === "/health";
 
@@ -12,9 +13,9 @@ const healthyResponse = {
 
 test("초기 화면과 화면 경로가 표시된다", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle("작품 피드 | KEMI");
+  await expect(page).toHaveTitle("당신의 이야기에, 딱 맞는 크리에이터 | KEMI");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "작품에서 시작하는 새로운 연결",
+    "당신의 이야기에,딱 맞는 크리에이터.",
   );
   await expect(
     page.getByRole("link", { name: "공개 모집", exact: true }),
@@ -36,8 +37,52 @@ test("없는 경로를 새로고침해도 안내가 표시되고 홈으로 이�
   await page.getByRole("link", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "당신의 이야기에,딱 맞는 크리에이터.",
+  );
+});
+
+test("첫 화면·작품 피드·기존 랜딩 주소가 연결된다", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#landing-title")).toBeVisible();
+  await page.getByRole("link", { name: "전체 작품 보기", exact: true }).click();
+  await expect(page).toHaveURL("/works");
+  await expect(page).toHaveTitle("작품 피드 | KEMI");
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "작품에서 시작하는 새로운 연결",
   );
+  await page.getByRole("link", { name: "KEMI 홈", exact: true }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.locator("#landing-title")).toBeVisible();
+  await page.goto("/landing?purpose=SNS_SHORTFORM");
+  await expect(page.locator("#landing-title")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "전체 작품 보기", exact: true }),
+  ).toHaveAttribute("href", "/works?purpose=SNS_SHORTFORM");
+});
+
+test("로그인 헤더 링크와 로그아웃 버튼은 세로 중앙이 일치한다", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/works");
+  await login(page);
+  const centers = await page
+    .getByRole("navigation", { name: "주 메뉴", exact: true })
+    .evaluate((nav) => {
+      const logout = nav.querySelector("button");
+      if (!logout) throw new Error("로그아웃 버튼 없음");
+      const box = logout.getBoundingClientRect();
+      return [...nav.querySelectorAll("a")].map((link) => {
+        const rect = link.getBoundingClientRect();
+        return Math.abs(rect.y + rect.height / 2 - (box.y + box.height / 2));
+      });
+    });
+  expect(centers.length).toBeGreaterThan(3);
+  expect(Math.max(...centers)).toBeLessThanOrEqual(1);
+  await page
+    .locator("header")
+    .screenshot({ path: testInfo.outputPath("header-aligned.png") });
 });
 
 test("확인 중에는 중복 클릭을 막고 응답 후 성공을 표시한다", async ({

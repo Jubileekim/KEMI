@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 
 for (const entry of [
   { path: "/", api: "/api/feed", loading: "작품을 불러오고 있어요." },
+  { path: "/works", api: "/api/feed", loading: "작품을 불러오고 있어요." },
   {
     path: "/campaigns",
     api: "/api/projects",

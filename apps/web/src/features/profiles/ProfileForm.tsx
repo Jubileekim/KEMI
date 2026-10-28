@@ -43,7 +43,7 @@ export default function ProfileForm({
   const [params] = useSearchParams();
   const returnTo = params.get("returnTo");
   let next = { to: "/studio/portfolio", label: "작업물 올리러 가기" };
-  if (role === "CLIENT") next = { to: "/", label: "작품 둘러보기" };
+  if (role === "CLIENT") next = { to: "/works", label: "작품 둘러보기" };
   if (returnTo)
     next = {
       to: safeReturnTo(returnTo, role === "CLIENT" ? "client" : "creator"),

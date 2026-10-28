@@ -35,7 +35,7 @@ export default function CatalogMock() {
         저장소는 미연결이에요. 분류·페이지 크기·노출 순서 D21은 검토 예시예요.
       </p>
       <div className="flex flex-wrap gap-4">
-        <Link to="/">작품 피드</Link>
+        <Link to="/works">작품 피드</Link>
         <Link to="/campaigns">공개 모집 둘러보기</Link>
         <Button
           variant="outline"

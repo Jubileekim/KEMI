@@ -77,7 +77,7 @@ try {
     });
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto("/");
+    await page.goto("/works");
     if (role !== "GUEST")
       await expect(
         page.getByRole("button", { name: "로그아웃", exact: true }),

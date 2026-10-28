@@ -4,7 +4,7 @@ import { login, navigate, studioFixture } from "./proposal-helpers";
 test("6-A 비회원 작품→영상, 가격 없음·필터/페이지·뒤로가기·실패 복구", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await expect(page.getByRole("article")).toHaveCount(3);
   await expect(page.getByRole("article").first()).not.toContainText("원");
   await page.getByRole("button", { name: "다음 페이지", exact: true }).click();
@@ -38,14 +38,14 @@ test("6-A 비회원 작품→영상, 가격 없음·필터/페이지·뒤로가�
   await expect(page.getByLabel("스타일", { exact: true })).toHaveValue(
     "차분한",
   );
-  await navigate(page, "/?style=없는분류");
+  await navigate(page, "/works?style=없는분류");
   await expect(page.getByText(/조건에 맞는 공개 작품이 없어요/)).toBeVisible();
 });
 
 test("6-A 공개 상태 재검사·서비스 비공개/삭제·조회 실패와 재시도", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await login(page);
   await studioFixture(page);
   await page.getByRole("link", { name: "작품", exact: true }).click();
@@ -73,7 +73,7 @@ test("6-A 공개 상태 재검사·서비스 비공개/삭제·조회 실패와 
   });
   await page.getByRole("button", { name: "최신 공개 상태 확인" }).click();
   await expect(page.getByRole("alert")).toContainText("비공개");
-  await navigate(page, "/");
+  await navigate(page, "/works");
   await expect(page.getByRole("article")).toHaveCount(0);
   await page.evaluate(() =>
     fetch("/__mock__/catalog/scenario", { method: "POST", body: "500" }),
