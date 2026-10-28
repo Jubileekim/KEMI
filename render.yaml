@@ -37,3 +37,6 @@ services:
         value: "0"
       # 소셜 로그인 키(GOOGLE_CLIENT_ID·GOOGLE_CLIENT_SECRET·KAKAO_REST_API_KEY·KAKAO_CLIENT_SECRET)는
       # 발급되면 Render 대시보드 Environment에서 직접 추가한다. 이 파일에 없는 변수는 동기화해도 지워지지 않는다.
+      # 같은 방식으로 직접 추가하는 선택 기능 키:
+      # - 파일 저장소: SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY·STORAGE_BUCKET(kemi-files). 없으면 업로드·재생 503
+      # - AI 참고 제작비(AI-01·02): AI_PRICING_API_KEY(OpenAI), AI_PRICING_MODEL(기본 gpt-4o-mini). 없으면 분석 503
