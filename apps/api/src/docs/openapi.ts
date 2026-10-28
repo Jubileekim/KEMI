@@ -346,6 +346,8 @@ const openApiDocument = {
       get: {
         tags: ["health"],
         summary: "DB 연결까지 확인",
+        description:
+          "준비 여부(status·HTTP 상태)는 DB만 본다. `checks.storage`는 파일 저장소 진단용이다: ok(버킷 접근 가능), not_configured(저장소 환경변수 없음), missing_bucket(STORAGE_BUCKET 버킷 없음), unauthorized(키 거부), error(연결·기타 오류).",
         responses: {
           200: {
             description: "DB 연결 정상",
@@ -4519,7 +4521,19 @@ const openApiDocument = {
           checks: {
             type: "object",
             required: ["database"],
-            properties: { database: { type: "string", enum: ["ok", "error"] } },
+            properties: {
+              database: { type: "string", enum: ["ok", "error"] },
+              storage: {
+                type: "string",
+                enum: [
+                  "ok",
+                  "not_configured",
+                  "missing_bucket",
+                  "unauthorized",
+                  "error",
+                ],
+              },
+            },
           },
         },
       },
