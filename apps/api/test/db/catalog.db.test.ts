@@ -300,6 +300,88 @@ describe("작업물 (PORT-01·02)", () => {
   });
 });
 
+describe("작업물 삭제 (PORT-03)", () => {
+  async function publicWork(creator: Party, title: string) {
+    const video = await portfolioFile(creator, "video/mp4");
+    const work = await post(creator.token, "/api/creator/portfolios", {
+      title,
+      videoFileId: video,
+      purpose: "TRAVEL_DAILY",
+      roles: ["EDITING"],
+    });
+    await post(
+      creator.token,
+      `/api/creator/portfolios/${work.body.id}/publish`,
+    );
+    return String(work.body.id);
+  }
+
+  it("본인 작업물만 지우고, 저장함에서도 빠지며, 의뢰의 참고 작품은 지우지 않는다", async () => {
+    const creator = await signup(app, "CREATOR");
+    const other = await signup(app, "CREATOR", 2);
+    const client = await signup(app, "CLIENT");
+    const pkg = await post(
+      creator.token,
+      "/api/creator/packages",
+      FULL_PACKAGE,
+    );
+    await post(creator.token, `/api/creator/packages/${pkg.body.id}/publish`);
+    await post(
+      creator.token,
+      `/api/creator/packages/${pkg.body.id}/representative`,
+    );
+    await post(creator.token, "/api/creator/service/publish");
+    const saved = await publicWork(creator, "저장된 작업물");
+    const referenced = await publicWork(creator, "참고 작품");
+    const draft = await post(creator.token, "/api/creator/portfolios", {
+      title: "초안",
+    });
+    const del = (token: string, id: string) =>
+      request(app).delete(`/api/creator/portfolios/${id}`).set(auth(token));
+
+    expect(
+      (
+        await request(app)
+          .put(`/api/portfolios/${saved}/bookmark`)
+          .set(auth(client.token))
+      ).status,
+    ).toBe(200);
+    const direct = await post(
+      client.token,
+      `/api/packages/${pkg.body.id}/direct-requests`,
+      {
+        message: "이 작품처럼 여행 영상을 만들고 싶어요.",
+        referencePortfolioId: referenced,
+      },
+    );
+    expect(direct.status).toBe(201);
+
+    expect((await del(other.token, saved)).status).toBe(404);
+    expect((await del(client.token, saved)).status).toBe(403);
+    expect((await del(creator.token, referenced)).status).toBe(409);
+    expect(
+      await prisma.portfolio.count({ where: { id: BigInt(referenced) } }),
+    ).toBe(1);
+
+    expect((await del(creator.token, saved)).status).toBe(204);
+    expect((await del(creator.token, draft.body.id)).status).toBe(204);
+    expect(
+      await prisma.portfolio.count({
+        where: { id: { in: [BigInt(saved), BigInt(draft.body.id)] } },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.portfolioBookmark.count({
+        where: { portfolioId: BigInt(saved) },
+      }),
+    ).toBe(0);
+    expect((await request(app).get(`/api/portfolios/${saved}`)).status).toBe(
+      404,
+    );
+    expect((await del(creator.token, saved)).status).toBe(404);
+  });
+});
+
 describe("공고 임시 저장·공개 (CAMP-01·02)", () => {
   it("비어 있어도 저장하고, 공개할 때 검사한 뒤 공개 시각 + 모집 기간으로 마감한다", async () => {
     const client = await signup(app, "CLIENT");

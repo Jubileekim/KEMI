@@ -2060,6 +2060,22 @@ const openApiDocument = {
       },
     },
     "/api/creator/portfolios/{portfolioId}": {
+      delete: {
+        tags: ["catalog"],
+        summary: "작업물 삭제",
+        description:
+          "본인 작업물만. 다른 사람의 저장함에서도 빠진다. 의뢰의 참고 작품으로 쓰인 작업물은 지울 수 없다(409, 비공개는 가능). 영상·이미지 파일 행은 남는다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        responses: {
+          204: { description: "삭제함" },
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
+          404: errorResponse("대상이 없거나 본인 것이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("의뢰의 참고 작품이라 지울 수 없음 (`CONFLICT`)"),
+        },
+      },
       patch: {
         tags: ["catalog"],
         summary: "작업물 수정",

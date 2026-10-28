@@ -97,6 +97,11 @@ export default function createCatalogRouter(
     portfolioStatus(true),
   );
   router.post("/creator/portfolios/:portfolioId/hide", portfolioStatus(false));
+  router.delete("/creator/portfolios/:portfolioId", async (req, res) => {
+    const user = await currentUser(req);
+    await catalogService.deletePortfolio(user, idOf(req, "portfolioId"));
+    res.status(204).end();
+  });
 
   // ─── 크리에이터 본인: 제작 서비스 공개 ───
   const serviceStatus =

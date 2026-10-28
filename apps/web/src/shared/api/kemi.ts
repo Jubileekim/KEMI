@@ -342,6 +342,8 @@ export const kemi = {
     post<Portfolio>(
       `/api/creator/portfolios/${enc(id)}/${visible ? "publish" : "hide"}`,
     ),
+  deletePortfolio: (id: string) =>
+    del<void>(`/api/creator/portfolios/${enc(id)}`),
   setServiceVisible: (visible: boolean) =>
     post<{ serviceStatus: string }>(
       `/api/creator/service/${visible ? "publish" : "hide"}`,
