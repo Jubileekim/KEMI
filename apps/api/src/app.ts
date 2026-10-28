@@ -6,6 +6,8 @@ import createProductionRouter from "./production/production.router.js";
 import createDeliveryRouter from "./delivery/delivery.router.js";
 import createCatalogRouter from "./catalog/catalog.router.js";
 import createDirectRouter from "./direct/direct.router.js";
+import createInquiryRouter from "./direct/inquiry.router.js";
+import type { InquiryService } from "./direct/inquiry.service.js";
 import createCancelRouter from "./cancel/cancel.router.js";
 import type { CancelService } from "./cancel/cancel.service.js";
 import type { DirectRequestService } from "./direct/direct.service.js";
@@ -64,6 +66,7 @@ export interface AppDependencies {
   catalogService: CatalogService;
   projectDraftService: ProjectDraftService;
   directRequestService: DirectRequestService;
+  inquiryService: InquiryService;
   feedService: FeedService;
   cancelService: CancelService;
   safetyService: SafetyService;
@@ -96,6 +99,7 @@ export function createApp({
   catalogService,
   projectDraftService,
   directRequestService,
+  inquiryService,
   feedService,
   cancelService,
   safetyService,
@@ -154,6 +158,7 @@ export function createApp({
     "/api",
     createDirectRouter(authService, directRequestService, feedService),
   );
+  app.use("/api", createInquiryRouter(authService, inquiryService));
   // 취소·부분 환불·분쟁·운영 (CANCEL·REFUND·DISPUTE·OPS)
   app.use("/api", createCancelRouter(authService, cancelService));
   // ACT-01, OPS-01·02, METRIC-01: 내 활동·신고와 이용 제한·행동 기록

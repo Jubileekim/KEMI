@@ -27,6 +27,7 @@ const APP_TABLES = [
   "work_requests",
   "notifications",
   "project_bookmarks",
+  "portfolio_bookmarks",
   "terms_versions",
   "signatures",
   "contracts",
