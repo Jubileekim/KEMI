@@ -16,6 +16,7 @@ const DirectRequestForm = lazy(
   () => import("../features/requests/DirectRequestForm"),
 );
 const FeedPage = lazy(() => import("../features/portfolio/FeedPage"));
+const LandingPage = lazy(() => import("../features/landing/LandingPage"));
 const WorkDetailPage = lazy(
   () => import("../features/portfolio/WorkDetailPage"),
 );
@@ -112,6 +113,7 @@ export default function App() {
                         <DirectRequestForm />
                       )}
                       {screen.path === "/" && <FeedPage />}
+                      {screen.path === "/landing" && <LandingPage />}
                       {screen.path === "/works/:workId" && <WorkDetailPage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
@@ -181,6 +183,7 @@ export default function App() {
                       {![
                         ...proposalPaths,
                         "/",
+                        "/landing",
                         "/works/:workId",
                         "/creators/:creatorId",
                         "/creators/:creatorId/request",

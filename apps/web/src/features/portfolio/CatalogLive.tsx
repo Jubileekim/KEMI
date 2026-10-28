@@ -79,7 +79,7 @@ function AutoplayVideo({
 
 // 공개 작업물 썸네일. 서명 주소는 만료되므로 화면에서 그때그때 받는다.
 // autoplay면 영상을 소리 없이 반복 재생하고, 움직임 줄이기 설정이나 재생 실패 시 대표 이미지를 보여준다.
-function Thumbnail({
+export function Thumbnail({
   portfolio,
   autoplay = false,
 }: {
