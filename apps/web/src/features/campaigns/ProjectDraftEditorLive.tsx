@@ -15,6 +15,8 @@ import { kemi } from "../../shared/api/kemi";
 import { Card, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
 import { label, purposeLabels, styleLabels } from "../live/labels";
+import PricingPanel from "./PricingPanel";
+import { pricingConditions, setBudget } from "./pricing-form";
 
 function DraftForm({ draft }: { draft?: ProjectDraft }) {
   const form = useRef<HTMLFormElement>(null);
@@ -144,6 +146,13 @@ function DraftForm({ draft }: { draft?: ProjectDraft }) {
                 required
               />
             </Field>
+            <PricingPanel
+              conditions={() => pricingConditions(form.current, styles)}
+              target={() =>
+                savedId.current ? { draftId: savedId.current } : null
+              }
+              onApply={(amount) => setBudget(form.current, amount)}
+            />
             <Field id="draft-days" label="모집 기간">
               <select
                 id="draft-days"

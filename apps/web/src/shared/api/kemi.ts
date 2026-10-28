@@ -3,6 +3,10 @@ import type {
   BulkInquiryCreateRequest,
   BulkInquiryResponse,
   WorkBookmarkListResponse,
+  AiReportApplyRequest,
+  AiReportApplyResponse,
+  PricingAnalysisRequest,
+  PricingAnalysisResponse,
   AnalyticsBatchRequest,
   AnalyticsSummary,
   MySafetyView,
@@ -118,6 +122,14 @@ export const kemi = {
     id
       ? patch<ProjectDraft>(`/api/project-drafts/${enc(id)}`, body)
       : post<ProjectDraft>("/api/project-drafts", body),
+  // AI-01·02: AI 참고 제작비 분석과 분석 결과의 예산 반영
+  analyzePricing: (body: PricingAnalysisRequest) =>
+    post<PricingAnalysisResponse>("/api/pricing/analyze", body),
+  applyPricingReport: (reportId: string, target: AiReportApplyRequest) =>
+    post<AiReportApplyResponse>(
+      `/api/pricing/reports/${enc(reportId)}/apply`,
+      target,
+    ),
   publishDraft: (id: string) =>
     post<{ draft: ProjectDraft; project: ProjectSummary }>(
       `/api/project-drafts/${enc(id)}/publish`,
