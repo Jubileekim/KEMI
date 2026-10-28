@@ -259,7 +259,9 @@ function Detail({ id }: { id: string }) {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to={`/login?returnTo=${encodeURIComponent(applyPath)}`}>
+                <Link
+                  to={`/login?role=creator&returnTo=${encodeURIComponent(applyPath)}`}
+                >
                   로그인하고 지원하기
                 </Link>
               </Button>

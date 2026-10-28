@@ -37,6 +37,11 @@ function errorMessage(error: unknown) {
 export default function AuthForm({ signup = false }: { signup?: boolean }) {
   const [params] = useSearchParams();
   const { role, status, notice } = useSession();
+  // 로그인 ↔ 회원가입을 오가도 돌아갈 곳(returnTo)과 고른 역할(role)을 유지한다.
+  const switchQuery = new URLSearchParams(
+    [...params].filter(([key]) => key === "returnTo" || key === "role"),
+  ).toString();
+  const switchPath = `${signup ? "/login" : "/signup"}${switchQuery ? `?${switchQuery}` : ""}`;
   const [showPassword, setShowPassword] = useState(false);
   const form = useForm<FormValues>({
     defaultValues: {
@@ -263,7 +268,7 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
         {signup ? "이미 계정이 있나요? " : "처음 오셨나요? "}
         <Link
           className="font-semibold text-primary underline underline-offset-4"
-          to={`${signup ? "/login" : "/signup"}${params.get("returnTo") ? `?returnTo=${encodeURIComponent(params.get("returnTo") ?? "")}` : ""}`}
+          to={switchPath}
         >
           {signup ? "로그인" : "회원가입"}
         </Link>
