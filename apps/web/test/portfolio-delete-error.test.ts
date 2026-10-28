@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { clarifyPortfolioDeleteError } from "../src/features/packages/portfolio-delete-error";
+import clarifyPortfolioDeleteError from "../src/features/packages/portfolio-delete-error";
 import { ApiError } from "../src/shared/api/client";
 
 it("shows a specific explanation when an existing inquiry prevents portfolio deletion", () => {
@@ -10,11 +10,15 @@ it("shows a specific explanation when an existing inquiry prevents portfolio del
   );
   const normalized = clarifyPortfolioDeleteError(generic);
   expect(normalized).toBeInstanceOf(ApiError);
-  expect((normalized as ApiError).code).toBe("PORTFOLIO_REFERENCED");
-  expect((normalized as ApiError).message).toContain(
-    "참고 작품으로 사용되어 삭제할 수 없어요",
+  expect(normalized).toHaveProperty("code", "PORTFOLIO_REFERENCED");
+  expect(normalized).toHaveProperty(
+    "message",
+    expect.stringContaining("참고 작품으로 사용되어 삭제할 수 없어요"),
   );
-  expect((normalized as ApiError).message).toContain("비공개로 전환");
+  expect(normalized).toHaveProperty(
+    "message",
+    expect.stringContaining("비공개로 전환"),
+  );
 });
 
 it("does not rewrite unrelated errors", () => {
