@@ -35,8 +35,7 @@ services:
       # 0으로 시작하고, 배포 후 절차서 4단계에서 확인한 값으로 바꾼다.
       - key: TRUST_PROXY_HOPS
         value: "0"
-      # 운영에서도 API 문서(/api/docs Swagger UI, /api/openapi.json)를 열지. 기본 false
-      - key: API_DOCS
-        value: "false"
+      # API_DOCS(운영에서도 /api/docs Swagger UI·/api/openapi.json 열기, 기본 false)는 값을 여기 두지 않는다.
+      # Blueprint 동기화가 대시보드에서 켠 값을 덮어쓰지 않도록, 켤 때 Render Environment에서 직접 true로 추가한다.
       # 소셜 로그인 키(GOOGLE_CLIENT_ID·GOOGLE_CLIENT_SECRET·KAKAO_REST_API_KEY·KAKAO_CLIENT_SECRET)는
       # 발급되면 Render 대시보드 Environment에서 직접 추가한다. 이 파일에 없는 변수는 동기화해도 지워지지 않는다.
