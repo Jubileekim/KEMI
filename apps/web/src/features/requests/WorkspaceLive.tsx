@@ -10,6 +10,7 @@ import {
   dateTime,
   label,
   purposeLabels,
+  materialTypeLabels,
   requestStatusLabels,
   won,
 } from "../live/labels";
@@ -50,10 +51,40 @@ function DirectHeader({ requestId }: { requestId: string }) {
           ["작업 일수", `${item.package.deliveryDays}일`],
           ["목적", item.purpose ? label(purposeLabels, item.purpose) : "미정"],
           ["행사일", item.eventDate ? dateOnly(item.eventDate) : "없음"],
+          [
+            "희망 납품일",
+            item.desiredDeliveryDate
+              ? dateOnly(item.desiredDeliveryDate)
+              : "없음",
+          ],
+          [
+            "가진 자료",
+            item.materialType
+              ? label(materialTypeLabels, item.materialType)
+              : "미정",
+          ],
+          [
+            "참고 작품",
+            item.referencePortfolio ? (
+              <Link
+                to={`/works/${item.referencePortfolio.id}`}
+                className="underline"
+              >
+                {item.referencePortfolio.title}
+              </Link>
+            ) : (
+              "없음"
+            ),
+          ],
           ["응답 기한", dateTime(item.respondDueAt)],
         ]}
       />
       <p className="whitespace-pre-wrap">{item.message}</p>
+      {item.inquiryGroupId && (
+        <p className="text-sm text-muted-foreground">
+          의뢰인이 같은 조건으로 여러 크리에이터에게 함께 보낸 문의예요.
+        </p>
+      )}
       {item.status === "PENDING" && (
         <div className="flex flex-wrap gap-3">
           {role === "creator" && (

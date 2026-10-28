@@ -1,5 +1,8 @@
 import type {
   ActivityResponse,
+  BulkInquiryCreateRequest,
+  BulkInquiryResponse,
+  WorkBookmarkListResponse,
   AnalyticsBatchRequest,
   AnalyticsSummary,
   MySafetyView,
@@ -348,6 +351,15 @@ export const kemi = {
       `/api/packages/${enc(packageId)}/direct-requests`,
       body,
     ),
+  // SAVE-01·INQ-01: 작품 저장함과 일괄 문의
+  workBookmarks: (signal?: AbortSignal) =>
+    get<WorkBookmarkListResponse>("/api/me/work-bookmarks", signal),
+  saveWork: (portfolioId: string) =>
+    put<{ saved: true }>(`/api/portfolios/${enc(portfolioId)}/bookmark`),
+  unsaveWork: (portfolioId: string) =>
+    del<{ saved: false }>(`/api/portfolios/${enc(portfolioId)}/bookmark`),
+  sendBulkInquiry: (body: BulkInquiryCreateRequest) =>
+    post<BulkInquiryResponse>("/api/direct-inquiries", body),
   directRequests: (signal?: AbortSignal) =>
     get<{ items: DirectRequest[] }>("/api/direct-requests", signal),
   directRequest: (id: string, signal?: AbortSignal) =>
