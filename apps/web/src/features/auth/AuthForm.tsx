@@ -74,9 +74,11 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
   const submitLabel = signup ? "가입하고 시작하기" : "이메일로 로그인";
   const passwordDescription = signup ? "password-hint" : undefined;
   if (status === "authenticated") {
+    // 가입은 프로필 화면으로 보내되, 원래 가려던 곳(returnTo)을 넘겨 프로필 화면에서 이어 가게 한다.
+    const returnTo = params.get("returnTo");
     const destination = signup
-      ? "/me/profile"
-      : safeReturnTo(params.get("returnTo"), role);
+      ? `/me/profile${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`
+      : safeReturnTo(returnTo, role);
     return <Navigate replace to={destination} />;
   }
   return (
