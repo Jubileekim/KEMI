@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import Textarea from "../../components/ui/textarea";
 import Label from "../../components/ui/label";
 import { session } from "../../app/session";
 import { mockEnabled } from "../auth/config";
+import safeReturnTo from "../auth/redirect";
 import { uploadFile } from "../../shared/api/upload";
 import ProfileImageField from "./ProfileImageField";
 import { saveProfile, profileError } from "./api";
@@ -36,6 +38,17 @@ export default function ProfileForm({
   reload: () => void;
 }) {
   const role: ProfileRole = data.profile.type;
+  // 모든 항목이 선택이라, 아무것도 바꾸지 않아도 다음 화면으로 넘어갈 수 있게 한다.
+  // 가입 전에 가려던 곳(returnTo)이 있으면 그리로, 없으면 역할별 첫 화면으로 보낸다.
+  const [params] = useSearchParams();
+  const returnTo = params.get("returnTo");
+  let next = { to: "/studio/portfolio", label: "작업물 올리러 가기" };
+  if (role === "CLIENT") next = { to: "/", label: "작품 둘러보기" };
+  if (returnTo)
+    next = {
+      to: safeReturnTo(returnTo, role === "CLIENT" ? "client" : "creator"),
+      label: "하던 일 이어가기",
+    };
   const [original, setOriginal] = useState(() => profileValues(data));
   const [saved, setSaved] = useState(false);
   const cache = useQueryClient();
@@ -277,8 +290,15 @@ export default function ProfileForm({
             {busy ? "저장 중…" : "프로필 저장"}
           </Button>
           <Button
+            asChild
+            variant={form.formState.isDirty ? "outline" : "default"}
+          >
+            <Link to={next.to}>{next.label}</Link>
+          </Button>
+          <Button
             type="button"
             variant="outline"
+            disabled={!form.formState.isDirty}
             onClick={() => {
               form.reset(original);
               mutation.reset();
@@ -297,10 +317,16 @@ export default function ProfileForm({
       {saved && !form.formState.isDirty && (
         <p role="status">프로필을 저장했어요.</p>
       )}
-      {form.formState.isDirty && (
+      {form.formState.isDirty ? (
         <p className="text-sm text-muted-foreground">
           아직 저장하지 않은 변경이 있어요. 화면을 나가면 입력이 사라져요.
         </p>
+      ) : (
+        !saved && (
+          <p className="text-sm text-muted-foreground">
+            모든 항목은 선택이에요. 나중에 채워도 돼요.
+          </p>
+        )
       )}
       {mutation.error && (
         <div role="alert" className="grid gap-3">
