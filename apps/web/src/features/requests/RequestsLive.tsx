@@ -245,6 +245,7 @@ function RequestList() {
   });
   const directs = useQuery({
     queryKey: ["direct-requests"],
+    refetchOnWindowFocus: true,
     queryFn: ({ signal }) => kemi.directRequests(signal),
   });
   return (

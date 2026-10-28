@@ -198,6 +198,7 @@ function Activity() {
   const stage = params.get("stage") ?? "";
   const activity = useQuery({
     queryKey: ["activity"],
+    refetchOnWindowFocus: true,
     queryFn: ({ signal }) => kemi.activity(signal),
   });
   if (activity.isPending) return <Loading text="내 활동을 불러오고 있어요." />;

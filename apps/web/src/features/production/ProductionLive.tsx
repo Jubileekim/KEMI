@@ -18,6 +18,7 @@ import {
   productionStatusLabels,
 } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
+import invalidateRequestProgress from "../live/request-progress";
 import { errorText, selectClass } from "../live/errors";
 
 type Kind = MaterialCreateRequest["kind"];
@@ -294,7 +295,10 @@ export default function ProductionLive({ contractId }: { contractId: string }) {
     queryKey: key,
     queryFn: ({ signal }) => kemi.production(contractId, signal),
   });
-  const update = (next: Production) => client.setQueryData(key, next);
+  const update = (next: Production) => {
+    client.setQueryData(key, next);
+    invalidateRequestProgress(client);
+  };
   const act = useMutation({
     mutationFn: (run: () => Promise<Production>) => run(),
     onSuccess: update,

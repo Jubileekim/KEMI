@@ -7,6 +7,7 @@ import Button from "../../components/ui/button";
 import { kemi, newCommandId } from "../../shared/api/kemi";
 import { dateTime, label, paymentStatusLabels, won } from "../live/labels";
 import { Card, Facts, Failure, Loading } from "../live/ui";
+import invalidateRequestProgress from "../live/request-progress";
 import { errorText } from "../live/errors";
 import {
   mountTossWidgets,
@@ -73,11 +74,19 @@ function Checkout({ contractId }: { contractId: string }) {
         await requestWidgetPayment(widgets.current, { ...order, contractId });
       else await openTossPayment({ ...order, contractId });
     },
-    onSettled: () => client.invalidateQueries({ queryKey: key }),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: key }),
+        invalidateRequestProgress(client),
+      ]),
   });
   const sync = useMutation({
     mutationFn: (orderId: string) => kemi.syncPayment(orderId),
-    onSettled: () => client.invalidateQueries({ queryKey: key }),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: key }),
+        invalidateRequestProgress(client),
+      ]),
   });
   if (payments.isPending)
     return <Loading text="결제 정보를 불러오고 있어요." />;
@@ -201,7 +210,10 @@ function Result({ contractId }: { contractId: string }) {
             message: params.get("message") ?? undefined,
           }),
     onSettled: () =>
-      client.invalidateQueries({ queryKey: ["payments", contractId] }),
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["payments", contractId] }),
+        invalidateRequestProgress(client),
+      ]),
   });
   useEffect(() => {
     if (sent.current || !orderId) return;

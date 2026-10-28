@@ -23,6 +23,7 @@ import {
   revisionTypeLabels,
 } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
+import invalidateRequestProgress from "../live/request-progress";
 import { errorText, selectClass } from "../live/errors";
 
 const KINDS: DeliverableKind[] = ["DRAFT", "REVIEW", "FINAL"];
@@ -222,7 +223,10 @@ export default function DeliveryLive({ contractId }: { contractId: string }) {
     queryKey: key,
     queryFn: ({ signal }) => kemi.delivery(contractId, signal),
   });
-  const update = (next: Delivery) => client.setQueryData(key, next);
+  const update = (next: Delivery) => {
+    client.setQueryData(key, next);
+    invalidateRequestProgress(client);
+  };
   const act = useMutation({
     mutationFn: (run: () => Promise<Delivery>) => run(),
     onSuccess: update,

@@ -15,6 +15,7 @@ import Textarea from "../../components/ui/textarea";
 import { kemi, newCommandId } from "../../shared/api/kemi";
 import { dateTime, label, termsStatusLabels, won } from "../live/labels";
 import { Card, Facts, Field } from "../live/ui";
+import invalidateRequestProgress from "../live/request-progress";
 import { errorText } from "../live/errors";
 import track from "../../shared/analytics/track";
 
@@ -203,7 +204,7 @@ export default function TermsLive({
   const { user, role } = useSession();
   const client = useQueryClient();
   const refresh = () => {
-    client.invalidateQueries({ queryKey: ["terms", requestId] });
+    invalidateRequestProgress(client);
     client.invalidateQueries({ queryKey: ["chat", requestId] });
   };
   const [editing, setEditing] = useState(false);

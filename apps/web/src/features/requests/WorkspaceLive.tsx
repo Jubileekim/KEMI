@@ -28,6 +28,7 @@ function DirectHeader({ requestId }: { requestId: string }) {
   const client = useQueryClient();
   const direct = useQuery({
     queryKey: ["direct-request", requestId],
+    refetchOnWindowFocus: true,
     queryFn: ({ signal }) => kemi.directRequest(requestId, signal),
     retry: false,
   });
@@ -124,6 +125,7 @@ function DirectHeader({ requestId }: { requestId: string }) {
 export default function WorkspaceLive({ requestId }: { requestId: string }) {
   const terms = useQuery({
     queryKey: ["terms", requestId],
+    refetchOnWindowFocus: true,
     queryFn: ({ signal }) => kemi.terms(requestId, signal),
     retry: (count, error) => !notFound(error) && count < 2,
   });
