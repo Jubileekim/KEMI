@@ -16,6 +16,7 @@ import {
   workRequestStatusSchema,
 } from "@kemi/shared";
 import { z } from "zod";
+import { dealContractRelations, dealStage } from "../deal/stage.js";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
@@ -336,7 +337,9 @@ export function createTermsService({
             orderBy: { versionNo: "asc" },
             include: includeSignatures,
           },
-          contract: { include: includeContractVersion },
+          contract: {
+            include: { ...includeContractVersion, ...dealContractRelations },
+          },
         },
       });
       requireParty(user, request);
@@ -346,6 +349,7 @@ export function createTermsService({
       return {
         workRequestId: request.id.toString(),
         workRequestStatus: workRequestStatusSchema.parse(request.status),
+        stage: dealStage(request.status, request.contract),
         projectStatus: request.project
           ? projectStatusSchema.parse(request.project.status)
           : null,

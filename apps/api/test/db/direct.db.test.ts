@@ -53,6 +53,20 @@ beforeEach(async () => {
   app = makeApp();
 });
 
+// 의뢰 상세·목록·조건서가 보여 주는 거래 진행 단계(요청 상태는 계약 뒤 CONTRACTED로 멈춘다)
+async function stagesOf(token: string, requestId: string) {
+  const [detail, list, terms] = await Promise.all([
+    request(app).get(`/api/direct-requests/${requestId}`).set(auth(token)),
+    request(app).get("/api/direct-requests").set(auth(token)),
+    request(app).get(`/api/work-requests/${requestId}/terms`).set(auth(token)),
+  ]);
+  return [
+    detail.body.stage,
+    list.body.items.find((i: { id: string }) => i.id === requestId)?.stage,
+    terms.body.stage,
+  ];
+}
+
 const post = (token: string, path: string, body: object = {}) =>
   request(app).post(path).set(auth(token)).send(body);
 
@@ -163,6 +177,16 @@ describe("직접 의뢰 (DIRECT-01~03)", () => {
         select: { projectId: true },
       }),
     ).toEqual({ projectId: null });
+    const detail = await request(app)
+      .get(`/api/direct-requests/${requestId}`)
+      .set(auth(client.token));
+    expect(detail.body).toMatchObject({
+      status: "CONTRACTED",
+      stage: "PAYMENT_PENDING",
+    });
+    expect(await stagesOf(creator.token, requestId)).toEqual(
+      Array(3).fill("PAYMENT_PENDING"),
+    );
 
     // 결제(기록) → 자료 확인 → 제작 → 검토본 승인 → 최종본 수령 → 리뷰
     await prisma.payment.create({
@@ -188,7 +212,13 @@ describe("직접 의뢰 (DIRECT-01~03)", () => {
         commandId: randomUUID(),
       },
     });
+    expect(await stagesOf(client.token, requestId)).toEqual(
+      Array(3).fill("PREPARING"),
+    );
     await post(creator.token, `/api/contracts/${contractId}/production/start`);
+    expect(await stagesOf(client.token, requestId)).toEqual(
+      Array(3).fill("IN_PROGRESS"),
+    );
     const submit = async (kind: string) =>
       post(creator.token, `/api/contracts/${contractId}/deliverables`, {
         commandId: randomUUID(),
@@ -209,6 +239,14 @@ describe("직접 의뢰 (DIRECT-01~03)", () => {
       productionStatus: "COMPLETED",
       settlement: { feeKrw: 20_000, payoutKrw: 180_000 },
     });
+    // 내 활동과 같은 값: 의뢰 상세·목록·조건서 모두 거래 완료
+    expect(await stagesOf(client.token, requestId)).toEqual(
+      Array(3).fill("COMPLETED"),
+    );
+    expect(
+      (await request(app).get("/api/activity").set(auth(client.token))).body
+        .requests[0].stage,
+    ).toBe("COMPLETED");
     expect(
       (
         await post(client.token, `/api/contracts/${contractId}/reviews`, {

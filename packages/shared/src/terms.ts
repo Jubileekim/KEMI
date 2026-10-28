@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ActivityStage } from "./activity.js";
 import type { ProjectStatus } from "./project.js";
 import type { WorkRequestStatus } from "./application.js";
 
@@ -133,6 +134,8 @@ export interface Contract {
 export interface TermsDocument {
   workRequestId: string;
   workRequestStatus: WorkRequestStatus;
+  // 거래 진행 단계(계약 뒤 결제·제작·완료까지)
+  stage: ActivityStage;
   projectStatus: ProjectStatus | null;
   // 첫 버전을 저장하기 전에는 null
   reference: TermsReference | null;

@@ -9,6 +9,11 @@ import {
   workRequestClosedReasonSchema,
   workRequestStatusSchema,
 } from "@kemi/shared";
+import {
+  type DealContract,
+  dealStage,
+  dealStageInclude,
+} from "../deal/stage.js";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import notify from "../notifications/notify.js";
@@ -32,9 +37,13 @@ interface ApplicationRow {
   respondedAt: Date | null;
   createdAt: Date;
   creator: { name: string };
+  contract: DealContract;
 }
 
-const includeCreator = { creator: { select: { name: true } } } as const;
+const includeCreator = {
+  creator: { select: { name: true } },
+  ...dealStageInclude,
+} as const;
 
 // 같은 프로젝트의 변경이 줄을 서서 기다릴 수 있도록 기본값보다 넉넉히 둔다.
 const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 15_000 };
@@ -53,6 +62,7 @@ function toApplication(row: ApplicationRow): Application {
     proposedAmount: Number(row.initialAmount),
     expectedDays: row.expectedDays,
     status: workRequestStatusSchema.parse(row.status),
+    stage: dealStage(row.status, row.contract),
     closedReason:
       row.closedReason === null
         ? null

@@ -5,23 +5,16 @@ import { ACTIVITY_STAGES, type ActivityStage } from "@kemi/shared";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
 import { kemi } from "../../shared/api/kemi";
-import { dateTime, label, projectStatusLabels, won } from "../live/labels";
+import {
+  dateTime,
+  label,
+  projectStatusLabels,
+  stageLabels,
+  won,
+} from "../live/labels";
 import { Card, Failure, Loading } from "../live/ui";
 import { errorText } from "../live/errors";
 import readPage from "./navigation";
-
-const stageLabels: Record<ActivityStage, string> = {
-  PENDING: "검토 대기",
-  DISCUSSING: "협의 중",
-  CLOSED: "종료",
-  PAYMENT_PENDING: "계약 확정 · 결제 대기",
-  PREPARING: "제작 준비",
-  IN_PROGRESS: "제작 중",
-  DELIVERED: "수령 완료 · 정산 대기",
-  COMPLETED: "거래 완료",
-  CANCELED: "취소됨",
-  DISPUTED: "분쟁 처리 중",
-};
 
 // 요청 단계에 맞는 다음 화면
 const nextPath = (

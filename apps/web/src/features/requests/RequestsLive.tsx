@@ -8,7 +8,7 @@ import Button from "../../components/ui/button";
 import Input from "../../components/ui/input";
 import Textarea from "../../components/ui/textarea";
 import { kemi } from "../../shared/api/kemi";
-import { dateTime, label, requestStatusLabels, won } from "../live/labels";
+import { dateTime, requestProgress, won } from "../live/labels";
 import { Card, Failure, Field, Loading } from "../live/ui";
 import { errorText } from "../live/errors";
 import WorkspaceLive from "./WorkspaceLive";
@@ -159,7 +159,7 @@ function Proposals({ projectId }: { projectId: string }) {
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="type-heading-md">{item.creatorName}</h2>
               <Badge variant="secondary">
-                {label(requestStatusLabels, item.status)}
+                {requestProgress(item.status, item.stage)}
               </Badge>
             </div>
             <p className="whitespace-pre-wrap">{item.message}</p>
@@ -289,7 +289,7 @@ function RequestList() {
                 {role === "creator" ? item.clientName : item.creatorName}
               </Link>
               <Badge variant="secondary">
-                {label(requestStatusLabels, item.status)}
+                {requestProgress(item.status, item.stage)}
               </Badge>
             </li>
           ))}
@@ -310,7 +310,7 @@ function RequestList() {
                   {item.project.title}
                 </Link>
                 <Badge variant="secondary">
-                  {label(requestStatusLabels, item.status)}
+                  {requestProgress(item.status, item.stage)}
                 </Badge>
                 <span className="text-muted-foreground">
                   제안 {won(item.proposedAmount)}

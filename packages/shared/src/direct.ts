@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ActivityStage } from "./activity.js";
 import type { Portfolio } from "./catalog.js";
 import type { WorkRequestStatus } from "./application.js";
 import { productionRoleSchema } from "./status.js";
@@ -83,6 +84,8 @@ export interface DirectRequest {
   // 일괄 문의로 보냈으면 그 묶음 ID(같은 조건으로 여러 크리에이터에게 보낸 요청)
   inquiryGroupId: string | null;
   status: WorkRequestStatus;
+  // 거래 진행 단계(계약 뒤 결제·제작·완료까지). 화면의 진행 상태 표시는 이 값을 쓴다.
+  stage: ActivityStage;
   // 크리에이터 응답 기한
   respondDueAt: string;
   respondedAt: string | null;

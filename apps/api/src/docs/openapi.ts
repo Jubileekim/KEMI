@@ -3140,6 +3140,7 @@ const openApiDocument = {
           "proposedAmount",
           "expectedDays",
           "status",
+          "stage",
           "closedReason",
           "respondedAt",
           "createdAt",
@@ -3153,6 +3154,12 @@ const openApiDocument = {
           proposedAmount: { type: "integer" },
           expectedDays: { type: "integer" },
           status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
+          stage: {
+            type: "string",
+            enum: [...ACTIVITY_STAGES],
+            description:
+              "거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값).",
+          },
           closedReason: nullableEnum(WORK_REQUEST_CLOSED_REASONS),
           respondedAt: { type: ["string", "null"], format: "date-time" },
           createdAt: { type: "string", format: "date-time" },
@@ -3753,6 +3760,7 @@ const openApiDocument = {
           "referencePortfolio",
           "inquiryGroupId",
           "status",
+          "stage",
           "respondDueAt",
           "respondedAt",
           "createdAt",
@@ -3817,6 +3825,12 @@ const openApiDocument = {
             description: "일괄 문의로 보낸 경우 그 묶음 ID",
           },
           status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
+          stage: {
+            type: "string",
+            enum: [...ACTIVITY_STAGES],
+            description:
+              "거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값).",
+          },
           respondDueAt: { type: "string", format: "date-time" },
           respondedAt: { type: ["string", "null"], format: "date-time" },
           createdAt: { type: "string", format: "date-time" },
@@ -4622,6 +4636,7 @@ const openApiDocument = {
         required: [
           "workRequestId",
           "workRequestStatus",
+          "stage",
           "projectStatus",
           "reference",
           "versions",
@@ -4632,6 +4647,12 @@ const openApiDocument = {
           workRequestStatus: {
             type: "string",
             enum: [...WORK_REQUEST_STATUSES],
+          },
+          stage: {
+            type: "string",
+            enum: [...ACTIVITY_STAGES],
+            description:
+              "거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값).",
           },
           projectStatus: nullableEnum(PROJECT_STATUSES),
           reference: {
