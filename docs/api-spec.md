@@ -4,7 +4,7 @@
 > `npm run docs:api -w @kemi/api`로 다시 만든다. `test/api-spec.test.ts`가 코드와 어긋나면 실패한다.
 
 - 버전: 0.1.0
-- 엔드포인트: 124개 (21개 영역)
+- 엔드포인트: 128개 (21개 영역)
 - 실시간 문서: 개발 서버에서 `/api/docs`(Swagger UI), `/api/openapi.json`
 
 ## 공통 규칙
@@ -164,6 +164,10 @@
 | 메서드 | 경로 | 설명 | 인증 |
 | --- | --- | --- | --- |
 | POST | [`/api/packages/{packageId}/direct-requests`](#op-post-api-packages-packageid-direct-requests) | 직접 의뢰 보내기 (DIRECT-01, ORDER-01~03) | 로그인 필요 |
+| GET | [`/api/me/work-bookmarks`](#op-get-api-me-work-bookmarks) | 작품 저장함 목록 (SAVE-01) | 로그인 필요 |
+| PUT | [`/api/portfolios/{portfolioId}/bookmark`](#op-put-api-portfolios-portfolioid-bookmark) | 작품 저장 (SAVE-01) | 로그인 필요 |
+| DELETE | [`/api/portfolios/{portfolioId}/bookmark`](#op-delete-api-portfolios-portfolioid-bookmark) | 작품 저장 해제 (SAVE-01) | 로그인 필요 |
+| POST | [`/api/direct-inquiries`](#op-post-api-direct-inquiries) | 저장한 작품의 제작자들에게 일괄 문의 (INQ-01) | 로그인 필요 |
 | GET | [`/api/direct-requests`](#op-get-api-direct-requests) | 내 직접 의뢰 목록 | 로그인 필요 |
 | GET | [`/api/direct-requests/{requestId}`](#op-get-api-direct-requests-requestid) | 직접 의뢰 상세 | 로그인 필요 |
 | POST | [`/api/direct-requests/{requestId}/accept`](#op-post-api-direct-requests-requestid-accept) | 협의 수락 (DIRECT-02) | 로그인 필요 |
@@ -1862,6 +1866,9 @@ REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원
 | `message` | string | 예 | 최소 길이 10, 최대 길이 2000 | - |
 | `purpose` | `WEDDING_COUPLE`, `CHILD_FAMILY`, `THANKS_CELEBRATION`, `TRAVEL_DAILY`, `SNS_SHORTFORM`, `OTHER` |  | - | - |
 | `eventDate` | string(date) |  | 형식 `^(?:(?:\d\d[2468][048]\|\d\d[13579][26]\|\d\d0[48]\|[02468][048]00\|[13579][26]00)-02-29\|\d{4}-(?:(?:0[13578]\|1[02])-(?:0[1-9]\|[12]\d\|3[01])\|(?:0[469]\|11)-(?:0[1-9]\|[12]\d\|30)\|(?:02)-(?:0[1-9]\|1\d\|2[0-8])))$` | - |
+| `materialType` | `PHOTOS_ONLY`, `PHOTOS_AND_VIDEOS`, `NEEDS_SHOOTING` |  | - | - |
+| `desiredDeliveryDate` | string(date) |  | 형식 `^(?:(?:\d\d[2468][048]\|\d\d[13579][26]\|\d\d0[48]\|[02468][048]00\|[13579][26]00)-02-29\|\d{4}-(?:(?:0[13578]\|1[02])-(?:0[1-9]\|[12]\d\|3[01])\|(?:0[469]\|11)-(?:0[1-9]\|[12]\d\|30)\|(?:02)-(?:0[1-9]\|1\d\|2[0-8])))$` | - |
+| `referencePortfolioId` | string |  | 형식 `^[1-9]\d*$` | - |
 
 **응답**
 
@@ -1873,6 +1880,104 @@ REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원
 | 403 | 역할이 맞지 않음 (`FORBIDDEN`) | [Error](#schema-error) |
 | 404 | 대상이 없거나 당사자가 아님 (`NOT_FOUND`) | [Error](#schema-error) |
 | 409 | 지금 상태에서 할 수 없음 (`CONFLICT`) | [Error](#schema-error) |
+
+<a id="op-get-api-me-work-bookmarks"></a>
+
+### GET `/api/me/work-bookmarks`
+
+**작품 저장함 목록 (SAVE-01)**
+
+내가 저장한 작품(최근 저장순, 최대 100개). `available`은 지금도 공개 중이고 의뢰할 수 있는 패키지(연결 패키지 또는 대표 패키지)가 있는지다.
+
+- 인증: 로그인 필요
+
+**응답**
+
+| 상태 | 설명 | 본문 |
+| --- | --- | --- |
+| 200 | 저장한 작품 | [WorkBookmarkList](#schema-workbookmarklist) |
+| 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
+
+<a id="op-put-api-portfolios-portfolioid-bookmark"></a>
+
+### PUT `/api/portfolios/{portfolioId}/bookmark`
+
+**작품 저장 (SAVE-01)**
+
+공개 작품만 저장한다. 이미 저장했으면 그대로 성공. 최대 100개(넘으면 409).
+
+- 인증: 로그인 필요
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 |
+| --- | --- | --- | --- | --- |
+| `portfolioId` | 경로 | 예 | string (형식 `^[1-9]\d*$`) | - |
+
+**응답**
+
+| 상태 | 설명 | 본문 |
+| --- | --- | --- |
+| 200 | 저장됨 | object |
+| 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
+| 403 | 이용이 제한된 계정 (`FORBIDDEN`) | [Error](#schema-error) |
+| 404 | 공개 작품이 아님 (`NOT_FOUND`) | [Error](#schema-error) |
+| 409 | 저장 한도 초과 (`CONFLICT`) | [Error](#schema-error) |
+
+<a id="op-delete-api-portfolios-portfolioid-bookmark"></a>
+
+### DELETE `/api/portfolios/{portfolioId}/bookmark`
+
+**작품 저장 해제 (SAVE-01)**
+
+저장하지 않은 작품이어도 성공한다.
+
+- 인증: 로그인 필요
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 |
+| --- | --- | --- | --- | --- |
+| `portfolioId` | 경로 | 예 | string (형식 `^[1-9]\d*$`) | - |
+
+**응답**
+
+| 상태 | 설명 | 본문 |
+| --- | --- | --- |
+| 200 | 해제됨 | object |
+| 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
+
+<a id="op-post-api-direct-inquiries"></a>
+
+### POST `/api/direct-inquiries`
+
+**저장한 작품의 제작자들에게 일괄 문의 (INQ-01)**
+
+활성 의뢰인. 작품 1~5개를 골라 각 작품의 제작자에게 같은 조건(요청사항·목적·보유 자료·행사일·희망 납품일)으로 직접 의뢰를 보낸다. 작품마다 연결 패키지(없거나 비공개면 대표 패키지) 조건으로 시작하고, 크리에이터당 한 건이다. 보낼 수 없는 작품은 결과에 이유(`ALREADY_OPEN` 이미 진행 중, `SAME_CREATOR` 같은 제작자, `UNAVAILABLE` 공개 아님)를 남기고 나머지는 보낸다. 같은 `commandId`로 다시 보내면 처음 결과를 돌려준다. 이후 흐름(48시간 응답·조건서·서명·결제)은 직접 의뢰와 같다.
+
+- 인증: 로그인 필요
+
+**요청 본문** (application/json, 필수)
+
+| 필드 | 타입 | 필수 | 제약 | 설명 |
+| --- | --- | --- | --- | --- |
+| `commandId` | string(uuid) | 예 | 형식 `^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\|00000000-0000-0000-0000-000000000000\|ffffffff-ffff-ffff-ffff-ffffffffffff)$` | - |
+| `portfolioIds` | string[] | 예 | 최소 개수 1, 최대 개수 5 | - |
+| `message` | string | 예 | 최소 길이 10, 최대 길이 2000 | - |
+| `purpose` | `WEDDING_COUPLE`, `CHILD_FAMILY`, `THANKS_CELEBRATION`, `TRAVEL_DAILY`, `SNS_SHORTFORM`, `OTHER` |  | - | - |
+| `eventDate` | string(date) |  | 형식 `^(?:(?:\d\d[2468][048]\|\d\d[13579][26]\|\d\d0[48]\|[02468][048]00\|[13579][26]00)-02-29\|\d{4}-(?:(?:0[13578]\|1[02])-(?:0[1-9]\|[12]\d\|3[01])\|(?:0[469]\|11)-(?:0[1-9]\|[12]\d\|30)\|(?:02)-(?:0[1-9]\|1\d\|2[0-8])))$` | - |
+| `materialType` | `PHOTOS_ONLY`, `PHOTOS_AND_VIDEOS`, `NEEDS_SHOOTING` |  | - | - |
+| `desiredDeliveryDate` | string(date) |  | 형식 `^(?:(?:\d\d[2468][048]\|\d\d[13579][26]\|\d\d0[48]\|[02468][048]00\|[13579][26]00)-02-29\|\d{4}-(?:(?:0[13578]\|1[02])-(?:0[1-9]\|[12]\d\|3[01])\|(?:0[469]\|11)-(?:0[1-9]\|[12]\d\|30)\|(?:02)-(?:0[1-9]\|1\d\|2[0-8])))$` | - |
+
+**응답**
+
+| 상태 | 설명 | 본문 |
+| --- | --- | --- |
+| 201 | 작품별 발송 결과 | [BulkInquiryResponse](#schema-bulkinquiryresponse) |
+| 400 | 입력값 오류 (`VALIDATION_FAILED`) | [Error](#schema-error) |
+| 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
+| 403 | 역할이 맞지 않음 (`FORBIDDEN`), 이용 제한 (`RESTRICTED`) | [Error](#schema-error) |
+| 409 | 동시에 겹친 요청 (`CONFLICT`) | [Error](#schema-error) |
 
 <a id="op-get-api-direct-requests"></a>
 
@@ -4170,10 +4275,43 @@ REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(
 | `message` | string | 예 | - | - |
 | `purpose` | string 또는 null | 예 | - | - |
 | `eventDate` | string 또는 null(date) | 예 | - | - |
+| `materialType` | `PHOTOS_ONLY`, `PHOTOS_AND_VIDEOS`, `NEEDS_SHOOTING` 또는 null | 예 | - | 보유 자료: 사진만 / 사진·영상 / 촬영도 필요 |
+| `desiredDeliveryDate` | string 또는 null(date) | 예 | - | 희망 납품일(행사일과 같거나 빠름) |
+| `referencePortfolio` | object 또는 null | 예 | - | 이 의뢰를 시작한 참고 작품 |
+| `inquiryGroupId` | string 또는 null(uuid) | 예 | - | 일괄 문의로 보낸 경우 그 묶음 ID |
 | `status` | `PENDING`, `DISCUSSING`, `CONTRACTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`, `NOT_SELECTED` | 예 | - | - |
 | `respondDueAt` | string(date-time) | 예 | - | - |
 | `respondedAt` | string 또는 null(date-time) | 예 | - | - |
 | `createdAt` | string(date-time) | 예 | - | - |
+
+<a id="schema-bulkinquiryresponse"></a>
+
+### BulkInquiryResponse
+
+| 필드 | 타입 | 필수 | 제약 | 설명 |
+| --- | --- | --- | --- | --- |
+| `inquiryGroupId` | string(uuid) | 예 | - | - |
+| `results` | object[] | 예 | - | - |
+| `results[].portfolioId` | string | 예 | - | - |
+| `results[].portfolioTitle` | string 또는 null | 예 | - | - |
+| `results[].creatorName` | string 또는 null | 예 | - | - |
+| `results[].status` | `SENT`, `ALREADY_OPEN`, `SAME_CREATOR`, `UNAVAILABLE` | 예 | - | - |
+| `results[].request` | [DirectRequest](#schema-directrequest) 또는 null | 예 | - | - |
+
+<a id="schema-workbookmarklist"></a>
+
+### WorkBookmarkList
+
+| 필드 | 타입 | 필수 | 제약 | 설명 |
+| --- | --- | --- | --- | --- |
+| `items` | object[] | 예 | - | - |
+| `items[].portfolio` | [Portfolio](#schema-portfolio) | 예 | - | - |
+| `items[].creator` | object | 예 | - | - |
+| `items[].creator.userId` | string | 예 | - | - |
+| `items[].creator.name` | string | 예 | - | - |
+| `items[].startingPriceKrw` | integer 또는 null | 예 | - | - |
+| `items[].savedAt` | string(date-time) | 예 | - | - |
+| `items[].available` | boolean | 예 | - | - |
 
 <a id="schema-directrequestlist"></a>
 
