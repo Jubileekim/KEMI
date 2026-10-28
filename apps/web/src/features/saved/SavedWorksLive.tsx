@@ -130,7 +130,7 @@ export default function SavedWorksLive() {
   });
   if (list.isPending) return <Loading text="저장한 작품을 불러오고 있어요." />;
   if (list.error) return <Failure error={list.error} />;
-  const {items} = list.data;
+  const { items } = list.data;
   const chosen = items.filter((i) => selected.includes(i.portfolio.id));
   const creators = [...new Set(chosen.map((i) => i.creator.userId))];
   if (result)
