@@ -116,7 +116,7 @@ function start(env: Env) {
     activityService: createActivityService({ prisma }),
     appOrigin: env.APP_ORIGIN,
     trustProxyHops: env.TRUST_PROXY_HOPS,
-    apiDocs: env.NODE_ENV !== "production",
+    apiDocs: env.NODE_ENV !== "production" || env.API_DOCS,
   });
 
   const server = app.listen(env.PORT, () => {

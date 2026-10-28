@@ -29,6 +29,14 @@ const envSchema = z
     APP_ORIGIN: z.url({ error: "APP_ORIGIN은 http(s) 주소여야 합니다." }),
     // 앞단 프록시 개수(0 = 프록시 없음). 배포 경로에 맞게 확인한 값을 넣는다(README "클라이언트 IP").
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    // API 문서(/api/docs Swagger UI, /api/openapi.json)를 운영에서도 열지(선택, 기본 끔).
+    // 개발 환경에서는 항상 열린다. 문서만 보여주며 인증·권한 검사는 그대로다.
+    API_DOCS: z
+      .enum(["true", "false"], {
+        error: "API_DOCS는 true 또는 false여야 합니다.",
+      })
+      .default("false")
+      .transform((value) => value === "true"),
     // 소셜 로그인 (선택). 없으면 해당 제공자는 SOCIAL_UNAVAILABLE로 안내한다.
     GOOGLE_CLIENT_ID: optionalSecret,
     GOOGLE_CLIENT_SECRET: optionalSecret,
