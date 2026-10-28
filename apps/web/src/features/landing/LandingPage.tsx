@@ -6,6 +6,7 @@ import { kemi, query } from "../../shared/api/kemi";
 import { purposeLabels, won } from "../live/labels";
 import { Failure } from "../live/ui";
 import { Thumbnail } from "../portfolio/CatalogLive";
+import AuthRequiredCta from "../../components/AuthRequiredCta";
 import "./landing.css";
 
 export default function LandingPage() {
@@ -48,12 +49,14 @@ export default function LandingPage() {
             <a className="landing-button" href="#landing-works">
               작품 둘러보기 <ArrowRight size={18} aria-hidden="true" />
             </a>
-            <Link
+            <AuthRequiredCta
               className="landing-button landing-button-outline"
-              to="/campaigns"
+              returnTo="/campaigns"
+              browseTo="/campaigns"
+              description="공개 모집을 올리거나 크리에이터로 참여하려면 회원가입 또는 로그인이 필요해요."
             >
               공개 모집 살펴보기
-            </Link>
+            </AuthRequiredCta>
           </div>
         </div>
         <div
@@ -233,9 +236,14 @@ export default function LandingPage() {
             <h2 id="landing-cta-title">좋은 영상의 시작, 좋은 만남부터.</h2>
             <p>지금, 공개 모집에서 함께할 크리에이터를 찾아보세요.</p>
           </div>
-          <Link className="landing-button" to="/campaigns">
+          <AuthRequiredCta
+            className="landing-button"
+            returnTo="/campaigns"
+            browseTo="/campaigns"
+            description="공개 모집을 올리거나 크리에이터로 참여하려면 회원가입 또는 로그인이 필요해요."
+          >
             공개 모집 살펴보기 <ArrowRight size={18} aria-hidden="true" />
-          </Link>
+          </AuthRequiredCta>
         </div>
       </section>
     </div>
