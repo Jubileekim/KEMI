@@ -5,7 +5,7 @@ import {
   type Portfolio,
   type ServicePackage,
 } from "@kemi/shared";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -21,16 +21,96 @@ import {
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
 import track from "../../shared/analytics/track";
+import feedMediaMode, { shouldRefreshMedia } from "./feed-media";
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+// 화면에 절반 이상 보일 때만 재생하고, 벗어나면 멈춘다. 데이터는 재생할 때 받는다.
+function AutoplayVideo({
+  src,
+  poster,
+  title,
+  onFail,
+}: {
+  src: string;
+  poster: string | undefined;
+  title: string;
+  onFail: () => void;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return undefined;
+    const play = () => {
+      video.play().catch(() => {});
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      play();
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) play();
+        else video.pause();
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [src]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      preload="none"
+      aria-label={`${title} 미리보기 영상`}
+      className="aspect-video w-full rounded-xl bg-muted object-cover"
+      onError={onFail}
+    />
+  );
+}
 
 // 공개 작업물 썸네일. 서명 주소는 만료되므로 화면에서 그때그때 받는다.
-function Thumbnail({ portfolio }: { portfolio: Portfolio }) {
+// autoplay면 영상을 소리 없이 반복 재생하고, 움직임 줄이기 설정이나 재생 실패 시 대표 이미지를 보여준다.
+function Thumbnail({
+  portfolio,
+  autoplay = false,
+}: {
+  portfolio: Portfolio;
+  autoplay?: boolean;
+}) {
+  const [videoFailed, setVideoFailed] = useState(false);
   const media = useQuery({
     queryKey: ["portfolio-media", portfolio.id],
-    enabled: !!portfolio.thumbnailFileId,
+    enabled:
+      !!portfolio.thumbnailFileId || (autoplay && !!portfolio.videoFileId),
     queryFn: ({ signal }) => kemi.portfolioMedia(portfolio.id, signal),
     staleTime: 5 * 60_000,
   });
-  if (!media.data?.thumbnail)
+  const mode = feedMediaMode(
+    media.data,
+    !autoplay || videoFailed || prefersReducedMotion(),
+  );
+  if (mode === "video" && media.data?.video)
+    return (
+      <AutoplayVideo
+        src={media.data.video.url}
+        poster={media.data.thumbnail?.url}
+        title={portfolio.title}
+        onFail={() => {
+          if (shouldRefreshMedia(media.dataUpdatedAt, Date.now()))
+            media.refetch().catch(() => setVideoFailed(true));
+          else setVideoFailed(true);
+        }}
+      />
+    );
+  if (mode === "empty" || !media.data?.thumbnail)
     return <div className="aspect-video rounded-xl bg-muted" aria-hidden />;
   return (
     <img
@@ -144,7 +224,7 @@ function Feed() {
         {feed.data?.items.map((item) => (
           <li key={item.portfolio.id} className="showcase-card grid gap-2">
             <Link to={`/works/${item.portfolio.id}`} className="grid gap-2">
-              <Thumbnail portfolio={item.portfolio} />
+              <Thumbnail portfolio={item.portfolio} autoplay />
               <span className="type-title">{item.portfolio.title}</span>
             </Link>
             <Link
