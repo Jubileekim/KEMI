@@ -23,7 +23,8 @@ import { SeedTargetError } from "./target.js";
 //
 // 실사용자와 함께 쓰는 DB(sharedDatabase, 운영 DB 1회성 예외)에서는 더 조심한다.
 // - 같은 이메일의 시연 계정이 이미 있는데 시드가 만든 계정(이름·역할이 같음)이 아니면 아무것도 쓰기 전에 멈춘다.
-// - 이미 있는 제작자 프로필은 덮어쓰지 않는다.
+// - 이미 있는 제작자 프로필은 덮어쓰지 않는다. 누군가 서비스를 내렸거나 다른 대표 패키지를 정했거나 시연 패키지를
+//   비공개로 돌려 둔 시연 제작자도 되돌리지 않고, 아무것도 쓰기 전에 멈춘다.
 // - 작업물은 비공개(DRAFT)로 둔다. 파일 행만 있고 영상이 없어 공개 피드에 재생되지 않는 카드가 생기기 때문이다.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -32,8 +33,18 @@ const BCRYPT_COST = 12;
 const DEMO_USERS = {
   client: { key: "demo-client", name: "김의뢰", role: "CLIENT" },
   client2: { key: "demo-client2", name: "이가족", role: "CLIENT" },
-  creator: { key: "demo-creator", name: "박편집", role: "CREATOR" },
-  creator2: { key: "demo-creator2", name: "최촬영", role: "CREATOR" },
+  creator: {
+    key: "demo-creator",
+    name: "박편집",
+    role: "CREATOR",
+    packageTitle: "돌잔치 성장영상 기본",
+  },
+  creator2: {
+    key: "demo-creator2",
+    name: "최촬영",
+    role: "CREATOR",
+    packageTitle: "웨딩 하이라이트",
+  },
 } as const;
 type DemoUser = (typeof DEMO_USERS)[keyof typeof DEMO_USERS];
 const demoEmail = (user: DemoUser) => `${user.key}@${TEST_EMAIL_DOMAIN}`;
@@ -113,6 +124,36 @@ export async function seedDemo(
     if (foreign.length > 0) {
       throw new SeedTargetError(
         `시드가 만들지 않은 같은 이메일 계정이 있어 아무것도 바꾸지 않고 멈춥니다: ${foreign
+          .map((row) => row.email)
+          .join(", ")}`,
+      );
+    }
+    // 시드가 만든 제작자라도 사람이 바꿔 둔 공개 설정은 되돌리지 않는다.
+    const creators = await prisma.user.findMany({
+      where: {
+        email: {
+          in: [demoEmail(DEMO_USERS.creator), demoEmail(DEMO_USERS.creator2)],
+        },
+      },
+      include: { creatorProfile: true, servicePackages: true },
+    });
+    const changed = creators.filter((row) => {
+      const packageTitle =
+        row.email === demoEmail(DEMO_USERS.creator)
+          ? DEMO_USERS.creator.packageTitle
+          : DEMO_USERS.creator2.packageTitle;
+      return (
+        row.creatorProfile?.serviceStatus === "PRIVATE" ||
+        row.servicePackages.some(
+          (pkg) =>
+            (pkg.isRepresentative && pkg.title !== packageTitle) ||
+            (pkg.title === packageTitle && pkg.status === "PRIVATE"),
+        )
+      );
+    });
+    if (changed.length > 0) {
+      throw new SeedTargetError(
+        `서비스 공개·대표 패키지를 바꿔 둔 시연 제작자가 있어 아무것도 바꾸지 않고 멈춥니다: ${changed
           .map((row) => row.email)
           .join(", ")}`,
       );
@@ -250,7 +291,7 @@ export async function seedDemo(
       niche: "LIFESTYLE",
     },
     {
-      title: "돌잔치 성장영상 기본",
+      title: DEMO_USERS.creator.packageTitle,
       purpose: "CHILD_FAMILY",
       priceKrw: 200_000,
       deliveryDays: 5,
@@ -269,7 +310,7 @@ export async function seedDemo(
       niche: "LIFESTYLE",
     },
     {
-      title: "웨딩 하이라이트",
+      title: DEMO_USERS.creator2.packageTitle,
       purpose: "WEDDING_COUPLE",
       priceKrw: 350_000,
       deliveryDays: 10,

@@ -204,4 +204,71 @@ describe("실사용자와 함께 쓰는 DB에 시연 데이터 넣기 (sharedDat
     ).rejects.toBeInstanceOf(SeedTargetError);
     expect(await counts()).toEqual(before);
   });
+
+  it.each([
+    [
+      "서비스를 내려 둔 경우",
+      async (creatorId: bigint) => {
+        await prisma.creatorProfile.update({
+          where: { userId: creatorId },
+          data: { serviceStatus: "PRIVATE" },
+        });
+      },
+    ],
+    [
+      "다른 패키지를 대표로 정한 경우",
+      async (creatorId: bigint) => {
+        await prisma.servicePackage.updateMany({
+          where: { creatorId },
+          data: { isRepresentative: false },
+        });
+        await prisma.servicePackage.create({
+          data: {
+            creatorId,
+            title: "직접 만든 대표 패키지",
+            description: "직접 만든 패키지입니다.",
+            purpose: "CHILD_FAMILY",
+            priceKrw: 100_000,
+            deliveryDays: 3,
+            revisionCount: 1,
+            includes: ["영상 1편"],
+            status: "PUBLIC",
+            isRepresentative: true,
+          },
+        });
+      },
+    ],
+    [
+      "시연 패키지를 비공개로 돌린 경우",
+      async (creatorId: bigint) => {
+        await prisma.servicePackage.updateMany({
+          where: { creatorId, title: "돌잔치 성장영상 기본" },
+          data: { status: "PRIVATE", isRepresentative: false },
+        });
+      },
+    ],
+  ])(
+    "시드가 만든 제작자의 %s 되돌리지 않고 쓰기 전에 멈춘다",
+    async (_label, change) => {
+      await realCreator();
+      await seedDemo(prisma, { password: PASSWORD, sharedDatabase: true });
+      const demo = await prisma.user.findUniqueOrThrow({
+        where: { email: "demo-creator@kemi.test" },
+      });
+      await change(demo.id);
+      const before = await counts();
+      const profile = await prisma.creatorProfile.findUniqueOrThrow({
+        where: { userId: demo.id },
+      });
+      await expect(
+        seedDemo(prisma, { password: PASSWORD, sharedDatabase: true }),
+      ).rejects.toBeInstanceOf(SeedTargetError);
+      expect(await counts()).toEqual(before);
+      expect(
+        await prisma.creatorProfile.findUniqueOrThrow({
+          where: { userId: demo.id },
+        }),
+      ).toEqual(profile);
+    },
+  );
 });
