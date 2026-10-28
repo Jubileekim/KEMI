@@ -51,6 +51,22 @@ test("가입 화면과 로그인 전환에서도 공개 모집 목적지를 보�
   await expect(page).toHaveURL("/login?returnTo=%2Fcampaigns");
 });
 
+test("비회원은 팝업에서 로그인 없이 공개 모집을 둘러볼 수 있다", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "공개 모집 살펴보기", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: "로그인 없이 둘러보기" })
+    .click();
+  await expect(page).toHaveURL("/campaigns");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+});
+
 ["client", "creator"].forEach((role) => {
   test(`${role} 로그인 후 공개 모집으로 복귀하고 CTA는 바로 이동한다`, async ({
     page,
