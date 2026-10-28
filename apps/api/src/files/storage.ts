@@ -17,11 +17,22 @@ export interface FileStorage {
   // 형식 판정용으로 앞부분만 읽는다. 없으면 null
   readHead(path: string, bytes: number): Promise<Uint8Array | null>;
   createDownloadUrl(path: string, expiresInSeconds: number): Promise<string>;
+  // 운영 점검용: 키로 버킷을 읽을 수 있는지 본다. 실패해도 예외 없이 결과만 돌려준다.
+  checkBucket(): Promise<StorageCheck>;
 }
 
+// ok: 버킷 접근 가능, missing_bucket: 버킷 이름이 없음, unauthorized: 키 거부, error: 연결·기타 오류
+export type StorageCheck = "ok" | "missing_bucket" | "unauthorized" | "error";
+
+// network: 연결 실패·시간 초과, http: 저장소가 오류 상태로 응답, response: 응답 형식이 예상과 다름
+export type StorageFailure = "network" | "http" | "response";
+
 export class StorageUnavailableError extends Error {
-  constructor() {
-    super("storage request failed");
+  constructor(
+    readonly reason: StorageFailure = "response",
+    readonly storageStatus?: number,
+  ) {
+    super(`storage request failed (${reason})`);
     this.name = "StorageUnavailableError";
   }
 }
@@ -47,7 +58,7 @@ export async function readPrefix(
     const filled = await pull(0);
     return out.slice(0, filled);
   } catch {
-    throw new StorageUnavailableError();
+    throw new StorageUnavailableError("network");
   } finally {
     await reader.cancel().catch(() => undefined);
   }
@@ -75,7 +86,17 @@ export function createSupabaseStorage({
       .map(encodeURIComponent)
       .join("/")}`;
 
-  async function call(url: string, init: RequestInit): Promise<Response> {
+  const field = (value: unknown, key: string): unknown =>
+    typeof value === "object" && value !== null
+      ? Reflect.get(value, key)
+      : undefined;
+
+  // op는 로그에 남길 작업 이름. 키·서명 주소는 로그에 남기지 않는다.
+  async function call(
+    op: string,
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
     try {
       return await fetchFn(url, {
         ...init,
@@ -83,46 +104,58 @@ export function createSupabaseStorage({
         signal: AbortSignal.timeout(STORAGE_TIMEOUT_MS),
       });
     } catch {
-      console.warn("[files] storage request failed");
-      throw new StorageUnavailableError();
+      console.warn(`[files] storage ${op} failed: network or timeout`);
+      throw new StorageUnavailableError("network");
     }
+  }
+
+  // 저장소가 거절한 이유(예: Bucket not found, invalid signature)를 로그에 남기고 실패로 바꾼다.
+  async function rejected(op: string, response: Response): Promise<never> {
+    const body: unknown = await response.json().catch(() => undefined);
+    const hint = [field(body, "error"), field(body, "message")]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .replace(/https?:\/\/\S+/g, "<url>")
+      .slice(0, 160);
+    console.warn(
+      `[files] storage ${op} rejected: http ${response.status}${hint ? ` ${hint}` : ""}`,
+    );
+    throw new StorageUnavailableError("http", response.status);
   }
 
   async function json(response: Response): Promise<unknown> {
     try {
       return await response.json();
     } catch {
-      throw new StorageUnavailableError();
+      throw new StorageUnavailableError("response");
     }
   }
-
-  const field = (value: unknown, key: string): unknown =>
-    typeof value === "object" && value !== null
-      ? Reflect.get(value, key)
-      : undefined;
 
   return {
     async createUploadUrl(path) {
       const response = await call(
+        "upload-sign",
         `${base}/object/upload/sign/${objectPath(path)}`,
         { method: "POST" },
       );
-      if (!response.ok) throw new StorageUnavailableError();
+      if (!response.ok) return rejected("upload-sign", response);
       const body = await json(response);
       const url = field(body, "url");
-      if (typeof url !== "string") throw new StorageUnavailableError();
+      if (typeof url !== "string")
+        throw new StorageUnavailableError("response");
       const token = new URL(url, "http://local").searchParams.get("token");
-      if (!token) throw new StorageUnavailableError();
+      if (!token) throw new StorageUnavailableError("response");
       return { url: `${base}${url}`, token };
     },
 
     async stat(path) {
       const response = await call(
+        "stat",
         `${base}/object/info/authenticated/${objectPath(path)}`,
         { method: "GET" },
       );
       if (response.status === 404 || response.status === 400) return null;
-      if (!response.ok) throw new StorageUnavailableError();
+      if (!response.ok) return rejected("stat", response);
       const body = await json(response);
       const size =
         field(body, "size") ?? field(field(body, "metadata"), "size");
@@ -131,25 +164,63 @@ export function createSupabaseStorage({
 
     async readHead(path, bytes) {
       const response = await call(
+        "read-head",
         `${base}/object/authenticated/${objectPath(path)}`,
         { method: "GET", headers: { Range: `bytes=0-${bytes - 1}` } },
       );
       if (response.status === 404 || response.status === 400) return null;
-      if (!response.ok) throw new StorageUnavailableError();
+      if (!response.ok) return rejected("read-head", response);
       // 저장소가 Range를 무시하고 전체 파일(최대 수백 MB)을 보내도 앞부분만 읽고 나머지는 받지 않는다.
       return readPrefix(response, bytes);
     },
 
     async createDownloadUrl(path, expiresInSeconds) {
-      const response = await call(`${base}/object/sign/${objectPath(path)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expiresIn: expiresInSeconds }),
-      });
-      if (!response.ok) throw new StorageUnavailableError();
+      const response = await call(
+        "download-sign",
+        `${base}/object/sign/${objectPath(path)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expiresIn: expiresInSeconds }),
+        },
+      );
+      if (!response.ok) return rejected("download-sign", response);
       const signed = field(await json(response), "signedURL");
-      if (typeof signed !== "string") throw new StorageUnavailableError();
+      if (typeof signed !== "string")
+        throw new StorageUnavailableError("response");
       return `${base}${signed}`;
+    },
+
+    async checkBucket() {
+      try {
+        const response = await call(
+          "check-bucket",
+          `${base}/bucket/${encodeURIComponent(bucket)}`,
+          { method: "GET" },
+        );
+        if (response.ok) return "ok";
+        // Supabase Storage는 HTTP 400에 실제 이유를 본문 statusCode·error로 담기도 한다.
+        const body: unknown = await response.json().catch(() => undefined);
+        const code = String(field(body, "statusCode") ?? response.status);
+        const text = [field(body, "error"), field(body, "message")]
+          .filter((value): value is string => typeof value === "string")
+          .join(" ")
+          .toLowerCase();
+        console.warn(
+          `[files] storage check-bucket rejected: http ${response.status} ${code} ${text.slice(0, 160)}`,
+        );
+        if (
+          code === "401" ||
+          code === "403" ||
+          /unauthori|signature|jwt|invalid.*key/.test(text)
+        )
+          return "unauthorized";
+        if (code === "404" || text.includes("not found"))
+          return "missing_bucket";
+        return "error";
+      } catch {
+        return "error";
+      }
     },
   };
 }

@@ -15,6 +15,7 @@ export function createFakeStorage() {
     readHead: async (path, n) => objects.get(path)?.slice(0, n) ?? null,
     createDownloadUrl: async (path, seconds) =>
       `https://storage.test/download/${path}?expires=${seconds}`,
+    checkBucket: async () => "ok",
   };
   return {
     storage,

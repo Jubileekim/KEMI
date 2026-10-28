@@ -286,6 +286,7 @@ export function createCatalogService({
         503,
         "SERVICE_UNAVAILABLE",
         "파일 저장소가 아직 설정되지 않았습니다.",
+        { reason: "STORAGE_NOT_CONFIGURED" },
       );
     }
     try {
@@ -301,6 +302,11 @@ export function createCatalogService({
           503,
           "SERVICE_UNAVAILABLE",
           "파일 저장소에 연결할 수 없습니다.",
+          {
+            reason: "STORAGE_REQUEST_FAILED",
+            failure: err.reason,
+            storageStatus: err.storageStatus ?? null,
+          },
         );
       }
       throw err;

@@ -32,7 +32,11 @@ import createPricingRouter from "./pricing/pricing.router.js";
 import type { PricingService } from "./pricing/pricing.service.js";
 import createProjectRouter from "./projects/project.router.js";
 import type { ProjectService } from "./projects/project.service.js";
-import { createHealthRouter, type DatabaseCheck } from "./routes/health.js";
+import {
+  createHealthRouter,
+  type DatabaseCheck,
+  type StorageReadiness,
+} from "./routes/health.js";
 import createTermsRouter from "./terms/terms.router.js";
 import type { TermsService } from "./terms/terms.service.js";
 import createSafetyRouter from "./safety/safety.router.js";
@@ -42,6 +46,8 @@ import type { ActivityService } from "./safety/activity.service.js";
 
 export interface AppDependencies {
   checkDatabase: DatabaseCheck;
+  // /health/ready에 파일 저장소 점검을 붙인다(없으면 생략)
+  checkStorage?: () => Promise<StorageReadiness>;
   authService: AuthService;
   profileService: ProfileService;
   projectService: ProjectService;
@@ -73,6 +79,7 @@ export interface AppDependencies {
 
 export function createApp({
   checkDatabase,
+  checkStorage,
   authService,
   profileService,
   projectService,
@@ -106,7 +113,7 @@ export function createApp({
 
   app.use(express.json({ limit: "1mb" }));
 
-  app.use(createHealthRouter(checkDatabase));
+  app.use(createHealthRouter(checkDatabase, checkStorage));
   app.use("/api/auth", createAuthRouter(authService, appOrigin));
   app.use("/api/profiles", createProfileRouter(authService, profileService));
   app.use("/api/projects", createProjectRouter(authService, projectService));

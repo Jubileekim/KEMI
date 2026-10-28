@@ -2,8 +2,14 @@ import type { HealthResponse, ReadinessResponse } from "@kemi/shared";
 import { Router } from "express";
 
 export type DatabaseCheck = () => Promise<void>;
+export type StorageReadiness = NonNullable<
+  ReadinessResponse["checks"]["storage"]
+>;
 
-export function createHealthRouter(checkDatabase: DatabaseCheck): Router {
+export function createHealthRouter(
+  checkDatabase: DatabaseCheck,
+  checkStorage?: () => Promise<StorageReadiness>,
+): Router {
   const router = Router();
 
   // 프로세스가 살아 있는지만 확인한다. DB 장애로 Render가 서버를 재시작하지 않도록 DB는 보지 않는다.
@@ -28,9 +34,13 @@ export function createHealthRouter(checkDatabase: DatabaseCheck): Router {
       );
       database = "error";
     }
+    // 저장소 상태는 진단용으로만 알린다. 저장소 장애로 서버 전체를 준비 안 됨으로 만들지 않는다.
+    const storage = checkStorage
+      ? await checkStorage().catch((): StorageReadiness => "error")
+      : undefined;
     const body: ReadinessResponse = {
       status: database === "ok" ? "ok" : "unavailable",
-      checks: { database },
+      checks: storage ? { database, storage } : { database },
     };
     res.status(database === "ok" ? 200 : 503).json(body);
   });

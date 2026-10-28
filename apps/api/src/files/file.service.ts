@@ -58,11 +58,27 @@ function notFound(): AppError {
   return new AppError(404, "NOT_FOUND", "파일을 찾을 수 없습니다.");
 }
 
-function unavailable(): AppError {
+// 저장소 환경변수가 없을 때. details.reason으로 요청 실패와 구분한다.
+function notConfigured(): AppError {
   return new AppError(
     503,
     "SERVICE_UNAVAILABLE",
-    "파일 저장소가 아직 설정되지 않았거나 응답하지 않습니다.",
+    "파일 저장소가 아직 설정되지 않았습니다.",
+    { reason: "STORAGE_NOT_CONFIGURED" },
+  );
+}
+
+// 설정은 있지만 저장소 요청이 실패했을 때. 저장소 응답 상태를 함께 알린다(상세 이유는 서버 로그).
+function unavailable(err: StorageUnavailableError): AppError {
+  return new AppError(
+    503,
+    "SERVICE_UNAVAILABLE",
+    "파일 저장소가 요청을 처리하지 못했습니다.",
+    {
+      reason: "STORAGE_REQUEST_FAILED",
+      failure: err.reason,
+      storageStatus: err.storageStatus ?? null,
+    },
   );
 }
 
@@ -110,7 +126,7 @@ export function createFileService({
   now?: () => Date;
 }): FileService {
   function requireStorage(): FileStorage {
-    if (!storage) throw unavailable();
+    if (!storage) throw notConfigured();
     return storage;
   }
 
@@ -118,7 +134,7 @@ export function createFileService({
     try {
       return await work();
     } catch (err) {
-      if (err instanceof StorageUnavailableError) throw unavailable();
+      if (err instanceof StorageUnavailableError) throw unavailable(err);
       throw err;
     }
   }

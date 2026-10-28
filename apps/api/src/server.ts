@@ -62,6 +62,13 @@ function start(env: Env) {
           bucket: env.STORAGE_BUCKET,
         })
       : undefined;
+  // 저장소 설정 여부를 시작 로그에 남긴다(키 값은 남기지 않는다). 운영 503 원인 확인용.
+  if (storage)
+    console.info(`[files] storage enabled: bucket=${env.STORAGE_BUCKET}`);
+  else
+    console.warn(
+      "[files] storage disabled: SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없어 파일 업로드·재생이 503입니다",
+    );
   // 테스트 시크릿 키가 있을 때만 결제·환불을 켠다(env.ts가 live 키를 거부한다).
   const toss = env.TOSS_SECRET_KEY
     ? createTossClient({ secretKey: env.TOSS_SECRET_KEY })
@@ -70,6 +77,8 @@ function start(env: Env) {
     checkDatabase: async () => {
       await prisma.$queryRaw`SELECT 1`;
     },
+    checkStorage: async () =>
+      storage ? storage.checkBucket() : "not_configured",
     authService: createAuthService({
       prisma,
       accessTokenSecret: env.JWT_ACCESS_SECRET,
