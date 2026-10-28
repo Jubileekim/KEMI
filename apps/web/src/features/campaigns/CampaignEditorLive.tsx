@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
@@ -15,6 +15,8 @@ import { label, purposeLabels, styleLabels } from "../live/labels";
 import { Card, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
 import ProjectDraftEditorLive from "./ProjectDraftEditorLive";
+import PricingPanel from "./PricingPanel";
+import { pricingConditions, setBudget } from "./pricing-form";
 
 // datetime-local 값(브라우저 현지 시각)을 ISO로
 const toIso = (local: string) => (local ? new Date(local).toISOString() : "");
@@ -27,6 +29,7 @@ const toLocal = (iso?: string) => {
 
 function Editor({ initial }: { initial?: ProjectSummary }) {
   const navigate = useNavigate();
+  const formRef = useRef<HTMLFormElement>(null);
   const [styles, setStyles] = useState<string[]>(initial?.styles ?? []);
   const [problem, setProblem] = useState("");
   const save = useMutation({
@@ -42,6 +45,7 @@ function Editor({ initial }: { initial?: ProjectSummary }) {
     <>
       <h1 className="type-heading-lg">{initial ? "모집 수정" : "모집 작성"}</h1>
       <form
+        ref={formRef}
         className="grid gap-6"
         onSubmit={(event) => {
           event.preventDefault();
@@ -147,6 +151,11 @@ function Editor({ initial }: { initial?: ProjectSummary }) {
               defaultValue={initial?.budget}
             />
           </Field>
+          <PricingPanel
+            conditions={() => pricingConditions(formRef.current, styles)}
+            target={() => (initial ? { projectId: initial.id } : null)}
+            onApply={(amount) => setBudget(formRef.current, amount)}
+          />
           <Field id="campaign-end" label="모집 마감">
             <Input
               id="campaign-end"
