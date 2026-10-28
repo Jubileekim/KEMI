@@ -9,13 +9,14 @@ import Button from "../../components/ui/button";
 
 export default function Shell() {
   const location = useLocation();
+  const landing = location.pathname === "/landing";
   const { role, status, notice } = useSession();
   const main = useRef<HTMLElement>(null);
   const screen = matchRoutes(screens, location)?.[0]?.route;
   useEffect(() => {
     document.title = `${screen?.title ?? "페이지 없음"} | KEMI`;
-    main.current?.focus();
-  }, [location.pathname, screen?.title]);
+    main.current?.focus({ preventScroll: landing });
+  }, [location.pathname, screen?.title, landing]);
   return (
     <>
       <a
@@ -76,19 +77,23 @@ export default function Shell() {
         id="main-content"
         ref={main}
         tabIndex={-1}
-        className="page-container grid gap-6"
+        className={
+          landing ? "page-container landing-shell" : "page-container grid gap-6"
+        }
         data-layout={screen?.layout ?? "public"}
       >
-        <p className="text-sm text-muted-foreground">
-          {
+        {!landing && (
+          <p className="text-sm text-muted-foreground">
             {
-              public: "함께 만드는 KEMI",
-              member: "회원 공간",
-              workspace: "작업 공간",
-              ops: "운영 공간",
-            }[screen?.layout ?? "public"]
-          }
-        </p>
+              {
+                public: "함께 만드는 KEMI",
+                member: "회원 공간",
+                workspace: "작업 공간",
+                ops: "운영 공간",
+              }[screen?.layout ?? "public"]
+            }
+          </p>
+        )}
         {status === "logging-out" || status === "logout-error" ? (
           <section role="status">
             <p>
@@ -110,7 +115,14 @@ export default function Shell() {
           </>
         )}
       </main>
-      <footer className="page-container text-sm text-muted-foreground">
+      <footer
+        className={`page-container text-sm text-muted-foreground${landing ? " landing-footer" : ""}`}
+      >
+        {landing && (
+          <Link to="/" aria-label="KEMI 작품 피드">
+            <Brand />
+          </Link>
+        )}
         KEMI · 함께 만드는 영상
       </footer>
     </>
