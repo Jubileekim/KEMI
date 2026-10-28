@@ -450,7 +450,7 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 
 ## 시연 데이터 (단계 8)
 
-**전용 개발·시연 DB에만** 시연 데이터를 넣는다. 운영 DB에는 넣지 않는다.
+기본은 **전용 개발·시연 DB 전용**이다. 운영·공유 DB는 여전히 거부하지만, PM이 특정 KEMI 공유 DB와 위험을 명시 승인한 **1회성 수동 실행**만 예외적으로 허용한다. RLS·권한·서비스 DB 설정을 해제하지 않는다.
 
 ```bash
 SEED_PASSWORD=<12자 이상> \
@@ -462,8 +462,9 @@ npm run db:seed -w @kemi/api
 - **대상 확인(fail-closed):** 실행자의 `NODE_ENV`만으로는 DB를 알 수 없어서, 접속 주소에서 DB 신원을 뽑아 확인한다.
   - DB 신원: Supabase는 `supabase:<프로젝트 ref>`, 그 밖은 `host:port/dbname`
   - `SEED_ALLOWED_TARGETS`(쉼표 구분)에 있고 `SEED_CONFIRM_TARGET`과 같아야 실행한다. 다르면 DB에 접속하지 않고 멈춘다.
-  - `NODE_ENV=production`이면 거부한다.
-  - 시연 계정(`@kemi.test`)이 아닌 사용자가 한 명이라도 있는 DB는 실제 서비스 DB로 보고 거부한다.
+  - 기본적으로 `NODE_ENV=production`이면 거부한다.
+  - 기본적으로 시연 계정(`@kemi.test`)이 아닌 사용자가 한 명이라도 있으면 거부한다.
+  - KEMI 운영·공유 DB 한 곳만 아래의 **명시적 운영 시연 승인**으로 예외 처리된다. 다른 운영 DB는 허용하지 않는다.
 - `DATABASE_URL`은 `apps/api/.env`에서 읽는다. 마이그레이션(`npm run db:deploy`)이 먼저 적용돼 있어야 한다.
 - 계정 4개(`demo-client`·`demo-client2`·`demo-creator`·`demo-creator2` `@kemi.test`, 이름에 `[시연]`). 비밀번호는 `SEED_PASSWORD`이며 저장소에 두지 않는다.
 - 만드는 것:
@@ -475,6 +476,27 @@ npm run db:seed -w @kemi/api
 - 작업물·납품 파일은 DB 행만 있고 저장소에 실제 바이트가 없다. 재생·다운로드 주소는 열리지 않는다(실제 업로드·다운로드 검증은 배포 점검 절차에서 따로 한다).
 - **재실행:** 단계마다 "있으면 그대로, 없으면 만든다"로 진행한다. 중간에 실패해도 다시 실행하면 남은 단계만 이어서 만들고, 다 만든 뒤 다시 실행하면 아무것도 바꾸지 않는다. 아무것도 지우지 않는다.
 - 시연 계정은 운영 지표(`GET /api/admin/metrics`)에서 빠진다.
+
+### 운영·공유 DB 예외: PM이 직접 1회성 실행할 때만
+
+**사전 조건:** 기존 DB 백업 확인, 대상 확인, 임시 계정·시연 결제·정산 기록이 운영 DB에 추가되는 데 대한 PM 승인, 시연 영상의 이용 권한 확인. 애플리케이션 서버의 Render 환경변수에 아래 승인 플래그를 **상시 저장하지 않는다**.
+
+```bash
+# DATABASE_URL은 로컬 apps/api/.env 또는 안전한 셸 환경에만 보관한다.
+# 비밀번호는 12자 이상이고 GitHub/메신저/로그에 노출하지 않는다.
+NODE_ENV=production \
+SEED_ALLOWED_TARGETS=supabase:nibqyycfknurkncdgqps \
+SEED_CONFIRM_TARGET=supabase:nibqyycfknurkncdgqps \
+SEED_PRODUCTION_ACK=I_ACKNOWLEDGE_LIVE_KEMI_DB_FAKE_PAYMENTS_AND_MEDIA \
+SEED_PASSWORD='<개별로 생성한 안전한 12자 이상 비밀번호>' \
+npm run db:seed -w @kemi/api
+```
+
+- 세 조건(정확한 DB 신원, 허용 목록·확인값 일치, 위의 명시적 승인 문구)이 모두 맞아야만 운영 DB가 허용된다. 다른 DB는 예외가 없다.
+- 실사용자 계정과 레코드를 지우거나 갱신하지 않는 경로만 사용하지만, **시연 회원 4명, 공개 모집·패키지, 비공개 포트폴리오, 가상 성공 결제·정산·리뷰**가 운영 DB에 추가되어 데이터가 섞인다. 운영 데이터 정리를 별도 계획해야 한다.
+- 같은 이메일(`demo-client@kemi.test` 등)의 계정이 이미 있는데 시드가 만든 계정(이름 `[시연] …`·역할이 같음)이 아니면 **아무것도 쓰기 전에 멈춘다.** 이미 있는 제작자 프로필(소개·분야·활동 여부)은 덮어쓰지 않는다.
+- **영상 주의:** Seed의 `seed/...` 경로는 가짜 `READY` 파일 행으로 실제 Storage 바이트가 없다. 그래서 이 예외 경로에서는 시드 작업물을 **공개하지 않고 비공개(DRAFT)로 둔다**(공개 피드에 재생되지 않는 카드가 생기지 않게). 실제 영상은 권한 확인 후 크리에이터의 `/studio/portfolio`에서 업로드·확인·공개하고 공개 대표 패키지 및 제작 서비스를 설정해야 한다.
+- 본 명령은 **한 번만 수동 실행**하며, 일반 배포·GitHub CI·Render 시작 명령이나 자동화에 포함하지 않는다. 실행하지 않을 때는 `SEED_PRODUCTION_ACK`를 설정하지 않는다.
 
 ## API 경로 규칙
 

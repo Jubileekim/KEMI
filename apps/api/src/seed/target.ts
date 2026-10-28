@@ -1,12 +1,13 @@
 import { TEST_EMAIL_DOMAIN } from "@kemi/shared";
 import type { PrismaClient } from "../generated/prisma/client.js";
 
-// 시드 실행 대상 확인 (#64 리뷰). 실행자의 NODE_ENV는 DB가 무엇인지 말해주지 않으므로, 접속 주소에서
-// DB 신원을 뽑아 허용 목록·명시적 확인값과 맞춰 보고, 실제 사용자가 있는 DB는 거부한다(fail-closed).
-
-// KEMI의 현재 운영·공유 Supabase DB는 신규 users 행이 0개여도 운영 DB다.
-// 개발자가 실수로 허용 목록에 이 신원을 적어도 시연 데이터를 만들 수 없게 막는다.
-const FORBIDDEN_SEED_IDENTITIES = new Set(["supabase:nibqyycfknurkncdgqps"]);
+// 기본: 접속 주소 신원·허용 목록·직접 확인값·실제 사용자 여부를 모두 확인한 후에만 실행한다.
+// KEMI 운영·공유 DB만 PM의 1회성 명시 승인으로 예외 허용한다. 기본은 계속 거부(fail-closed).
+// 이 예외는 DB 전체 권한(RLS)을 바꾸지 않으며 db:seed 명령에만 적용된다.
+const SHARED_PRODUCTION_IDENTITY = "supabase:nibqyycfknurkncdgqps";
+const FORBIDDEN_SEED_IDENTITIES = new Set([SHARED_PRODUCTION_IDENTITY]);
+export const SHARED_PRODUCTION_SEED_ACK =
+  "I_ACKNOWLEDGE_LIVE_KEMI_DB_FAKE_PAYMENTS_AND_MEDIA";
 
 export class SeedTargetError extends Error {
   constructor(message: string) {
@@ -48,19 +49,39 @@ export interface SeedTargetEnv {
   SEED_ALLOWED_TARGETS?: string;
   // 이번 실행 대상의 신원을 직접 적은 값. 허용 목록에 있고 실제 접속 대상과 같아야 한다.
   SEED_CONFIRM_TARGET?: string;
+  // 운영·공유 DB에서 시연 계정·가상 성공결제·가짜 파일 행을 만드는 위험을 1회성으로 명시 확인.
+  // Render의 상시 환경변수로 보관하지 말고 수동 작업 시에만 전달한다.
+  SEED_PRODUCTION_ACK?: string;
+}
+
+// 운영 DB 예외는 실제 DB 신원+허용 목록+확인값+명시적 위험 승인이 모두 일치할 때만 성립한다.
+export function allowSharedProductionDemoSeed(
+  env: SeedTargetEnv,
+  identity: string,
+): boolean {
+  const allowed = (env.SEED_ALLOWED_TARGETS ?? "")
+    .split(",")
+    .map((value) => value.trim());
+  return (
+    identity === SHARED_PRODUCTION_IDENTITY &&
+    env.SEED_PRODUCTION_ACK === SHARED_PRODUCTION_SEED_ACK &&
+    env.SEED_CONFIRM_TARGET === identity &&
+    allowed.includes(identity)
+  );
 }
 
 // 환경 변수만으로 판단할 수 있는 조건. 하나라도 어긋나면 DB에 접속하지 않고 멈춘다.
 export function checkSeedTarget(env: SeedTargetEnv): string {
-  if (env.NODE_ENV === "production") {
+  const identity = databaseIdentity(env.DATABASE_URL);
+  const explicitlyApproved = allowSharedProductionDemoSeed(env, identity);
+  if (env.NODE_ENV === "production" && !explicitlyApproved) {
     throw new SeedTargetError(
-      "NODE_ENV=production에서는 시연 데이터를 넣지 않습니다.",
+      "NODE_ENV=production에서는 명시적 KEMI 공유 DB 승인 없이 시연 데이터를 넣지 않습니다.",
     );
   }
-  const identity = databaseIdentity(env.DATABASE_URL);
-  if (FORBIDDEN_SEED_IDENTITIES.has(identity)) {
+  if (FORBIDDEN_SEED_IDENTITIES.has(identity) && !explicitlyApproved) {
     throw new SeedTargetError(
-      "KEMI 운영·공유 Supabase DB에는 시연 데이터를 넣을 수 없습니다.",
+      "KEMI 운영·공유 Supabase DB에는 1회성 PM 명시 승인 없이 시연 데이터를 넣지 않습니다.",
     );
   }
   const allowed = (env.SEED_ALLOWED_TARGETS ?? "")
@@ -86,7 +107,10 @@ export function checkSeedTarget(env: SeedTargetEnv): string {
 }
 
 // DB에 접속해서 확인하는 조건: 시연 계정(@kemi.test)이 아닌 사용자가 한 명이라도 있으면 실제 서비스 DB로 보고 멈춘다.
-export async function assertSeedDatabase(prisma: PrismaClient): Promise<void> {
+export async function assertSeedDatabase(
+  prisma: PrismaClient,
+  { allowExistingUsers = false }: { allowExistingUsers?: boolean } = {},
+): Promise<void> {
   const realUsers = await prisma.user.count({
     where: {
       OR: [
@@ -95,7 +119,7 @@ export async function assertSeedDatabase(prisma: PrismaClient): Promise<void> {
       ],
     },
   });
-  if (realUsers > 0) {
+  if (realUsers > 0 && !allowExistingUsers) {
     throw new SeedTargetError(
       "시연 계정이 아닌 사용자가 있는 DB입니다. 실제 서비스 DB에는 시연 데이터를 넣지 않습니다.",
     );

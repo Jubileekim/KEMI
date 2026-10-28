@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  allowSharedProductionDemoSeed,
   checkSeedTarget,
   databaseIdentity,
+  SHARED_PRODUCTION_SEED_ACK,
   SeedTargetError,
 } from "../src/seed/target.js";
 
@@ -63,6 +65,43 @@ describe("시드 대상 확인 (#64 리뷰)", () => {
           SEED_CONFIRM_TARGET: productionIdentity,
         }),
       ).toThrow(SeedTargetError);
+    });
+  });
+  it("PM 1회 명시 승인 + 운영 DB 정확한 신원 + 두 개 대상 확인이 모두 일치하면 예외 허용", () => {
+    const identity = "supabase:nibqyycfknurkncdgqps";
+    const base = {
+      DATABASE_URL:
+        "postgresql://postgres.nibqyycfknurkncdgqps:pw@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres",
+      NODE_ENV: "production",
+      SEED_ALLOWED_TARGETS: identity,
+      SEED_CONFIRM_TARGET: identity,
+      SEED_PRODUCTION_ACK: SHARED_PRODUCTION_SEED_ACK,
+    };
+    expect(checkSeedTarget(base)).toBe(identity);
+    expect(allowSharedProductionDemoSeed(base, identity)).toBe(true);
+    expect(
+      allowSharedProductionDemoSeed(
+        { ...base, SEED_PRODUCTION_ACK: undefined },
+        identity,
+      ),
+    ).toBe(false);
+
+    const refused = [
+      { ...base, SEED_PRODUCTION_ACK: undefined },
+      { ...base, SEED_PRODUCTION_ACK: "yes" },
+      { ...base, SEED_ALLOWED_TARGETS: "" },
+      { ...base, SEED_CONFIRM_TARGET: "supabase:other" },
+      { ...base, DATABASE_URL: OTHER },
+      // 어느 운영 DB에나 일괄 적용되는 우회는 없어야 한다.
+      {
+        ...base,
+        DATABASE_URL: OTHER,
+        SEED_ALLOWED_TARGETS: "supabase:prodref999",
+        SEED_CONFIRM_TARGET: "supabase:prodref999",
+      },
+    ];
+    refused.forEach((env) => {
+      expect(() => checkSeedTarget(env)).toThrow(SeedTargetError);
     });
   });
 });
