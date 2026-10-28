@@ -130,6 +130,7 @@ export function PackageCard({
   creatorId: string;
 }) {
   const { role } = useSession();
+  const requestPath = `/creators/${creatorId}/request?packageId=${pkg.id}`;
   return (
     <li className="showcase-card grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -148,10 +149,21 @@ export function PackageCard({
       )}
       {role === "client" && (
         <Button asChild className="justify-self-start">
-          <Link to={`/creators/${creatorId}/request?packageId=${pkg.id}`}>
-            이 패키지로 직접 의뢰
-          </Link>
+          <Link to={requestPath}>이 패키지로 직접 의뢰</Link>
         </Button>
+      )}
+      {/* 비로그인 방문자: 로그인(또는 가입) 뒤 바로 이 패키지 의뢰 화면으로 돌아온다. */}
+      {role === "guest" && (
+        <div className="grid gap-1 justify-self-start">
+          <Button asChild>
+            <Link to={`/login?returnTo=${encodeURIComponent(requestPath)}`}>
+              로그인하고 이 패키지로 의뢰
+            </Link>
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            의뢰인 계정으로 로그인하면 바로 의뢰를 보낼 수 있어요.
+          </p>
+        </div>
       )}
     </li>
   );
