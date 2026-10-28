@@ -383,7 +383,7 @@ PRD v2.0의 공개 맞춤 의뢰(PROJ-01·02)다. 공개 목록과 상세는 로
 | `POST .../{portfolioId}/publish` · `/hide`                      | 크리에이터 | 공개(영상·목적·본인 역할, 고객 작업은 고객 동의)·내리기 |
 | `POST /api/creator/service/publish` · `/hide`                   | 크리에이터 | 제작 서비스 공개(공개 대표 패키지 필요)·내리기          |
 | `GET /api/creators/{userId}`                                    | 누구나     | 제작자 페이지: 대표·기타 공개 패키지, 작업물, 리뷰 요약 |
-| `GET /api/packages/{id}` · `/api/portfolios/{id}` · `.../media` | 누구나     | 공개 패키지·작업물 상세, 작업물 재생 주소(10분)         |
+| `GET /api/packages/{id}` · `/api/portfolios/{id}` · `.../media` | 누구나     | 공개 패키지·작업물 상세, 작업물 재생 주소(24시간)       |
 
 - 공개 서비스의 대표 패키지는 다른 대표를 정하기 전에는 내릴 수 없다. 공개 중인 항목의 필수 값은 비울 수 없다.
 - 작업물 파일은 본인이 올린 `PORTFOLIO` 파일만 쓴다. 고객 납품물은 자동으로 공개되지 않는다.

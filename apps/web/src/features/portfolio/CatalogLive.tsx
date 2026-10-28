@@ -21,7 +21,10 @@ import {
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
 import track from "../../shared/analytics/track";
-import feedMediaMode, { shouldRefreshMedia } from "./feed-media";
+import feedMediaMode, {
+  MEDIA_STALE_MS,
+  shouldRefreshMedia,
+} from "./feed-media";
 import SaveWorkButton from "../saved/SaveWorkButton";
 
 const prefersReducedMotion = () =>
@@ -92,7 +95,7 @@ export function Thumbnail({
     enabled:
       !!portfolio.thumbnailFileId || (autoplay && !!portfolio.videoFileId),
     queryFn: ({ signal }) => kemi.portfolioMedia(portfolio.id, signal),
-    staleTime: 5 * 60_000,
+    staleTime: MEDIA_STALE_MS,
   });
   const mode = feedMediaMode(
     media.data,
@@ -305,6 +308,7 @@ function WorkDetail({ id }: { id: string }) {
     queryKey: ["portfolio-media", id],
     enabled: !!work.data,
     queryFn: ({ signal }) => kemi.portfolioMedia(id, signal),
+    staleTime: MEDIA_STALE_MS,
   });
   const pkg = useQuery({
     queryKey: ["package", work.data?.packageId],
