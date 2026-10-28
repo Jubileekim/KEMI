@@ -19,7 +19,17 @@ import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
 
 function List() {
+  const { role } = useSession();
   const [params, setParams] = useSearchParams();
+  // 검색어·필터·페이지가 하나라도 있으면 "조건에 맞는 모집 없음", 아니면 "아직 모집 없음"
+  const filtered = [
+    "q",
+    "purpose",
+    "budgetMin",
+    "budgetMax",
+    "sort",
+    "page",
+  ].some((key) => params.has(key));
   const search = query({
     q: params.get("q") ?? undefined,
     purpose: params.get("purpose") ?? undefined,
@@ -126,7 +136,25 @@ function List() {
           </p>
           {list.data.items.length === 0 && (
             <Card>
-              <p>조건에 맞는 모집이 없어요. 필터를 바꿔 주세요.</p>
+              {filtered ? (
+                <p>조건에 맞는 모집이 없어요. 필터를 바꿔 주세요.</p>
+              ) : (
+                <p>아직 모집 중인 공고가 없어요.</p>
+              )}
+              {!filtered && role === "client" && (
+                <Button asChild className="justify-self-start">
+                  <Link to="/campaigns/new">첫 모집 공고 올리기</Link>
+                </Button>
+              )}
+              {!filtered && role !== "creator" && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="justify-self-start"
+                >
+                  <Link to="/">작품 피드에서 크리에이터 찾기</Link>
+                </Button>
+              )}
             </Card>
           )}
           <ul className="grid gap-4">

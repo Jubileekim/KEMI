@@ -79,6 +79,13 @@ describe("안전한 역할별 복귀", () => {
       "/campaigns/42?from=list",
     );
     expect(safeReturnTo(null, "creator")).toBe("/studio/portfolio");
+    // 비로그인 패키지 의뢰 CTA: 로그인 뒤 같은 패키지 의뢰 화면으로 돌아온다.
+    expect(safeReturnTo("/creators/7/request?packageId=4", "client")).toBe(
+      "/creators/7/request?packageId=4",
+    );
+    expect(safeReturnTo("/creators/7/request?packageId=4", "creator")).toBe(
+      "/studio/portfolio",
+    );
     expect(safeReturnTo("/campaigns/new", "creator")).toBe("/studio/portfolio");
   });
 });
