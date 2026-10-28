@@ -6,6 +6,7 @@ import { kemi, query } from "../../shared/api/kemi";
 import { purposeLabels, won } from "../live/labels";
 import { Failure } from "../live/ui";
 import { Thumbnail } from "../portfolio/CatalogLive";
+import CampaignBrowseCta from "./CampaignBrowseCta";
 import "./landing.css";
 
 export default function LandingPage() {
@@ -48,12 +49,9 @@ export default function LandingPage() {
             <a className="landing-button" href="#landing-works">
               작품 둘러보기 <ArrowRight size={18} aria-hidden="true" />
             </a>
-            <Link
-              className="landing-button landing-button-outline"
-              to="/campaigns"
-            >
+            <CampaignBrowseCta className="landing-button landing-button-outline">
               공개 모집 살펴보기
-            </Link>
+            </CampaignBrowseCta>
           </div>
         </div>
         <div
@@ -233,9 +231,9 @@ export default function LandingPage() {
             <h2 id="landing-cta-title">좋은 영상의 시작, 좋은 만남부터.</h2>
             <p>지금, 공개 모집에서 함께할 크리에이터를 찾아보세요.</p>
           </div>
-          <Link className="landing-button" to="/campaigns">
+          <CampaignBrowseCta className="landing-button">
             공개 모집 살펴보기 <ArrowRight size={18} aria-hidden="true" />
-          </Link>
+          </CampaignBrowseCta>
         </div>
       </section>
     </div>
