@@ -30,13 +30,13 @@ const prisma = createPrismaClient({
   DATABASE_URL: env.DATABASE_URL,
   DATABASE_POOL_MAX: 2,
 });
+const sharedDatabase = allowSharedProductionDemoSeed(env, identity);
 try {
-  await assertSeedDatabase(prisma, {
-    allowExistingUsers: allowSharedProductionDemoSeed(env, identity),
-  });
+  await assertSeedDatabase(prisma, { allowExistingUsers: sharedDatabase });
   console.info(`[seed] 대상 ${identity}에 시연 데이터를 넣습니다.`);
   const summary = await seedDemo(prisma, {
     password: env.SEED_PASSWORD,
+    sharedDatabase,
     onStep: (name) => console.info(`[seed] ${name} 완료`),
   });
   console.info("[seed] 시연 데이터를 넣었습니다.", summary);
