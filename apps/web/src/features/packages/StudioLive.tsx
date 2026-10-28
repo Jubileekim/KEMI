@@ -16,7 +16,7 @@ import Input from "../../components/ui/input";
 import Textarea from "../../components/ui/textarea";
 import { ApiError } from "../../shared/api/client";
 import { kemi } from "../../shared/api/kemi";
-import { clarifyPortfolioDeleteError } from "./portfolio-delete-error";
+import clarifyPortfolioDeleteError from "./portfolio-delete-error";
 import { getProfile } from "../profiles/api";
 import { uploadFile } from "../../shared/api/upload";
 import {
