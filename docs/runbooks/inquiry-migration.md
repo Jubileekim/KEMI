@@ -10,7 +10,18 @@
 
 ## 1. 적용 전 (PM)
 
-1. Supabase 대시보드에서 운영 DB 백업(또는 Point-in-time 복구 가능 시점) 확인
+1. 백업 확인 — 둘 중 하나를 남긴다.
+   - **Supabase 대시보드:** Database → Backups에서 오늘 날짜 백업(또는 PITR 복구 가능 시점)이 보이면 그 시각을 기록
+   - **직접 백업(대시보드 백업이 없거나 확인이 안 될 때, 무료 플랜 등):** `public` 스키마만 사용자 정의 형식으로 받아 둔다. 로컬에 PostgreSQL 17 클라이언트가 없으면 Docker로 실행한다.
+
+     ```bash
+     docker run --rm -v "$PWD:/backup" postgres:17 pg_dump "<운영 DB 직접 연결 주소>" --schema=public --format=custom --no-owner --file=/backup/kemi-before-inquiry.dump
+     docker run --rm -v "$PWD:/backup" postgres:17 pg_restore --list /backup/kemi-before-inquiry.dump
+     ```
+
+     - 연결 주소는 Supabase의 Direct connection(5432) 또는 Session pooler를 쓴다. Transaction pooler(6543)는 `pg_dump`를 지원하지 않는다.
+     - 두 번째 명령은 파일이 정상인지 목록만 확인한다(아무것도 복원하지 않음). 덤프 파일에는 회원 정보가 들어 있으니 저장소·메신저에 올리지 않는다.
+     - 복원이 필요하면 새 빈 DB에 `pg_restore --no-owner --dbname <새 DB 주소> kemi-before-inquiry.dump`로 먼저 확인한다(운영 DB에 바로 복원하지 않는다).
 2. 읽기 전용 점검: `psql "$DATABASE_URL" -f qa/inquiry-release/precheck.sql`
    - `target_already_applied = 0`, `unfinished_or_rolled_back = 0`
    - `portfolio_bookmarks_table`이 비어 있고, 새 컬럼 조회 결과 0행
@@ -51,4 +62,5 @@ KEMI_API_URL=https://kemi-api.onrender.com KEMI_SMOKE_EMAIL=<시연 의뢰인 @k
 
 - **빈 DB 리허설**: 마이그레이션 22개 상태 → precheck(대상 미적용·테이블·컬럼 없음) → 적용 → postcheck(RLS·nullable 4개·제약 5개·인덱스 4개, 기존 행 영향 0) 모두 기대값
 - **운영 복제 DB + 로컬 API 스모크**: 상태 점검, 로그인, 기존 직접 의뢰 조회(3건), 작품 저장·목록, 일괄 문의 2건 발송, 같은 commandId 재전송 시 같은 의뢰 ID(중복 없음), 공통 조건 저장, 철회·저장 해제 정리까지 모두 통과
-- 운영 DB에서는 아직 실행하지 않았다(1~4는 PM 적용 시 실행).
+- **직접 백업·복원 리허설**: 운영 복제 DB를 위 `pg_dump` 명령으로 백업(270KB, 테이블 데이터 60개) → 새 빈 DB에 `pg_restore` → 회원 24·의뢰 18·작업물 18·마이그레이션 23건으로 원본과 같음
+- 운영 precheck는 PM이 실행해 기대값 확인(2026-10-28 05:18, #92 리뷰). 적용·postcheck·스모크는 아직(1~4는 PM 적용 시 실행).
