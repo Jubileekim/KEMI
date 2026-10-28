@@ -2206,7 +2206,7 @@ const openApiDocument = {
       get: {
         tags: ["catalog"],
         summary: "공개 작업물 재생 주소",
-        description: "영상·대표 이미지의 10분짜리 서명 주소.",
+        description: "영상·대표 이미지의 24시간짜리 서명 주소.",
         parameters: [idParam("portfolioId")],
         responses: {
           200: jsonResponse("재생 주소", "PortfolioMedia"),

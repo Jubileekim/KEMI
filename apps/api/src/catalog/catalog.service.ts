@@ -20,7 +20,9 @@ type Tx = Prisma.TransactionClient;
 type PackageRow = Prisma.ServicePackageGetPayload<object>;
 type PortfolioRow = Prisma.PortfolioGetPayload<object>;
 
-const MEDIA_URL_SECONDS = 10 * 60;
+// 공개 작업물 재생 주소의 유효 시간. 긴 영상도 끝까지 재생되고, 보는 도중 주소가 바뀌어 처음으로 돌아가지 않게 길게 둔다.
+// 비공개 파일(납품·자료)은 files 서비스의 10분 주소를 그대로 쓴다.
+const MEDIA_URL_SECONDS = 24 * 60 * 60;
 
 const conflict = (message: string) => new AppError(409, "CONFLICT", message);
 const notFound = (what: string) =>
@@ -599,7 +601,7 @@ export function createCatalogService({
       return toPortfolio(row);
     },
 
-    // 공개 작업물의 영상·대표 이미지 재생 주소(10분)
+    // 공개 작업물의 영상·대표 이미지 재생 주소(24시간)
     async getPortfolioMedia(portfolioId) {
       const row = await prisma.portfolio.findFirst({
         where: { id: portfolioId, status: "PUBLIC", creator: publicCreator },
