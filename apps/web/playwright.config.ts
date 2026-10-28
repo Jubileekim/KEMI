@@ -6,7 +6,9 @@ export default defineConfig({
   testIgnore: "**/production/**",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: 0,
+  // CI(느린 모바일 에뮬레이션)에서 시간 때문에 가끔 실패하는 Mock 화면 검사를 한 번만 다시 시도한다.
+  // 다시 시도해 통과하면 결과에 flaky로 남는다. 로컬은 다시 시도하지 않아 불안정한 검사를 바로 드러낸다.
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : 2,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
