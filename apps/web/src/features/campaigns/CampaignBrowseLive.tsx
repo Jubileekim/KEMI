@@ -216,6 +216,7 @@ function Detail({ id }: { id: string }) {
   if (project.error) return <Failure error={project.error} />;
   const item = project.data;
   const owner = user?.id === item.clientId;
+  const applyPath = `/campaigns/${id}/apply`;
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
@@ -243,8 +244,35 @@ function Detail({ id }: { id: string }) {
       <div className="flex flex-wrap gap-3">
         {role === "creator" && item.status === "OPEN" && (
           <Button asChild>
-            <Link to={`/campaigns/${id}/apply`}>지원하기</Link>
+            <Link to={applyPath}>지원하기</Link>
           </Button>
+        )}
+        {/* 비회원: 크리에이터로 가입(또는 로그인)하고 프로필을 저장하면 이 공고의 지원 화면으로 돌아온다. */}
+        {role === "guest" && item.status === "OPEN" && (
+          <div className="grid gap-1">
+            <div className="flex flex-wrap gap-3">
+              <Button asChild>
+                <Link
+                  to={`/signup?role=creator&returnTo=${encodeURIComponent(applyPath)}`}
+                >
+                  크리에이터로 가입하고 지원하기
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to={`/login?returnTo=${encodeURIComponent(applyPath)}`}>
+                  로그인하고 지원하기
+                </Link>
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              지원은 크리에이터 계정으로 할 수 있어요.
+            </p>
+          </div>
+        )}
+        {role === "client" && !owner && item.status === "OPEN" && (
+          <p className="text-sm text-muted-foreground">
+            지원은 크리에이터 계정으로 할 수 있어요.
+          </p>
         )}
         {role === "creator" && (
           <>

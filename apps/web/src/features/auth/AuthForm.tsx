@@ -44,7 +44,8 @@ export default function AuthForm({ signup = false }: { signup?: boolean }) {
       password: "",
       passwordConfirm: "",
       name: "",
-      role: "CLIENT",
+      // 공고 지원 버튼처럼 역할을 정해 들어오면(?role=creator) 그 역할을 먼저 골라 둔다.
+      role: params.get("role") === "creator" ? "CREATOR" : "CLIENT",
     },
     resolver: zodResolver(signup ? signupFormSchema : loginFormSchema),
   });

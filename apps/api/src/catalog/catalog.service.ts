@@ -141,6 +141,7 @@ export interface CatalogService {
     portfolioId: bigint,
     visible: boolean,
   ): Promise<Portfolio>;
+  deletePortfolio(user: AuthUser, portfolioId: bigint): Promise<void>;
   setServiceStatus(
     user: AuthUser,
     visible: boolean,
@@ -498,6 +499,25 @@ export function createCatalogService({
               : { status: "PRIVATE" },
           }),
         );
+      });
+    },
+
+    // PORT-03: 작업물 삭제. 의뢰의 참고 작품으로 쓰인 작업물은 의뢰 기록을 지키려고 지우지 않는다(비공개는 가능).
+    // 다른 사람의 저장함에서는 함께 빠진다. 영상·이미지 파일 행은 그대로 둔다.
+    async deletePortfolio(user, portfolioId) {
+      const creatorId = requireCreator(user);
+      await prisma.$transaction(async (tx) => {
+        await ownPortfolio(tx, creatorId, portfolioId);
+        const referenced = await tx.workRequest.count({
+          where: { referencePortfolioId: portfolioId },
+        });
+        if (referenced > 0) {
+          throw conflict(
+            "의뢰에 참고 작품으로 쓰인 작업물은 지울 수 없어요. 비공개로 돌려 주세요.",
+          );
+        }
+        await tx.portfolioBookmark.deleteMany({ where: { portfolioId } });
+        await tx.portfolio.delete({ where: { id: portfolioId } });
       });
     },
 

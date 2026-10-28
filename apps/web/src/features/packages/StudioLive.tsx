@@ -7,12 +7,15 @@ import {
   VIDEO_STYLES,
   packageCreateSchema,
   portfolioCreateSchema,
+  type Portfolio,
 } from "@kemi/shared";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
 import Input from "../../components/ui/input";
 import Textarea from "../../components/ui/textarea";
+import { ApiError } from "../../shared/api/client";
 import { kemi } from "../../shared/api/kemi";
+import { getProfile } from "../profiles/api";
 import { uploadFile } from "../../shared/api/upload";
 import {
   catalogStatusLabels,
@@ -102,6 +105,64 @@ function ServiceToggle() {
         </p>
       )}
       {service.error && <p role="alert">{errorText(service.error)}</p>}
+    </Card>
+  );
+}
+
+// 공개에 꼭 필요한 항목(서버의 공개 조건과 같다). 빠진 항목을 화면에서 바로 알려 준다.
+function missingForPublish(p: {
+  videoFileId: string | null;
+  purpose: string | null;
+  roles: string[];
+}) {
+  return [
+    !p.videoFileId && "영상",
+    !p.purpose && "영상 목적",
+    p.roles.length === 0 && "본인 역할",
+  ].filter((name): name is string => typeof name === "string");
+}
+
+// 작업물이 피드에 보이려면 세 가지가 모두 필요하다(작업물 공개·공개된 대표 패키지·제작 서비스 공개).
+function FeedChecklist({ hasPublicWork }: { hasPublicWork: boolean }) {
+  const profile = useQuery({
+    queryKey: ["studio-service-status"],
+    queryFn: ({ signal }) => getProfile("CREATOR", signal),
+  });
+  const packages = useQuery({
+    queryKey: ["my-packages"],
+    queryFn: ({ signal }) => kemi.myPackages(signal),
+  });
+  const service =
+    profile.data?.profile.type === "CREATOR" &&
+    profile.data.profile.serviceStatus === "PUBLIC";
+  const representative = !!packages.data?.items.some(
+    (p) => p.isRepresentative && p.status === "PUBLIC",
+  );
+  const steps = [
+    {
+      done: hasPublicWork,
+      text: "작업물 1개 이상 공개 (아래 목록의 공개 버튼)",
+    },
+    { done: representative, text: "공개된 대표 패키지 지정", link: true },
+    { done: service, text: "제작 서비스 공개", link: true },
+  ];
+  const ready = steps.every((s) => s.done);
+  return (
+    <Card title={ready ? "피드에 보이고 있어요" : "피드에 보이려면"}>
+      <ul className="grid gap-1">
+        {steps.map((s) => (
+          <li key={s.text} className="flex flex-wrap items-center gap-2">
+            <span aria-hidden>{s.done ? "✅" : "⬜"}</span>
+            <span>{s.text}</span>
+            <span className="sr-only">{s.done ? "완료" : "아직"}</span>
+            {s.link && !s.done && (
+              <Link className="underline" to="/studio/packages">
+                패키지 관리로 가기
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -321,6 +382,25 @@ function Portfolios() {
     mutationFn: (run: () => Promise<unknown>) => run(),
     onSuccess: refresh,
   });
+  const [notice, setNotice] = useState<string | null>(null);
+  const publish = (p: Portfolio) => {
+    const missing = missingForPublish(p);
+    if (missing.length > 0) {
+      setNotice(
+        `공개하려면 ${missing.join("·")}이(가) 필요해요. 이 초안을 지우고 빠진 항목을 넣어 다시 올려 주세요.`,
+      );
+      return;
+    }
+    setNotice(null);
+    act.mutate(() => kemi.setPortfolioVisible(p.id, true));
+  };
+  // 삭제는 한 번 더 눌러 확인한다(되돌릴 수 없음).
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const remove = (p: Portfolio) => {
+    setNotice(null);
+    setConfirming(null);
+    act.mutate(() => kemi.deletePortfolio(p.id));
+  };
   const [styles, setStyles] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const create = useMutation({
@@ -349,11 +429,17 @@ function Portfolios() {
       };
       return kemi.createPortfolio(portfolioCreateSchema.parse(body));
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      setNotice("초안으로 저장했어요. 목록에서 공개를 눌러야 피드에 보여요.");
+      await refresh();
+    },
   });
   return (
     <>
       <h1 className="type-heading-lg">작품 관리</h1>
+      <FeedChecklist
+        hasPublicWork={!!list.data?.items.some((p) => p.status === "PUBLIC")}
+      />
       <Card title="내 작업물">
         {list.isPending && <Loading />}
         {list.error && <Failure error={list.error} />}
@@ -372,9 +458,7 @@ function Portfolios() {
                 <Button
                   size="sm"
                   disabled={act.isPending}
-                  onClick={() =>
-                    act.mutate(() => kemi.setPortfolioVisible(p.id, true))
-                  }
+                  onClick={() => publish(p)}
                 >
                   공개
                 </Button>
@@ -395,12 +479,48 @@ function Portfolios() {
                   </Button>
                 </>
               )}
+              {p.status !== "PUBLIC" && missingForPublish(p).length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  공개에 필요: {missingForPublish(p).join("·")}
+                </span>
+              )}
+              {confirming === p.id ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={act.isPending}
+                    onClick={() => remove(p)}
+                  >
+                    정말 삭제
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirming(null)}
+                  >
+                    취소
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={act.isPending}
+                  onClick={() => setConfirming(p.id)}
+                >
+                  삭제
+                </Button>
+              )}
             </li>
           ))}
         </ul>
+        {notice && <p role="status">{notice}</p>}
         {act.error && (
           <p role="alert">
-            {errorText(act.error, "공개하려면 영상·목적·본인 역할이 필요해요.")}
+            {act.error instanceof ApiError && act.error.status === 409
+              ? act.error.message
+              : errorText(act.error, "요청을 처리하지 못했어요.")}
           </p>
         )}
       </Card>

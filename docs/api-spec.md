@@ -4,7 +4,7 @@
 > `npm run docs:api -w @kemi/api`로 다시 만든다. `test/api-spec.test.ts`가 코드와 어긋나면 실패한다.
 
 - 버전: 0.1.0
-- 엔드포인트: 128개 (21개 영역)
+- 엔드포인트: 129개 (21개 영역)
 - 실시간 문서: 개발 서버에서 `/api/docs`(Swagger UI), `/api/openapi.json`
 
 ## 공통 규칙
@@ -189,6 +189,7 @@
 | GET | [`/api/creator/portfolios`](#op-get-api-creator-portfolios) | 내 작업물 목록 | 로그인 필요 |
 | POST | [`/api/creator/portfolios`](#op-post-api-creator-portfolios) | 작업물 초안 저장 (PORT-01) | 로그인 필요 |
 | PATCH | [`/api/creator/portfolios/{portfolioId}`](#op-patch-api-creator-portfolios-portfolioid) | 작업물 수정 | 로그인 필요 |
+| DELETE | [`/api/creator/portfolios/{portfolioId}`](#op-delete-api-creator-portfolios-portfolioid) | 작업물 삭제 | 로그인 필요 |
 | POST | [`/api/creator/portfolios/{portfolioId}/publish`](#op-post-api-creator-portfolios-portfolioid-publish) | 작업물 공개 (PORT-02) | 로그인 필요 |
 | POST | [`/api/creator/portfolios/{portfolioId}/hide`](#op-post-api-creator-portfolios-portfolioid-hide) | 작업물 내리기 | 로그인 필요 |
 | POST | [`/api/creator/service/publish`](#op-post-api-creator-service-publish) | 제작 서비스 공개 | 로그인 필요 |
@@ -2415,6 +2416,33 @@ REQUESTED·UNKNOWN 환불을 Toss 주문 조회로 맞춘다. 주문 번호·원
 | 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
 | 403 | 역할이 맞지 않음 (`FORBIDDEN`) | [Error](#schema-error) |
 | 404 | 대상이 없거나 본인 것이 아님 (`NOT_FOUND`) | [Error](#schema-error) |
+
+<a id="op-delete-api-creator-portfolios-portfolioid"></a>
+
+### DELETE `/api/creator/portfolios/{portfolioId}`
+
+**작업물 삭제**
+
+본인 작업물만. 다른 사람의 저장함에서도 빠진다. 의뢰의 참고 작품으로 쓰인 작업물은 지울 수 없다(409, 비공개는 가능). 영상·이미지 파일 행은 남는다.
+
+- 인증: 로그인 필요
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 |
+| --- | --- | --- | --- | --- |
+| `portfolioId` | 경로 | 예 | string (형식 `^[1-9]\d*$`) | - |
+
+**응답**
+
+| 상태 | 설명 | 본문 |
+| --- | --- | --- |
+| 204 | 삭제함 | - |
+| 400 | 입력값 오류 (`VALIDATION_FAILED`) | [Error](#schema-error) |
+| 401 | 토큰 없음·잘못됨 (`UNAUTHENTICATED`), 만료 (`TOKEN_EXPIRED`), 세션 폐기 (`SESSION_REVOKED`) | [Error](#schema-error) |
+| 403 | 역할이 맞지 않음 (`FORBIDDEN`) | [Error](#schema-error) |
+| 404 | 대상이 없거나 본인 것이 아님 (`NOT_FOUND`) | [Error](#schema-error) |
+| 409 | 의뢰의 참고 작품이라 지울 수 없음 (`CONFLICT`) | [Error](#schema-error) |
 
 <a id="op-post-api-creator-portfolios-portfolioid-publish"></a>
 
