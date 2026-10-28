@@ -1,7 +1,7 @@
 import { ApiError } from "../../shared/api/client";
 
 /** Give a safe, specific message for a portfolio referenced by an existing inquiry. */
-export function clarifyPortfolioDeleteError(error: unknown): unknown {
+export default function clarifyPortfolioDeleteError(error: unknown): unknown {
   if (
     error instanceof ApiError &&
     error.status === 409 &&
