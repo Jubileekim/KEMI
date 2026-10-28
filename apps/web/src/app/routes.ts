@@ -8,11 +8,16 @@ export interface Screen {
 const members: Role[] = ["client", "creator"];
 export const screens: Screen[] = [
   {
+    path: "/",
+    title: "당신의 이야기에, 딱 맞는 크리에이터",
+    layout: "public",
+  },
+  {
     path: "/landing",
     title: "당신의 이야기에, 딱 맞는 크리에이터",
     layout: "public",
   },
-  { path: "/", title: "작품 피드", layout: "public" },
+  { path: "/works", title: "작품 피드", layout: "public" },
   { path: "/works/:workId", title: "작품 상세", layout: "public" },
   {
     path: "/creators/:creatorId",

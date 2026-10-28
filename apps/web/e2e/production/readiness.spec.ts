@@ -73,7 +73,7 @@ test("비회원 온보딩은 로그인을 거치고 조회 실패를 빈 피드�
       json: { error: { code: "SERVICE_UNAVAILABLE" } },
     }),
   );
-  await page.goto("/");
+  await page.goto("/works");
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(
     page.getByText("아직 공개된 작품이 없어요.", { exact: true }),
@@ -126,7 +126,7 @@ test("공개 제작자 페이지에서 경력·외부 링크를 볼 수 있다",
 
 test("빈 피드 안내·필터 초기화·운영 하단 문구", async ({ page }, testInfo) => {
   await apiFixture(page);
-  await page.goto("/");
+  await page.goto("/works");
   await expect(
     page.getByRole("heading", { name: "아직 공개된 작품이 없어요." }),
   ).toBeVisible();
@@ -138,7 +138,7 @@ test("빈 피드 안내·필터 초기화·운영 하단 문구", async ({ page 
     page.getByRole("heading", { name: "조건에 맞는 작품이 없어요." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "전체 작품 보기" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/works$/);
   await expect(page.locator("footer")).toContainText("함께 만드는 영상");
   await expect(page.locator("body")).not.toContainText("화면 기반 구성 중");
   await page.screenshot({

@@ -148,7 +148,7 @@ export default function SavedWorksLive() {
         <Card>
           <p>아직 저장한 작품이 없어요.</p>
           <Button asChild className="justify-self-start">
-            <Link to="/">작품 둘러보기</Link>
+            <Link to="/works">작품 둘러보기</Link>
           </Button>
         </Card>
       ) : (

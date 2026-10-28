@@ -2,6 +2,17 @@
 
 final result: passed
 
+## Current routing and header correction · 2026-10-28
+
+- `/` now renders the existing-data landing page. `/works` renders the original work feed, and `/works/:workId` remains the detail route. `/landing` remains a compatible landing URL, including purpose filters.
+- Header logo returns to `/`; the 작품 menu, landing feed links, empty saved-works/campaign links, profile next action and Mock catalog back links now point to `/works`. Query parameters are preserved on landing-to-feed links.
+- Header navigation uses `align-items: center` so plain text links and the taller logout button have matching vertical centers. A pre-existing local edit for this exact alignment was preserved when switching from the merged feature branch to latest main (`eb68f33`).
+- [Authenticated header after correction](qa/landing/home-header-aligned.png): captured by the regression test using a local Mock creator session, not a production login. Every header link center differs from the logout button center by at most 1 CSS px at 1920px. Both test projects run this alignment check at that wide width, matching the reported screenshot.
+- New route round-trip and alignment cases each reported `ok` in desktop and mobile projects (four case-level passes). Route round-trip checks `/` → `/works` → reload → logo `/`, plus `/landing?purpose=SNS_SHORTFORM` → `/works?purpose=SNS_SHORTFORM`. Mobile routing uses the normal mobile viewport.
+- Browser regression invocation used a temporary configuration selecting installed Edge in place of missing Playwright Chromium. Both broader (28 cases) and focused (4 cases) runs stalled during runner shutdown after emitting individual pass results. The focused run ultimately reported `4 passed` plus one plugin-setup teardown timeout and exited 1; it is not claimed as a successful full command. Temporary config was removed; CI's normal browser configuration is unchanged. Full CI E2E remains pending.
+- Product build/typecheck/lint passed; 29 unit-test files / 251 tests passed. Browser also confirmed the public-data root landing, original `/works` feed, and return via the home logo. Public API proxy showed an intermittent network failure on refetch; it is not reported as an API stability fix.
+- Existing feed-dependent Mock/production/deployment checks were updated to `/works`; root deployment/session checks continue covering the new landing. Source mockup and earlier verification records below are historical and no longer imply the root remains the feed.
+
 ## Current revision: existing public works and videos
 
 - Both hero and grid now read the same existing public feed API. The hero uses the first three unfiltered records; filters only change the grid. Clicking a hero opens its actual work ID.

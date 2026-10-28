@@ -112,8 +112,10 @@ export default function App() {
                       {screen.path === "/creators/:creatorId/request" && (
                         <DirectRequestForm />
                       )}
-                      {screen.path === "/" && <FeedPage />}
-                      {screen.path === "/landing" && <LandingPage />}
+                      {screen.path === "/works" && <FeedPage />}
+                      {(screen.path === "/" || screen.path === "/landing") && (
+                        <LandingPage />
+                      )}
                       {screen.path === "/works/:workId" && <WorkDetailPage />}
                       {screen.path === "/studio/packages" && <PackagesPage />}
                       {screen.path === "/studio/portfolio" && <PortfolioPage />}
@@ -183,6 +185,7 @@ export default function App() {
                       {![
                         ...proposalPaths,
                         "/",
+                        "/works",
                         "/landing",
                         "/works/:workId",
                         "/creators/:creatorId",

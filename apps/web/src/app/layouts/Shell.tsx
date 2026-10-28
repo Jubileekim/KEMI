@@ -9,7 +9,7 @@ import Button from "../../components/ui/button";
 
 export default function Shell() {
   const location = useLocation();
-  const landing = location.pathname === "/landing";
+  const landing = location.pathname === "/" || location.pathname === "/landing";
   const { role, status, notice } = useSession();
   const main = useRef<HTMLElement>(null);
   const screen = matchRoutes(screens, location)?.[0]?.route;
@@ -30,8 +30,11 @@ export default function Shell() {
           <Link to="/" aria-label="KEMI 홈">
             <Brand />
           </Link>
-          <nav aria-label="주 메뉴" className="flex flex-wrap gap-6">
-            <NavLink to="/" end>
+          <nav
+            aria-label="주 메뉴"
+            className="flex flex-wrap items-center gap-6"
+          >
+            <NavLink to="/works" end>
               작품
             </NavLink>
             <NavLink to="/campaigns">공개 모집</NavLink>
@@ -122,7 +125,7 @@ export default function Shell() {
         className={`page-container text-sm text-muted-foreground${landing ? " landing-footer" : ""}`}
       >
         {landing && (
-          <Link to="/" aria-label="KEMI 작품 피드">
+          <Link to="/works" aria-label="KEMI 작품 피드">
             <Brand />
           </Link>
         )}

@@ -134,7 +134,7 @@ export default function LandingPage() {
             <p className="landing-eyebrow">함께 만드는 KEMI</p>
             <h2 id="landing-works-title">마음이 가는 작품을 발견해보세요.</h2>
           </div>
-          <Link className="landing-text-link" to={`/${search}`}>
+          <Link className="landing-text-link" to={`/works${search}`}>
             전체 작품 보기 <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
@@ -216,7 +216,7 @@ export default function LandingPage() {
           <div className="landing-more">
             <Link
               className="landing-button landing-button-outline"
-              to={`/${search}`}
+              to={`/works${search}`}
             >
               작품 더 보기 <ArrowRight size={18} aria-hidden="true" />
             </Link>

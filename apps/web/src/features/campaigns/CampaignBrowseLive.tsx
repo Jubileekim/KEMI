@@ -152,7 +152,7 @@ function List() {
                   variant="outline"
                   className="justify-self-start"
                 >
-                  <Link to="/">작품 피드에서 크리에이터 찾기</Link>
+                  <Link to="/works">작품 피드에서 크리에이터 찾기</Link>
                 </Button>
               )}
             </Card>

@@ -1,16 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./proposal-helpers";
 
-test("홈에서 회원가입·로그인과 공개 모집 상세로 이동한다", async ({ page }) => {
-  await page.goto("/");
+test("작품 피드에서 회원가입·로그인과 공개 모집 상세로 이동한다", async ({
+  page,
+}) => {
+  await page.goto("/works");
   const guide = page.getByRole("navigation", { name: "화면 이동 안내" });
   await expect(guide.getByRole("link")).toHaveCount(3);
   await guide.getByRole("link", { name: /회원가입 시작하기/ }).click();
   await expect(page).toHaveURL("/signup");
   await page.getByRole("link", { name: "KEMI 홈" }).click();
+  await page.getByRole("link", { name: "작품", exact: true }).click();
   await guide.getByRole("link", { name: /로그인하고 이어가기/ }).click();
   await expect(page).toHaveURL("/login");
   await page.getByRole("link", { name: "KEMI 홈" }).click();
+  await page.getByRole("link", { name: "작품", exact: true }).click();
   await guide.getByRole("link", { name: /공개 모집 둘러보기/ }).click();
   await expect(page).toHaveURL("/campaigns");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("공개 모집");
@@ -26,7 +30,7 @@ test("홈에서 회원가입·로그인과 공개 모집 상세로 이동한다"
 test("의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간다", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await login(page, "client");
   await expect(page).toHaveURL("/me/activity");
   const guide = page.getByRole("navigation", { name: "화면 이동 안내" });
@@ -57,9 +61,10 @@ test("의뢰인 로그인 도착점에서 초안·프로필·협의로 이어간
 test("크리에이터는 홈·프로필에서 제작 관리로 이동하고 의뢰인 경로는 차단된다", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await login(page);
   await page.getByRole("link", { name: "KEMI 홈" }).click();
+  await page.getByRole("link", { name: "작품", exact: true }).click();
   const guide = page.getByRole("navigation", { name: "화면 이동 안내" });
   await expect(guide.getByRole("link")).toHaveCount(5);
   await guide.getByRole("link", { name: /프로필 확인·수정/ }).click();
@@ -85,7 +90,7 @@ test("크리에이터는 홈·프로필에서 제작 관리로 이동하고 의�
 test("의뢰인은 다른 모집에서 크리에이터 전용 제출 행동을 보지 않는다", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await login(page, "client");
   await page
     .getByRole("navigation", { name: "화면 이동 안내" })

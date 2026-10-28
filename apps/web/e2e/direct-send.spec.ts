@@ -19,7 +19,7 @@ async function fillDirect(page: import("@playwright/test").Page) {
 test("6-B 비회원 피드→영상→제작자→패키지→로그인 복귀→개인 의뢰 발송", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/works");
   await page.getByRole("article").first().getByRole("link").first().click();
   await page.getByRole("link", { name: "제작자·공개 패키지 보기" }).click();
   await page.getByRole("link", { name: "로그인하고 이 패키지로 의뢰" }).click();
