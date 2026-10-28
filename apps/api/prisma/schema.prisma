@@ -41,6 +41,7 @@ model User {
   creatorRequests       WorkRequest[]        @relation("WorkRequestCreator")
   notifications         Notification[]
   projectBookmarks      ProjectBookmark[]
+  portfolioBookmarks    PortfolioBookmark[]
   termsAuthored         TermsVersion[]       @relation("TermsVersionAuthor")
   termsRequested        TermsVersion[]       @relation("TermsVersionSigningRequester")
   signatures            Signature[]
@@ -228,10 +229,16 @@ model WorkRequest {
   purpose         String?
   eventDate       DateTime? @map("event_date") @db.Date
   respondDueAt    DateTime? @map("respond_due_at") @db.Timestamptz(3)
+  // 직접 의뢰 공통 조건(INQ-01): 보유 자료, 희망 납품일(행사일과 별개), 참고 작품, 일괄 문의 묶음
+  materialType         String?   @map("material_type")
+  desiredDeliveryDate  DateTime? @map("desired_delivery_date") @db.Date
+  referencePortfolioId BigInt?   @map("reference_portfolio_id")
+  inquiryGroupId       String?   @map("inquiry_group_id") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  servicePackage ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  servicePackage     ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  referencePortfolio Portfolio?      @relation("WorkRequestReferencePortfolio", fields: [referencePortfolioId], references: [id], onDelete: Restrict)
   client         User            @relation("WorkRequestClient", fields: [clientId], references: [id], onDelete: Restrict)
   creator        User            @relation("WorkRequestCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   project        Project?        @relation(fields: [projectId], references: [id], onDelete: Restrict)
@@ -245,6 +252,7 @@ model WorkRequest {
   @@index([creatorId, createdAt])
   @@index([clientId, createdAt])
   @@index([projectId, status])
+  @@index([inquiryGroupId])
   @@map("work_requests")
 }
 
@@ -725,9 +733,27 @@ model Portfolio {
   thumbnail File?           @relation("PortfolioThumbnail", fields: [thumbnailFileId], references: [id], onDelete: Restrict)
   package   ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
 
+  bookmarks    PortfolioBookmark[]
+  referencedBy WorkRequest[]       @relation("WorkRequestReferencePortfolio")
+
   @@index([creatorId, createdAt])
   @@index([status, publishedAt])
   @@map("portfolios")
+}
+
+// 작품 저장함 (SAVE-01). 마음에 드는 공개 작품을 모아 두고 일괄 문의에 쓴다.
+model PortfolioBookmark {
+  userId      BigInt   @map("user_id")
+  portfolioId BigInt   @map("portfolio_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Restrict)
+
+  @@id([userId, portfolioId])
+  @@index([portfolioId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("portfolio_bookmarks")
 }
 
 // ─── 공고 임시 저장 (CAMP-01·02) ────────────────────────────────

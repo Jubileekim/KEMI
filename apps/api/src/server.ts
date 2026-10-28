@@ -25,6 +25,7 @@ import { createDeliveryService } from "./delivery/delivery.service.js";
 import { createCatalogService } from "./catalog/catalog.service.js";
 import { createProjectDraftService } from "./projects/project-draft.service.js";
 import { createDirectRequestService } from "./direct/direct.service.js";
+import { createInquiryService } from "./direct/inquiry.service.js";
 import { createSafetyService } from "./safety/safety.service.js";
 import { createAnalyticsService } from "./safety/analytics.service.js";
 import { createActivityService } from "./safety/activity.service.js";
@@ -101,6 +102,7 @@ function start(env: Env) {
     catalogService: createCatalogService({ prisma, storage }),
     projectDraftService: createProjectDraftService({ prisma }),
     directRequestService: createDirectRequestService({ prisma }),
+    inquiryService: createInquiryService({ prisma }),
     feedService: createFeedService({ prisma }),
     fileService: createFileService({
       prisma,

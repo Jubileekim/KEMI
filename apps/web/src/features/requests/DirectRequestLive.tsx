@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { directRequestCreateSchema, VIDEO_PURPOSES } from "@kemi/shared";
+import { directRequestCreateSchema } from "@kemi/shared";
 import Button from "../../components/ui/button";
-import Input from "../../components/ui/input";
-import Textarea from "../../components/ui/textarea";
 import { kemi } from "../../shared/api/kemi";
-import { label, purposeLabels, won } from "../live/labels";
+import { won } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { errorText, selectClass } from "../live/errors";
 import track from "../../shared/analytics/track";
+import ConditionFields from "../saved/ConditionFields";
+import readConditions from "../saved/conditions";
 
 // DIRECT-01: 공개 패키지로 직접 의뢰 보내기(실제 API). 크리에이터가 48시간 안에 수락하면 협의가 시작된다.
 export default function DirectRequestLive() {
@@ -21,13 +21,16 @@ export default function DirectRequestLive() {
     queryFn: ({ signal }) => kemi.creator(creatorId, signal),
   });
   const [packageId, setPackageId] = useState(params.get("packageId") ?? "");
+  // 작품 상세에서 왔으면 그 작품을 참고 작품으로 함께 보낸다(INQ-01).
+  const referenceId = params.get("portfolioId") ?? "";
+  const reference = useQuery({
+    queryKey: ["portfolio", referenceId],
+    enabled: !!referenceId,
+    queryFn: ({ signal }) => kemi.portfolio(referenceId, signal),
+  });
   const [problem, setProblem] = useState("");
   const send = useMutation({
-    mutationFn: (body: {
-      message: string;
-      purpose?: string;
-      eventDate?: string;
-    }) =>
+    mutationFn: (body: Record<string, unknown>) =>
       kemi.sendDirectRequest(packageId, directRequestCreateSchema.parse(body)),
     onSuccess: (request) => {
       track("request_sent", request.id);
@@ -53,13 +56,11 @@ export default function DirectRequestLive() {
           setProblem("");
           if (!selected) return;
           if (selected.id !== packageId) setPackageId(selected.id);
-          const form = new FormData(event.currentTarget);
-          const purpose = String(form.get("purpose") ?? "");
-          const eventDate = String(form.get("eventDate") ?? "");
           const body = {
-            message: String(form.get("message") ?? "").trim(),
-            ...(purpose ? { purpose } : {}),
-            ...(eventDate ? { eventDate } : {}),
+            ...readConditions(event.currentTarget),
+            ...(reference.data?.creatorId === creatorId
+              ? { referencePortfolioId: reference.data.id }
+              : {}),
           };
           const checked = directRequestCreateSchema.safeParse(body);
           if (!checked.success) {
@@ -94,33 +95,13 @@ export default function DirectRequestLive() {
             ]}
           />
         )}
-        <Field id="direct-message" label="요청사항 (10자 이상)">
-          <Textarea
-            id="direct-message"
-            name="message"
-            rows={5}
-            required
-            maxLength={2000}
-          />
-        </Field>
-        <Field id="direct-purpose" label="영상 목적 (선택)">
-          <select
-            id="direct-purpose"
-            name="purpose"
-            className={selectClass}
-            defaultValue=""
-          >
-            <option value="">선택하지 않음</option>
-            {VIDEO_PURPOSES.map((value) => (
-              <option key={value} value={value}>
-                {label(purposeLabels, value)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="direct-date" label="행사일 (선택)">
-          <Input id="direct-date" name="eventDate" type="date" />
-        </Field>
+        {reference.data?.creatorId === creatorId && (
+          <p className="rounded-xl bg-muted p-3 text-sm">
+            참고 작품: 「{reference.data.title}」 — 크리에이터가 이 작품을 보고
+            제작 가능 여부를 판단해요.
+          </p>
+        )}
+        <ConditionFields idPrefix="direct" />
         {packages.length === 0 && (
           <p role="alert">공개된 패키지가 없어 직접 의뢰를 보낼 수 없어요.</p>
         )}

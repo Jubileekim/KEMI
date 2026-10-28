@@ -46,6 +46,7 @@ const ReviewPage = lazy(() => import("../features/operations/ReviewPage"));
 const ActivityLive = lazy(() => import("../features/activity/ActivityLive"));
 const SafetyLive = lazy(() => import("../features/operations/SafetyLive"));
 const activityPaths = ["/me/activity", "/bookmarks", "/recommendations"];
+const SavedWorksLive = lazy(() => import("../features/saved/SavedWorksLive"));
 const NotificationsLive = lazy(() =>
   import("../features/activity/ActivityLive").then((m) => ({
     default: m.NotificationsLive,
@@ -157,6 +158,12 @@ export default function App() {
                         ) : (
                           <SettlementSummary />
                         ))}
+                      {screen.path === "/me/saved" &&
+                        (mockEnabled ? (
+                          <Placeholder screen={screen} />
+                        ) : (
+                          <SavedWorksLive />
+                        ))}
                       {screen.path === "/notifications" &&
                         (mockEnabled ? (
                           <Placeholder screen={screen} />
@@ -187,6 +194,7 @@ export default function App() {
                         "/ops/disputes",
                         ...activityPaths,
                         "/notifications",
+                        "/me/saved",
                         "/reports/new",
                         "/ops/reports",
                         "/contracts/:contractId/review",

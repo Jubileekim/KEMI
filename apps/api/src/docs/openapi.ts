@@ -56,6 +56,11 @@ import {
   REFUND_STATUSES,
   CATALOG_STATUSES,
   directRequestCreateSchema,
+  bulkInquiryCreateSchema,
+  BULK_INQUIRY_MAX,
+  BULK_INQUIRY_RESULTS,
+  MATERIAL_TYPES,
+  WORK_BOOKMARK_MAX,
   CONTRACT_STATUSES,
   packageCreateSchema,
   packageUpdateSchema,
@@ -1645,6 +1650,92 @@ const openApiDocument = {
           403: errorResponse("역할이 맞지 않음 (`FORBIDDEN`)"),
           404: errorResponse("대상이 없거나 당사자가 아님 (`NOT_FOUND`)"),
           409: errorResponse("지금 상태에서 할 수 없음 (`CONFLICT`)"),
+        },
+      },
+    },
+    "/api/me/work-bookmarks": {
+      get: {
+        tags: ["direct"],
+        summary: "작품 저장함 목록 (SAVE-01)",
+        description: `내가 저장한 작품(최근 저장순, 최대 ${WORK_BOOKMARK_MAX}개). \`available\`은 지금도 공개 중이고 의뢰할 수 있는 패키지(연결 패키지 또는 대표 패키지)가 있는지다.`,
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: jsonResponse("저장한 작품", "WorkBookmarkList"),
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/portfolios/{portfolioId}/bookmark": {
+      put: {
+        tags: ["direct"],
+        summary: "작품 저장 (SAVE-01)",
+        description: `공개 작품만 저장한다. 이미 저장했으면 그대로 성공. 최대 ${WORK_BOOKMARK_MAX}개(넘으면 409).`,
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: {
+            description: "저장됨",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["saved"],
+                  properties: { saved: { const: true } },
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          403: errorResponse("이용이 제한된 계정 (`FORBIDDEN`)"),
+          404: errorResponse("공개 작품이 아님 (`NOT_FOUND`)"),
+          409: errorResponse("저장 한도 초과 (`CONFLICT`)"),
+        },
+      },
+      delete: {
+        tags: ["direct"],
+        summary: "작품 저장 해제 (SAVE-01)",
+        description: "저장하지 않은 작품이어도 성공한다.",
+        security: [{ bearerAuth: [] }],
+        parameters: [idParam("portfolioId")],
+        responses: {
+          200: {
+            description: "해제됨",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["saved"],
+                  properties: { saved: { const: false } },
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+        },
+      },
+    },
+    "/api/direct-inquiries": {
+      post: {
+        tags: ["direct"],
+        summary: "저장한 작품의 제작자들에게 일괄 문의 (INQ-01)",
+        description: `활성 의뢰인. 작품 1~${BULK_INQUIRY_MAX}개를 골라 각 작품의 제작자에게 같은 조건(요청사항·목적·보유 자료·행사일·희망 납품일)으로 직접 의뢰를 보낸다. 작품마다 연결 패키지(없거나 비공개면 대표 패키지) 조건으로 시작하고, 크리에이터당 한 건이다. 보낼 수 없는 작품은 결과에 이유(\`ALREADY_OPEN\` 이미 진행 중, \`SAME_CREATOR\` 같은 제작자, \`UNAVAILABLE\` 공개 아님)를 남기고 나머지는 보낸다. 같은 \`commandId\`로 다시 보내면 처음 결과를 돌려준다. 이후 흐름(48시간 응답·조건서·서명·결제)은 직접 의뢰와 같다.`,
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: requestSchema(bulkInquiryCreateSchema),
+            },
+          },
+        },
+        responses: {
+          201: jsonResponse("작품별 발송 결과", "BulkInquiryResponse"),
+          400: errorResponse("입력값 오류 (`VALIDATION_FAILED`)"),
+          ...bearerErrors,
+          403: errorResponse(
+            "역할이 맞지 않음 (`FORBIDDEN`), 이용 제한 (`RESTRICTED`)",
+          ),
+          409: errorResponse("동시에 겹친 요청 (`CONFLICT`)"),
         },
       },
     },
@@ -3657,6 +3748,10 @@ const openApiDocument = {
           "message",
           "purpose",
           "eventDate",
+          "materialType",
+          "desiredDeliveryDate",
+          "referencePortfolio",
+          "inquiryGroupId",
           "status",
           "respondDueAt",
           "respondedAt",
@@ -3690,10 +3785,106 @@ const openApiDocument = {
           message: { type: "string" },
           purpose: { type: ["string", "null"] },
           eventDate: { type: ["string", "null"], format: "date" },
+          materialType: {
+            description: "보유 자료: 사진만 / 사진·영상 / 촬영도 필요",
+            anyOf: [
+              { type: "string", enum: [...MATERIAL_TYPES] },
+              { type: "null" },
+            ],
+          },
+          desiredDeliveryDate: {
+            type: ["string", "null"],
+            format: "date",
+            description: "희망 납품일(행사일과 같거나 빠름)",
+          },
+          referencePortfolio: {
+            description: "이 의뢰를 시작한 참고 작품",
+            anyOf: [
+              {
+                type: "object",
+                required: ["id", "title"],
+                properties: {
+                  id: { type: "string" },
+                  title: { type: "string" },
+                },
+              },
+              { type: "null" },
+            ],
+          },
+          inquiryGroupId: {
+            type: ["string", "null"],
+            format: "uuid",
+            description: "일괄 문의로 보낸 경우 그 묶음 ID",
+          },
           status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
           respondDueAt: { type: "string", format: "date-time" },
           respondedAt: { type: ["string", "null"], format: "date-time" },
           createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      BulkInquiryResponse: {
+        type: "object",
+        required: ["inquiryGroupId", "results"],
+        properties: {
+          inquiryGroupId: { type: "string", format: "uuid" },
+          results: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "portfolioId",
+                "portfolioTitle",
+                "creatorName",
+                "status",
+                "request",
+              ],
+              properties: {
+                portfolioId: { type: "string" },
+                portfolioTitle: { type: ["string", "null"] },
+                creatorName: { type: ["string", "null"] },
+                status: { type: "string", enum: [...BULK_INQUIRY_RESULTS] },
+                request: {
+                  anyOf: [
+                    { $ref: "#/components/schemas/DirectRequest" },
+                    { type: "null" },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      WorkBookmarkList: {
+        type: "object",
+        required: ["items"],
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "portfolio",
+                "creator",
+                "startingPriceKrw",
+                "savedAt",
+                "available",
+              ],
+              properties: {
+                portfolio: { $ref: "#/components/schemas/Portfolio" },
+                creator: {
+                  type: "object",
+                  required: ["userId", "name"],
+                  properties: {
+                    userId: { type: "string" },
+                    name: { type: "string" },
+                  },
+                },
+                startingPriceKrw: { type: ["integer", "null"] },
+                savedAt: { type: "string", format: "date-time" },
+                available: { type: "boolean" },
+              },
+            },
+          },
         },
       },
       DirectRequestList: {

@@ -50,6 +50,10 @@ import {
   createDirectRequestService,
   type DirectRequestService,
 } from "../../src/direct/direct.service.js";
+import {
+  createInquiryService,
+  type InquiryService,
+} from "../../src/direct/inquiry.service.js";
 import { createFeedService } from "../../src/direct/feed.service.js";
 import {
   type CancelService,
@@ -84,6 +88,7 @@ interface TestAppOptions {
   deliveryService?: DeliveryService;
   catalogService?: CatalogService;
   directRequestService?: DirectRequestService;
+  inquiryService?: InquiryService;
   cancelService?: CancelService;
 }
 
@@ -169,6 +174,7 @@ export function createTestApp({
   deliveryService,
   catalogService,
   directRequestService,
+  inquiryService,
   cancelService,
 }: TestAppOptions = {}): Express {
   unusedPrisma ??= createPrismaClient({
@@ -212,6 +218,7 @@ export function createTestApp({
     projectDraftService: createProjectDraftService({ prisma: client }),
     directRequestService:
       directRequestService ?? createDirectRequestService({ prisma: client }),
+    inquiryService: inquiryService ?? createInquiryService({ prisma: client }),
     feedService: createFeedService({ prisma: client }),
     cancelService: cancelService ?? createCancelService({ prisma: client }),
     safetyService: createSafetyService({ prisma: client }),

@@ -129,6 +129,12 @@ export const screens: Screen[] = [
   },
   { path: "/me/activity", title: "내 활동", layout: "member", roles: members },
   {
+    path: "/me/saved",
+    title: "작품 저장함",
+    layout: "member",
+    roles: ["client"],
+  },
+  {
     path: "/bookmarks",
     title: "저장한 캠페인",
     layout: "member",

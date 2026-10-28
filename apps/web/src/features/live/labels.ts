@@ -8,6 +8,18 @@ export const purposeLabels: Record<string, string> = {
   SNS_SHORTFORM: "SNS·숏폼",
   OTHER: "기타",
 };
+// 의뢰할 때 가진 자료(INQ-01)
+export const materialTypeLabels: Record<string, string> = {
+  PHOTOS_ONLY: "사진만 있어요",
+  PHOTOS_AND_VIDEOS: "사진·영상이 있어요",
+  NEEDS_SHOOTING: "촬영도 필요해요",
+};
+export const bulkResultLabels: Record<string, string> = {
+  SENT: "보냈어요",
+  ALREADY_OPEN: "이 패키지로 진행 중인 의뢰가 있어 건너뛰었어요",
+  SAME_CREATOR: "같은 크리에이터에게 이미 보냈어요",
+  UNAVAILABLE: "지금은 의뢰할 수 없는 작품이에요",
+};
 export const styleLabels: Record<string, string> = {
   EMOTIONAL: "감성",
   FUN: "유쾌",

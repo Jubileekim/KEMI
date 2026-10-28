@@ -22,6 +22,7 @@ import { Card, Facts, Failure, Field, Loading } from "../live/ui";
 import { selectClass } from "../live/errors";
 import track from "../../shared/analytics/track";
 import feedMediaMode, { shouldRefreshMedia } from "./feed-media";
+import SaveWorkButton from "../saved/SaveWorkButton";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -125,12 +126,15 @@ function Thumbnail({
 export function PackageCard({
   pkg,
   creatorId,
+  portfolioId,
 }: {
   pkg: ServicePackage;
   creatorId: string;
+  // 작품 상세에서 왔으면 그 작품을 참고 작품으로 의뢰에 붙인다(INQ-01)
+  portfolioId?: string;
 }) {
   const { role } = useSession();
-  const requestPath = `/creators/${creatorId}/request?packageId=${pkg.id}`;
+  const requestPath = `/creators/${creatorId}/request?packageId=${pkg.id}${portfolioId ? `&portfolioId=${portfolioId}` : ""}`;
   return (
     <li className="showcase-card grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -239,6 +243,9 @@ function Feed() {
               <Thumbnail portfolio={item.portfolio} autoplay />
               <span className="type-title">{item.portfolio.title}</span>
             </Link>
+            <span className="justify-self-start">
+              <SaveWorkButton portfolioId={item.portfolio.id} compact />
+            </span>
             <Link
               to={`/creators/${item.creator.userId}`}
               className="text-muted-foreground underline-offset-4 hover:underline"
@@ -349,10 +356,17 @@ function WorkDetail({ id }: { id: string }) {
         <Button asChild variant="outline" className="justify-self-start">
           <Link to={`/creators/${w.creatorId}`}>제작자 페이지</Link>
         </Button>
+        <span className="justify-self-start">
+          <SaveWorkButton portfolioId={w.id} />
+        </span>
       </Card>
       {pkg.data && (
         <ul className="grid gap-4">
-          <PackageCard pkg={pkg.data} creatorId={w.creatorId} />
+          <PackageCard
+            pkg={pkg.data}
+            creatorId={w.creatorId}
+            portfolioId={w.id}
+          />
         </ul>
       )}
     </>

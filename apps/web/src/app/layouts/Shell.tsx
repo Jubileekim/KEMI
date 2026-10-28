@@ -41,7 +41,10 @@ export default function Shell() {
               </>
             )}
             {role === "client" && (
-              <NavLink to="/campaigns/new">캠페인 작성</NavLink>
+              <>
+                <NavLink to="/campaigns/new">캠페인 작성</NavLink>
+                {!mockEnabled && <NavLink to="/me/saved">작품 저장함</NavLink>}
+              </>
             )}
             <NavLink to="/me/activity">내 활동</NavLink>
             {(role === "client" || role === "creator") && (
