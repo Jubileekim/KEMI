@@ -17,6 +17,7 @@ describe("parseEnv", () => {
       JWT_ACCESS_SECRET,
       APP_ORIGIN,
       TRUST_PROXY_HOPS: 0,
+      API_DOCS: false,
       AI_PRICING_MODEL: "gpt-4o-mini",
       STORAGE_BUCKET: "kemi-private",
     });
@@ -51,6 +52,15 @@ describe("parseEnv", () => {
           /^(?![\s\S]*real-secret-value)[\s\S]*TOSS_SECRET_KEY/,
         ),
       }),
+    );
+  });
+
+  it("API_DOCS는 기본으로 꺼져 있고 true·false만 받는다", () => {
+    expect(parseEnv({ ...REQUIRED }).API_DOCS).toBe(false);
+    expect(parseEnv({ ...REQUIRED, API_DOCS: "true" }).API_DOCS).toBe(true);
+    expect(parseEnv({ ...REQUIRED, API_DOCS: "false" }).API_DOCS).toBe(false);
+    expect(() => parseEnv({ ...REQUIRED, API_DOCS: "yes" })).toThrow(
+      /API_DOCS/,
     );
   });
 
