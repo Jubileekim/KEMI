@@ -122,3 +122,86 @@ describe("시연 데이터 (단계 8)", () => {
     await assertSeedDatabase(prisma, { allowExistingUsers: true });
   });
 });
+
+describe("실사용자와 함께 쓰는 DB에 시연 데이터 넣기 (sharedDatabase)", () => {
+  async function realCreator() {
+    const user = await prisma.user.create({
+      data: { email: "real@example.com", name: "실제 제작자", role: "CREATOR" },
+    });
+    await prisma.creatorProfile.create({
+      data: {
+        userId: user.id,
+        introduction: "실제 제작자 소개",
+        niche: "LIFESTYLE",
+        isAvailable: false,
+      },
+    });
+    return user.id;
+  }
+  const snapshot = (userId: bigint) =>
+    prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { creatorProfile: true },
+    });
+
+  it("실사용자와 기존 시연 프로필을 바꾸지 않고, 작업물을 공개하지 않으며, 다시 실행해도 같다", async () => {
+    const realId = await realCreator();
+    const real = await snapshot(realId);
+    // 이전 실행에서 시드가 만든 계정을 누군가 고쳐 둔 상태
+    const demo = await prisma.user.create({
+      data: {
+        email: "demo-creator@kemi.test",
+        name: "[시연] 박편집",
+        role: "CREATOR",
+      },
+    });
+    await prisma.creatorProfile.create({
+      data: {
+        userId: demo.id,
+        introduction: "직접 고친 소개",
+        niche: "FOOD",
+        isAvailable: false,
+      },
+    });
+
+    const summary = await seedDemo(prisma, {
+      password: PASSWORD,
+      sharedDatabase: true,
+    });
+    expect(await snapshot(realId)).toEqual(real);
+    const kept = await prisma.creatorProfile.findUniqueOrThrow({
+      where: { userId: demo.id },
+    });
+    expect(kept).toMatchObject({
+      introduction: "직접 고친 소개",
+      niche: "FOOD",
+      isAvailable: false,
+    });
+    expect(await prisma.portfolio.count({ where: { status: "PUBLIC" } })).toBe(
+      0,
+    );
+
+    const before = await counts();
+    expect(
+      await seedDemo(prisma, { password: PASSWORD, sharedDatabase: true }),
+    ).toEqual(summary);
+    expect(await counts()).toEqual(before);
+    expect(await snapshot(realId)).toEqual(real);
+  });
+
+  it("시드가 만들지 않은 같은 이메일 계정이 있으면 아무것도 쓰지 않고 멈춘다", async () => {
+    await realCreator();
+    await prisma.user.create({
+      data: {
+        email: "demo-client2@kemi.test",
+        name: "직접 만든 시연 계정",
+        role: "CLIENT",
+      },
+    });
+    const before = await counts();
+    await expect(
+      seedDemo(prisma, { password: PASSWORD, sharedDatabase: true }),
+    ).rejects.toBeInstanceOf(SeedTargetError);
+    expect(await counts()).toEqual(before);
+  });
+});

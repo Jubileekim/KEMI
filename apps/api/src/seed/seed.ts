@@ -9,6 +9,7 @@ import { createDirectRequestService } from "../direct/direct.service.js";
 import { createProductionService } from "../production/production.service.js";
 import { createProjectService } from "../projects/project.service.js";
 import { createTermsService } from "../terms/terms.service.js";
+import { SeedTargetError } from "./target.js";
 
 // 시연용 데이터 (단계 8). 전용 시연 DB에서만 쓴다(실행 대상 확인은 run.ts·target.ts).
 // - 모든 계정은 @kemi.test 이메일이라 운영 지표에서 빠지고, 이름에 [시연]이 붙는다.
@@ -19,9 +20,24 @@ import { createTermsService } from "../terms/terms.service.js";
 // 단계마다 "이미 있으면 그대로 쓰고, 없으면 만든다"로 진행한다. 중간에 실패해도 다시 실행하면 남은 단계만 이어서
 // 만들고, 다 만든 뒤 다시 실행하면 아무것도 바꾸지 않는다. 요청 식별자(commandId)는 단계 이름에서 고정값으로 만들어
 // 재실행이 서비스의 멱등 처리로 같은 결과를 받는다. 아무것도 지우지 않는다.
+//
+// 실사용자와 함께 쓰는 DB(sharedDatabase, 운영 DB 1회성 예외)에서는 더 조심한다.
+// - 같은 이메일의 시연 계정이 이미 있는데 시드가 만든 계정(이름·역할이 같음)이 아니면 아무것도 쓰기 전에 멈춘다.
+// - 이미 있는 제작자 프로필은 덮어쓰지 않는다.
+// - 작업물은 비공개(DRAFT)로 둔다. 파일 행만 있고 영상이 없어 공개 피드에 재생되지 않는 카드가 생기기 때문이다.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BCRYPT_COST = 12;
+
+const DEMO_USERS = {
+  client: { key: "demo-client", name: "김의뢰", role: "CLIENT" },
+  client2: { key: "demo-client2", name: "이가족", role: "CLIENT" },
+  creator: { key: "demo-creator", name: "박편집", role: "CREATOR" },
+  creator2: { key: "demo-creator2", name: "최촬영", role: "CREATOR" },
+} as const;
+type DemoUser = (typeof DEMO_USERS)[keyof typeof DEMO_USERS];
+const demoEmail = (user: DemoUser) => `${user.key}@${TEST_EMAIL_DOMAIN}`;
+const demoName = (user: DemoUser) => `[시연] ${user.name}`;
 
 export interface SeedSummary {
   users: { email: string; role: string }[];
@@ -59,9 +75,12 @@ export async function seedDemo(
     password,
     now = () => new Date(),
     onStep = () => undefined,
+    sharedDatabase = false,
   }: {
     password: string;
     now?: () => Date;
+    // 실사용자와 함께 쓰는 DB. 기존 계정·프로필을 덮어쓰지 않고 작업물을 공개하지 않는다.
+    sharedDatabase?: boolean;
     // 단계가 끝날 때마다 불린다(진행 표시, 부분 실패 테스트).
     onStep?: (name: string) => void;
   },
@@ -76,17 +95,37 @@ export async function seedDemo(
   const direct = createDirectRequestService({ prisma, now });
 
   // ─── 계정 ───
+  if (sharedDatabase) {
+    const demoUsers = Object.values(DEMO_USERS);
+    const existing = await prisma.user.findMany({
+      where: { email: { in: demoUsers.map(demoEmail) } },
+      select: { email: true, name: true, role: true },
+    });
+    const foreign = existing.filter(
+      (row) =>
+        !demoUsers.some(
+          (user) =>
+            demoEmail(user) === row.email &&
+            demoName(user) === row.name &&
+            user.role === row.role,
+        ),
+    );
+    if (foreign.length > 0) {
+      throw new SeedTargetError(
+        `시드가 만들지 않은 같은 이메일 계정이 있어 아무것도 바꾸지 않고 멈춥니다: ${foreign
+          .map((row) => row.email)
+          .join(", ")}`,
+      );
+    }
+  }
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
-  const ensureUser = async (
-    key: string,
-    name: string,
-    role: "CLIENT" | "CREATOR",
-  ): Promise<AuthUser> => {
-    const email = `${key}@${TEST_EMAIL_DOMAIN}`;
+  const ensureUser = async (user: DemoUser): Promise<AuthUser> => {
+    const email = demoEmail(user);
+    const { role } = user;
     const row =
       (await prisma.user.findUnique({ where: { email } })) ??
       (await prisma.user.create({
-        data: { email, passwordHash, name: `[시연] ${name}`, role },
+        data: { email, passwordHash, name: demoName(user), role },
       }));
     if (row.role !== role) {
       throw new Error(`시연 계정 ${email}의 역할이 예상과 다릅니다.`);
@@ -99,10 +138,10 @@ export async function seedDemo(
       status: "ACTIVE",
     };
   };
-  const client = await ensureUser("demo-client", "김의뢰", "CLIENT");
-  const client2 = await ensureUser("demo-client2", "이가족", "CLIENT");
-  const creator = await ensureUser("demo-creator", "박편집", "CREATOR");
-  const creator2 = await ensureUser("demo-creator2", "최촬영", "CREATOR");
+  const client = await ensureUser(DEMO_USERS.client);
+  const client2 = await ensureUser(DEMO_USERS.client2);
+  const creator = await ensureUser(DEMO_USERS.creator);
+  const creator2 = await ensureUser(DEMO_USERS.creator2);
   step("users");
 
   // 저장 경로를 이름으로 고정해 재실행 때 같은 파일 행을 쓴다.
@@ -148,7 +187,7 @@ export async function seedDemo(
     await prisma.creatorProfile.upsert({
       where: { userId: creatorId },
       create: { userId: creatorId, ...profile, isAvailable: true },
-      update: { ...profile, isAvailable: true },
+      update: sharedDatabase ? {} : { ...profile, isAvailable: true },
     });
     const existingPackage = await prisma.servicePackage.findFirst({
       where: { creatorId, title: pkg.title },
@@ -199,7 +238,7 @@ export async function seedDemo(
           })
         ).id,
       );
-    if (existingWork?.status !== "PUBLIC") {
+    if (!sharedDatabase && existingWork?.status !== "PUBLIC") {
       await catalog.setPortfolioStatus(user, portfolioId, true);
     }
     return packageId;
