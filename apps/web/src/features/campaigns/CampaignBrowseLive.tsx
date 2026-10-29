@@ -199,15 +199,19 @@ function List() {
 }
 
 function Detail({ id }: { id: string }) {
-  const { role, user } = useSession();
+  const { role, user, status } = useSession();
   const client = useQueryClient();
+  // 작성자·지원자는 마감·선정 뒤에도 상세를 본다(서버가 로그인 정보로 판단).
+  // 새로고침 직후 로그인 확인이 끝나기 전에 비회원으로 조회하면 404가 남으므로, 확인이 끝난 뒤 사용자별로 조회한다.
+  const projectKey = ["project", id, user?.id ?? "guest"];
   const project = useQuery({
-    queryKey: ["project", id],
+    queryKey: projectKey,
+    enabled: status !== "checking",
     queryFn: ({ signal }) => kemi.project(id, signal),
   });
   const close = useMutation({
     mutationFn: () => kemi.closeProject(id),
-    onSuccess: (data) => client.setQueryData(["project", id], data),
+    onSuccess: (data) => client.setQueryData(projectKey, data),
   });
   const bookmark = useMutation({
     mutationFn: (on: boolean) => (on ? kemi.bookmark(id) : kemi.unbookmark(id)),

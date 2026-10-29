@@ -11,7 +11,7 @@ import {
   label,
   purposeLabels,
   materialTypeLabels,
-  requestStatusLabels,
+  requestProgress,
   won,
 } from "../live/labels";
 import { Card, Facts, Failure, Loading } from "../live/ui";
@@ -46,7 +46,7 @@ function DirectHeader({ requestId }: { requestId: string }) {
     <Card title={`직접 의뢰 · ${item.package.title}`}>
       <Facts
         items={[
-          ["상태", label(requestStatusLabels, item.status)],
+          ["상태", requestProgress(item.status, item.stage)],
           ["패키지 금액", won(item.package.priceKrw)],
           ["작업 일수", `${item.package.deliveryDays}일`],
           ["목적", item.purpose ? label(purposeLabels, item.purpose) : "미정"],
@@ -135,7 +135,7 @@ export default function WorkspaceLive({ requestId }: { requestId: string }) {
         </h1>
         {terms.data && (
           <Badge variant="secondary">
-            {label(requestStatusLabels, terms.data.workRequestStatus)}
+            {requestProgress(terms.data.workRequestStatus, terms.data.stage)}
           </Badge>
         )}
       </div>

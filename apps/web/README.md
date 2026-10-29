@@ -90,7 +90,9 @@ npm run test:web:e2e
 - ID는 API 계약대로 문자열로 취급한다.
 - 인증 저장 방식 제안: Access 토큰은 메모리, Refresh 토큰은 HttpOnly 쿠키. localStorage에 저장하지 않는다.
 - 갱신 요청을 하나로 모으는 것은 확정 사항이다. Web Locks·`REFRESH_RACE` 재시도 횟수 등은 문서의 제안 기준을 인증 PR에서 맞춘다.
-- 오류 화면은 서버 메시지 문구 대신 shared의 오류 코드로 분기한다. 오류 코드가 추가되면 shared도 함께 갱신한다.
+- 오류 화면은 기본적으로 shared의 오류 코드와 HTTP 상태에 따른 화면 문구를 사용한다. 오류 코드가 추가되면 shared도 함께 갱신한다.
+- 예외적으로 Live 화면의 `errorText`는 400·409 응답에서 한글을 포함하고 200자 이하인 서버 문구(`ApiError.serverMessage`)를 표시한다. 입력 검사 `details` 배열의 조건에 맞는 문구를 순서대로 우선 확인하고, 없으면 `error.message`를 확인한다.
+- 표시 조건에 맞는 서버 문구가 없거나 401·429·5xx 응답이면 기존 화면 문구를 사용한다. 요청 제한의 `retryAfterMs` 처리도 유지한다.
 
 ## Vercel 배포·운영 현황
 

@@ -360,6 +360,33 @@ describe("행동 기록 (METRIC-01)", () => {
   });
 });
 
+describe("선정 뒤 모집 상세·지원 목록", () => {
+  it("작성자·선정된 크리에이터는 계약 뒤에도 모집 상세를 보고, 지원 목록은 거래 진행 단계를 따른다", async () => {
+    const deal = await signedDeal(app, prisma);
+    const projectPath = `/api/projects/${deal.project.id}`;
+    const owner = await get(deal.client.token, projectPath);
+    expect(owner.status).toBe(200);
+    expect(owner.body.status).not.toBe("OPEN");
+    expect((await get(deal.creator.token, projectPath)).status).toBe(200);
+    // 비회원·관계없는 사람에게는 모집 중이 아닌 공고를 보여 주지 않는다.
+    expect((await request(app).get(projectPath)).status).toBe(404);
+
+    const applicants = await get(
+      deal.client.token,
+      `/api/projects/${deal.project.id}/applications`,
+    );
+    expect(applicants.body.items[0]).toMatchObject({
+      status: "CONTRACTED",
+      stage: "PAYMENT_PENDING",
+    });
+    const mine = await get(deal.creator.token, "/api/applications/me");
+    expect(mine.body.items[0]).toMatchObject({
+      status: "CONTRACTED",
+      stage: "PAYMENT_PENDING",
+    });
+  });
+});
+
 describe("내 활동 (ACT-01)·알림 여러 개 읽음 (NOTI-02)", () => {
   it("정산 없는 완료 표시와 열린 분쟁은 정상 완료로 안내하지 않는다", async () => {
     const deal = await signedDeal(app, prisma, { paid: true });

@@ -4,6 +4,7 @@ import type {
   ActivityStage,
   AuthUser,
 } from "@kemi/shared";
+import { dealStage, dealStageInclude } from "../deal/stage.js";
 import AppError from "../http/app-error.js";
 import { createProjectDraftService } from "../projects/project-draft.service.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
@@ -14,16 +15,7 @@ const requestInclude = {
   project: { select: { title: true } },
   client: { select: { name: true } },
   creator: { select: { name: true } },
-  contract: {
-    select: {
-      id: true,
-      status: true,
-      payments: { where: { status: "SUCCEEDED" }, select: { id: true } },
-      production: { select: { status: true } },
-      settlement: { select: { contractId: true, status: true } },
-      disputes: { where: { status: "OPEN" }, select: { id: true } },
-    },
-  },
+  ...dealStageInclude,
 } satisfies Prisma.WorkRequestInclude;
 type RequestRow = Prisma.WorkRequestGetPayload<{
   include: typeof requestInclude;
@@ -36,30 +28,8 @@ const PACKAGE_TITLE = (snapshot: unknown) =>
     ? String(Reflect.get(snapshot, "title"))
     : "직접 의뢰";
 
-function stageOf(row: RequestRow): ActivityStage {
-  const { contract } = row;
-  if (!contract) {
-    if (row.status === "PENDING") return "PENDING";
-    if (row.status === "DISCUSSING") return "DISCUSSING";
-    return "CLOSED";
-  }
-  if (contract.disputes.length > 0) return "DISPUTED";
-  if (contract.status === "CANCELED") return "CANCELED";
-  if (contract.settlement?.status === "SIMULATED") return "COMPLETED";
-  if (contract.payments.length === 0) return "PAYMENT_PENDING";
-  switch (contract.production?.status) {
-    case "IN_PROGRESS":
-      return "IN_PROGRESS";
-    case "DELIVERED":
-      return "DELIVERED";
-    case "COMPLETED":
-      return "DELIVERED";
-    case "CANCELED":
-      return "CANCELED";
-    default:
-      return "PREPARING";
-  }
-}
+const stageOf = (row: RequestRow): ActivityStage =>
+  dealStage(row.status, row.contract);
 
 // 대략적인 "내 차례" 안내: 의뢰인은 지원 검토·결제, 크리에이터는 직접 의뢰 응답·제작 준비
 function needsAction(row: RequestRow, stage: ActivityStage, isClient: boolean) {

@@ -3937,6 +3937,7 @@ REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(
 | `proposedAmount` | integer | 예 | - | - |
 | `expectedDays` | integer | 예 | - | - |
 | `status` | `PENDING`, `DISCUSSING`, `CONTRACTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`, `NOT_SELECTED` | 예 | - | - |
+| `stage` | `PENDING`, `DISCUSSING`, `CLOSED`, `PAYMENT_PENDING`, `PREPARING`, `IN_PROGRESS`, `DELIVERED`, `COMPLETED`, `CANCELED`, `DISPUTED` | 예 | - | 거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값). |
 | `closedReason` | `OTHER_SELECTED`, `PROJECT_DELETED`, `NO_SELECTION`, `null` | 예 | - | - |
 | `respondedAt` | string 또는 null(date-time) | 예 | - | - |
 | `createdAt` | string(date-time) | 예 | - | - |
@@ -4308,6 +4309,7 @@ REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(
 | `referencePortfolio` | object 또는 null | 예 | - | 이 의뢰를 시작한 참고 작품 |
 | `inquiryGroupId` | string 또는 null(uuid) | 예 | - | 일괄 문의로 보낸 경우 그 묶음 ID |
 | `status` | `PENDING`, `DISCUSSING`, `CONTRACTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`, `NOT_SELECTED` | 예 | - | - |
+| `stage` | `PENDING`, `DISCUSSING`, `CLOSED`, `PAYMENT_PENDING`, `PREPARING`, `IN_PROGRESS`, `DELIVERED`, `COMPLETED`, `CANCELED`, `DISPUTED` | 예 | - | 거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값). |
 | `respondDueAt` | string(date-time) | 예 | - | - |
 | `respondedAt` | string 또는 null(date-time) | 예 | - | - |
 | `createdAt` | string(date-time) | 예 | - | - |
@@ -4758,6 +4760,7 @@ REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(
 | --- | --- | --- | --- | --- |
 | `workRequestId` | string | 예 | - | - |
 | `workRequestStatus` | `PENDING`, `DISCUSSING`, `CONTRACTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`, `NOT_SELECTED` | 예 | - | - |
+| `stage` | `PENDING`, `DISCUSSING`, `CLOSED`, `PAYMENT_PENDING`, `PREPARING`, `IN_PROGRESS`, `DELIVERED`, `COMPLETED`, `CANCELED`, `DISPUTED` | 예 | - | 거래 진행 단계. 계약 전에는 PENDING·DISCUSSING·CLOSED, 계약 뒤에는 결제·제작·완료 상태를 따른다(내 활동과 같은 값). |
 | `projectStatus` | `OPEN`, `MATCHED`, `CLOSED`, `CONTRACTED`, `null` | 예 | - | - |
 | `reference` | object 또는 null | 예 | - | 첫 저장 때 고정한 참조 사본 (프로젝트 공개 필드, 지원 내용) |
 | `reference.project` | object 또는 null | 예 | - | - |

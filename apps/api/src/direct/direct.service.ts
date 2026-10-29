@@ -9,6 +9,7 @@ import {
   workRequestStatusSchema,
 } from "@kemi/shared";
 import { z } from "zod";
+import { dealStage, dealStageInclude } from "../deal/stage.js";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { ensureChatRoom } from "../chat/chat.service.js";
@@ -34,6 +35,7 @@ export const includeParties = {
   client: { select: { name: true } },
   creator: { select: { name: true } },
   referencePortfolio: { select: { id: true, title: true } },
+  ...dealStageInclude,
 } satisfies Prisma.WorkRequestInclude;
 export type DirectRow = Prisma.WorkRequestGetPayload<{
   include: typeof includeParties;
@@ -71,6 +73,7 @@ export function toDirect(row: DirectRow): DirectRequest {
       : null,
     inquiryGroupId: row.inquiryGroupId,
     status: workRequestStatusSchema.parse(row.status),
+    stage: dealStage(row.status, row.contract),
     respondDueAt: row.respondDueAt.toISOString(),
     respondedAt: row.respondedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),

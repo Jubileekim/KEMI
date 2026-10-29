@@ -4,11 +4,35 @@ import { z } from "zod";
 const errorCode = z.object({
   error: z.object({
     code: z.string(),
-    details: z
-      .object({ retryAfterMs: z.number().nonnegative().finite().optional() })
-      .optional(),
+    message: z.string().optional(),
+    // 요청 제한은 객체({ retryAfterMs }), 입력 검사는 항목 배열([{ path, message }])이다.
+    details: z.unknown().optional(),
   }),
 });
+const retryDetails = z.object({
+  retryAfterMs: z.number().nonnegative().finite().optional(),
+});
+const issueDetails = z.array(z.object({ message: z.string().optional() }));
+const hangul = /[\uac00-\ud7a3]/;
+
+// 사용자에게 보여 줄 서버 문구. KEMI 서버의 4xx 문구는 사용자용 한국어로 쓴다(예: "검토본이 승인된 뒤에 최종본을 낼 수 있습니다.").
+// 한국어가 아니거나 너무 긴 문구, 인증·요청 제한·서버 오류(401·429·5xx)는 쓰지 않고 화면 문구를 쓴다.
+function userMessage(
+  status: number,
+  body: z.infer<typeof errorCode>["error"],
+): string | undefined {
+  if (status < 400 || status >= 500 || status === 401 || status === 429)
+    return undefined;
+  const issues = issueDetails.safeParse(body.details);
+  const candidates = [
+    ...(issues.success ? issues.data.map((issue) => issue.message) : []),
+    body.message,
+  ];
+  return candidates.find(
+    (text): text is string =>
+      typeof text === "string" && hangul.test(text) && text.length <= 200,
+  );
+}
 
 export class ApiError extends Error {
   constructor(
@@ -16,6 +40,8 @@ export class ApiError extends Error {
     public code: string,
     message: string,
     public retryAfterMs?: number,
+    // 서버가 준 사용자용 이유(4xx). 없으면 undefined
+    public serverMessage?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -148,13 +174,17 @@ api.interceptors.response.use(
           ? "응답 시간이 초과되었어요."
           : "네트워크 연결을 확인해 주세요.";
     }
-    // Render local copy; server messages may expose implementation details.
+    // 기본은 화면 문구를 쓴다. 서버의 사용자용 이유는 serverMessage로 따로 넘긴다(userMessage 참고).
+    const retry = parsed.success
+      ? retryDetails.safeParse(parsed.data.error.details)
+      : undefined;
     return Promise.reject(
       new ApiError(
         status,
         code,
         message,
-        parsed.success ? parsed.data.error.details?.retryAfterMs : undefined,
+        retry?.success ? retry.data.retryAfterMs : undefined,
+        parsed.success ? userMessage(status, parsed.data.error) : undefined,
       ),
     );
   },

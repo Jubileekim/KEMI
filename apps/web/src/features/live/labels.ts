@@ -1,3 +1,4 @@
+import type { ActivityStage } from "@kemi/shared";
 // 실제 API 상태값의 화면 표시 문구. 값 목록은 @kemi/shared 상수와 같다.
 
 export const purposeLabels: Record<string, string> = {
@@ -134,3 +135,27 @@ export const dateOnly = (iso: string) =>
     dateStyle: "medium",
     timeZone: "Asia/Seoul",
   }).format(new Date(iso));
+
+// 요청의 거래 진행 단계(서버가 계약·결제·제작·정산 상태로 계산). 내 활동·의뢰 현황·의뢰 상세가 같은 문구를 쓴다.
+export const stageLabels: Record<ActivityStage, string> = {
+  PENDING: "검토 대기",
+  DISCUSSING: "협의 중",
+  CLOSED: "종료",
+  PAYMENT_PENDING: "계약 확정 · 결제 대기",
+  PREPARING: "제작 준비",
+  IN_PROGRESS: "제작 중",
+  DELIVERED: "수령 완료 · 정산 대기",
+  COMPLETED: "거래 완료",
+  CANCELED: "취소됨",
+  DISPUTED: "분쟁 처리 중",
+};
+// 계약 전에는 요청 상태(거절·철회·미선정처럼 자세한 값), 계약 뒤에는 거래 진행 단계를 보여 준다.
+// 진행 단계를 아직 주지 않는 응답(이전 서버·시연 데이터)은 요청 상태로 보여 준다.
+export function requestProgress(
+  status: string,
+  stage: ActivityStage | undefined,
+) {
+  return !stage || ["PENDING", "DISCUSSING", "CLOSED"].includes(stage)
+    ? label(requestStatusLabels, status)
+    : stageLabels[stage];
+}
