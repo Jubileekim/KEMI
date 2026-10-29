@@ -21,7 +21,7 @@ export function SlowFeedNotice() {
   if (!show) return null;
   return (
     <p className="mt-2 text-sm text-muted-foreground" role="status">
-      첫 방문에는 서버가 준비되는 동안 작품 로딩이 길어질 수 있어요. 조금만 더 기다려 주세요.
+      첫 방문이라 작품을 불러오는 데 시간이 더 걸릴 수 있어요.
     </p>
   );
 }
