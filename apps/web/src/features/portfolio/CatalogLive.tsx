@@ -335,7 +335,7 @@ function WorkDetail({ id }: { id: string }) {
   if (work.error) return <Failure error={work.error} />;
   const w = work.data;
   let mediaView: ReactNode;
-  if (media.error)
+  if (media.error) {
     mediaView = (
       <div role="alert" className="grid gap-3">
         <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
@@ -349,7 +349,7 @@ function WorkDetail({ id }: { id: string }) {
         </Button>
       </div>
     );
-  else if (videoFailed)
+  } else if (videoFailed) {
     mediaView = (
       <div role="alert" className="grid gap-3">
         <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
@@ -363,7 +363,7 @@ function WorkDetail({ id }: { id: string }) {
         </Button>
       </div>
     );
-  else if (media.data?.video)
+  } else if (media.data?.video) {
     mediaView = (
       <video
         controls
@@ -377,7 +377,7 @@ function WorkDetail({ id }: { id: string }) {
         <track kind="captions" />
       </video>
     );
-  else
+  } else {
     mediaView = (
       <p className="text-muted-foreground">
         {media.isPending
@@ -385,6 +385,7 @@ function WorkDetail({ id }: { id: string }) {
           : "재생할 영상이 없어요."}
       </p>
     );
+  }
   return (
     <>
       <h1 className="type-heading-lg">{w.title}</h1>
