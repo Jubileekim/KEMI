@@ -109,7 +109,9 @@ export function Thumbnail({
         title={portfolio.title}
         onFail={() => {
           if (shouldRefreshMedia(media.dataUpdatedAt, Date.now()))
-            media.refetch().catch(() => setVideoFailed(true));
+            media.refetch().then((result) => {
+              if (result.isError) setVideoFailed(true);
+            });
           else setVideoFailed(true);
         }}
       />
@@ -338,9 +340,7 @@ function WorkDetail({ id }: { id: string }) {
   if (media.error) {
     mediaView = (
       <div role="alert" className="grid gap-3">
-        <p>
-          영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
-        </p>
+        <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
         <Button
           variant="outline"
           className="justify-self-start"
@@ -354,9 +354,7 @@ function WorkDetail({ id }: { id: string }) {
   } else if (videoFailed) {
     mediaView = (
       <div role="alert" className="grid gap-3">
-        <p>
-          영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.
-        </p>
+        <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
         <Button
           variant="outline"
           className="justify-self-start"
@@ -384,9 +382,7 @@ function WorkDetail({ id }: { id: string }) {
   } else {
     mediaView = (
       <p className="text-muted-foreground">
-        {media.isPending
-          ? "영상을 준비하고 있어요."
-          : "재생할 영상이 없어요."}
+        {media.isPending ? "영상을 준비하고 있어요." : "재생할 영상이 없어요."}
       </p>
     );
   }
