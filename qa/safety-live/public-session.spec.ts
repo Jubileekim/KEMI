@@ -74,8 +74,7 @@ test("북마크 조회 실패 시 저장되지 않음으로 오표시하지 않�
         ? reply({ error: { code: "SERVICE_UNAVAILABLE" } }, 503)
         : reply({ items: [] });
     }
-    if (path === "/api/notifications/unread-count")
-      return reply({ count: 0 });
+    if (path === "/api/notifications/unread-count") return reply({ count: 0 });
     if (path === "/api/reports/me")
       return reply({ limited: false, reports: [], restrictions: [] });
     return reply({ error: { code: "NOT_FOUND" } }, 404);
