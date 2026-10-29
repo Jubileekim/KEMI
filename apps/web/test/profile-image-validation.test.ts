@@ -9,7 +9,9 @@ it("accepts only nonempty supported image files up to 10 MiB", () => {
 });
 
 it("rejects unsupported, empty and oversized image files", () => {
-  expect(profileImageError({ type: "application/pdf", size: 128 })).toBeTruthy();
+  expect(
+    profileImageError({ type: "application/pdf", size: 128 }),
+  ).toBeTruthy();
   expect(profileImageError({ type: "image/webp", size: 0 })).toBeTruthy();
   expect(
     profileImageError({ type: "image/png", size: 10 * 1024 * 1024 + 1 }),
