@@ -18,6 +18,7 @@ import ProjectDraftEditorLive from "./ProjectDraftEditorLive";
 import PricingPanel from "./PricingPanel";
 import { pricingConditions, setBudget } from "./pricing-form";
 import limitBudgetInput, { MAX_PROJECT_BUDGET_KRW } from "./budget-input";
+import toggleCampaignStyle, { MAX_CAMPAIGN_STYLES } from "./style-selection";
 
 // datetime-local 값(브라우저 현지 시각)을 ISO로
 const toIso = (local: string) => (local ? new Date(local).toISOString() : "");
@@ -126,18 +127,27 @@ function Editor({ initial }: { initial?: ProjectSummary }) {
                     id={`campaign-style-${value}`}
                     type="checkbox"
                     checked={styles.includes(value)}
-                    onChange={(event) =>
-                      setStyles((prev) =>
-                        event.target.checked
-                          ? [...prev, value]
-                          : prev.filter((s) => s !== value),
-                      )
+                    disabled={
+                      !styles.includes(value) &&
+                      styles.length >= MAX_CAMPAIGN_STYLES
                     }
+                    onChange={(event) => {
+                      const checked = event.currentTarget.checked;
+                      setStyles((prev) =>
+                        toggleCampaignStyle(prev, value, checked),
+                      );
+                    }}
                   />
                   {label(styleLabels, value)}
                 </label>
               ))}
             </div>
+            {styles.length >= MAX_CAMPAIGN_STYLES && (
+              <p className="text-sm text-muted-foreground" role="status">
+                스타일은 최대 5개까지 선택할 수 있어요. 다른 스타일을 선택하려면
+                하나를 해제해 주세요.
+              </p>
+            )}
           </fieldset>
         </Card>
         <Card title="예산·일정">
