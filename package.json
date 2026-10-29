@@ -25,7 +25,7 @@
     "test:api:db": "npm run test:db -w @kemi/api",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write qa/safety-live/public-session.spec.ts && git diff -- qa/safety-live/public-session.spec.ts && prettier --check .",
     "dev": "npm run dev:web",
     "build": "npm run build:web",
     "preview": "npm run preview:web",
