@@ -32,3 +32,62 @@ for (const entry of [
     expect(result.status()).toBe(200);
   });
 }
+
+test("북마크 조회 실패 시 저장되지 않음으로 오표시하지 않고 재시도한다", async ({
+  page,
+}) => {
+  const user = {
+    id: "1",
+    name: "의뢰인",
+    email: "client@example.test",
+    role: "CLIENT",
+    status: "ACTIVE",
+  };
+  let reads = 0;
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const reply = (json: unknown, status = 200) =>
+      route.fulfill({ json, status });
+    if (path === "/api/auth/refresh")
+      return reply({
+        accessToken: "fixture-token",
+        accessTokenExpiresIn: 3600,
+        user,
+      });
+    if (path === "/api/auth/me") return reply({ user });
+    if (path === "/api/portfolios/777")
+      return reply({
+        id: "777",
+        creatorId: "1",
+        title: "저장 테스트 영상",
+        description: null,
+        purpose: "OTHER",
+        styles: [],
+        roles: [],
+        packageId: null,
+        thumbnailFileId: null,
+        videoFileId: null,
+      });
+    if (path === "/api/me/work-bookmarks") {
+      reads += 1;
+      return reads === 1
+        ? reply({ error: { code: "SERVICE_UNAVAILABLE" } }, 503)
+        : reply({ items: [] });
+    }
+    if (path === "/api/notifications/unread-count")
+      return reply({ count: 0 });
+    if (path === "/api/reports/me")
+      return reply({ limited: false, reports: [], restrictions: [] });
+    return reply({ error: { code: "NOT_FOUND" } }, 404);
+  });
+  await page.goto("/works/777");
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "저장 상태를 확인하지 못했어요.",
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "♡ 저장" })).toHaveCount(0);
+  await page.getByRole("button", { name: "저장 상태 다시 확인" }).click();
+  await expect(page.getByRole("button", { name: "♡ 저장" })).toBeVisible();
+  expect(reads).toBe(2);
+});
