@@ -42,6 +42,23 @@ export default function SaveWorkButton({
         </Link>
       </Button>
     );
+  if (saved.isError)
+    return (
+      <span className="inline-grid gap-1">
+        <span role="alert" className="text-sm text-destructive">
+          저장 상태를 확인하지 못했어요.
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size={size}
+          disabled={saved.isFetching}
+          onClick={() => saved.refetch()}
+        >
+          저장 상태 다시 확인
+        </Button>
+      </span>
+    );
   return (
     <span className="inline-grid gap-1">
       <Button

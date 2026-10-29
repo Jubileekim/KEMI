@@ -91,14 +91,21 @@ function WorkRow({
       <Button asChild variant="outline" size="sm">
         <Link to={`/works/${item.portfolio.id}`}>작품 보기</Link>
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={remove.isPending}
-        onClick={() => remove.mutate()}
-      >
-        저장 해제
-      </Button>
+      <span className="inline-grid gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={remove.isPending}
+          onClick={() => remove.mutate()}
+        >
+          저장 해제
+        </Button>
+        {remove.error && (
+          <span role="alert" className="text-sm text-destructive">
+            {errorText(remove.error, "저장을 해제하지 못했어요.")}
+          </span>
+        )}
+      </span>
     </li>
   );
 }
