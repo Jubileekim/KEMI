@@ -2,6 +2,8 @@ import {
   type AiReportApplyResponse,
   type AuthUser,
   aiReportApplySchema,
+  MAX_PROJECT_BUDGET_KRW,
+  projectBudgetSchema,
   projectDraftValuesSchema,
   type PricingAnalysisRequest,
   type PricingAnalysisResponse,
@@ -217,7 +219,7 @@ export function createPricingService({
       if (
         !Number.isSafeInteger(estimatedBudgetKrw) ||
         estimatedBudgetKrw < 1 ||
-        estimatedBudgetKrw > 1_000_000_000
+        estimatedBudgetKrw > MAX_PROJECT_BUDGET_KRW
       ) {
         throw unavailable();
       }
@@ -273,6 +275,9 @@ export function createPricingService({
         }
         if (report.appliedAt) throw conflict("이미 예산에 반영한 분석입니다.");
         const budget = report.estimatedBudgetKrw;
+        if (!projectBudgetSchema.safeParse(Number(budget)).success) {
+          throw conflict("예산은 999,999,999원 이하로 입력해 주세요.");
+        }
         let draftId: bigint | null = null;
         let projectId: bigint | null = null;
         if ("draftId" in target) {

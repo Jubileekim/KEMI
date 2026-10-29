@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import {
+  MAX_PROJECT_BUDGET_KRW,
   projectDraftValuesSchema,
   RECRUITMENT_DAYS,
   VIDEO_PURPOSES,
@@ -17,6 +18,7 @@ import { errorText, selectClass } from "../live/errors";
 import { label, purposeLabels, styleLabels } from "../live/labels";
 import PricingPanel from "./PricingPanel";
 import { pricingConditions, setBudget } from "./pricing-form";
+import limitBudgetInput from "./budget-input";
 
 function DraftForm({ draft }: { draft?: ProjectDraft }) {
   const form = useRef<HTMLFormElement>(null);
@@ -135,13 +137,18 @@ function DraftForm({ draft }: { draft?: ProjectDraft }) {
             </fieldset>
           </Card>
           <Card title="예산·일정">
-            <Field id="draft-budget" label="예산 (원)">
+            <Field
+              id="draft-budget"
+              label="예산 (원)"
+              hint="최대 999,999,999원까지 입력할 수 있어요."
+            >
               <Input
                 id="draft-budget"
                 name="budget"
                 type="number"
                 min={1}
-                max={1_000_000_000}
+                max={MAX_PROJECT_BUDGET_KRW}
+                onInput={limitBudgetInput}
                 defaultValue={values?.budget ?? ""}
                 required
               />

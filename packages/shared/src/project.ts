@@ -51,7 +51,12 @@ export type ProjectSort = z.infer<typeof projectSortSchema>;
 
 const projectTitleSchema = z.string().trim().min(2).max(200);
 const projectDescriptionSchema = z.string().trim().min(10).max(5000);
-const projectBudgetSchema = z.number().int().min(1).max(1_000_000_000);
+export const MAX_PROJECT_BUDGET_KRW = 999_999_999;
+export const projectBudgetSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_PROJECT_BUDGET_KRW, "예산은 999,999,999원 이하로 입력해 주세요.");
 const projectDurationSchema = z.number().int().min(1).max(21_600);
 const projectStylesSchema = z
   .array(videoStyleSchema)
