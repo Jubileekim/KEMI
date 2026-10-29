@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { productionRoleSchema } from "./status.js";
-import {
-  projectBudgetSchema,
-  videoPurposeSchema,
-  videoStyleSchema,
-} from "./project.js";
+import { videoPurposeSchema, videoStyleSchema } from "./project.js";
 
 // 제작 패키지·작업물·제작 서비스 공개 (단계 1: PACK-01~03, PORT-01~02)
 // 초안(DRAFT)으로 저장하고, 필수 항목을 갖춰야 공개(PUBLIC)할 수 있다. PRIVATE는 공개했다가 내린 상태다.
@@ -145,7 +141,7 @@ export const projectDraftValuesSchema = z.strictObject({
   description: z.string().trim().max(5000).nullable().optional(),
   purpose: videoPurposeSchema.nullable().optional(),
   styles: z.array(videoStyleSchema).max(5).optional(),
-  budget: projectBudgetSchema.nullable().optional(),
+  budget: z.int().min(1).max(1_000_000_000).nullable().optional(),
   expectedDurationSeconds: z.int().min(1).max(21_600).nullable().optional(),
   deliveryDueDate: z.iso.date().nullable().optional(),
   recruitmentDays: recruitmentDaysSchema.optional(),

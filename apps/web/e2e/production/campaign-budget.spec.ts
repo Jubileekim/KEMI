@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("모집 예산은 최대 999,999,999원까지 입력하고 임시 저장한다", async ({
+test("모집 예산은 최대 1,000,000,000원까지 입력하고 임시 저장한다", async ({
   page,
 }) => {
   const user = {
@@ -44,25 +44,25 @@ test("모집 예산은 최대 999,999,999원까지 입력하고 임시 저장한
   });
   await page.goto("/campaigns/new");
   const budget = page.getByLabel("예산 (원)", { exact: true });
-  await expect(budget).toHaveAttribute("max", "999999999");
-  await budget.fill("999999999");
-  await expect(budget).toHaveValue("999999999");
+  await expect(budget).toHaveAttribute("max", "1000000000");
+  await budget.fill("1000000000");
+  await expect(budget).toHaveValue("1000000000");
   await budget.press("End");
   await budget.press("9");
-  await expect(budget).toHaveValue("999999999");
+  await expect(budget).toHaveValue("1000000000");
   // fill emits an input event for replacing the complete value, as paste does.
   await budget.fill("123456789012345");
-  await expect(budget).toHaveValue("999999999");
+  await expect(budget).toHaveValue("1000000000");
   await budget.fill("");
   await expect(budget).toHaveValue("");
   await budget.fill("50000");
   await expect(budget).toHaveValue("50000");
-  await budget.fill("1000000000");
-  await expect(budget).toHaveValue("999999999");
+  await budget.fill("1000000001");
+  await expect(budget).toHaveValue("1000000000");
   await page.getByRole("button", { name: "임시 저장", exact: true }).click();
   await expect(page).toHaveURL(/draft=1/);
-  expect(writes).toEqual([expect.objectContaining({ budget: 999_999_999 })]);
+  expect(writes).toEqual([expect.objectContaining({ budget: 1_000_000_000 })]);
   await expect(page.getByLabel("예산 (원)", { exact: true })).toHaveValue(
-    "999999999",
+    "1000000000",
   );
 });

@@ -1,4 +1,4 @@
-import { MAX_PROJECT_BUDGET_KRW } from "@kemi/shared";
+export const MAX_PROJECT_BUDGET_KRW = 1_000_000_000;
 
 // max 속성은 제출만 막으므로 타이핑·붙여넣기 시에도 상한을 적용한다.
 export default function limitBudgetInput(event: {

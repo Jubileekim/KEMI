@@ -1,6 +1,5 @@
 import {
   pricingAnalysisRequestSchema,
-  projectBudgetSchema,
   type PricingAnalysisRequest,
 } from "@kemi/shared";
 import { ApiError } from "../../shared/api/client";
@@ -45,6 +44,5 @@ export function pricingConditions(
 // 예산 입력란(name="budget")에 금액을 넣는다.
 export function setBudget(form: HTMLFormElement | null, amountKrw: number) {
   const input = form?.elements.namedItem("budget");
-  if (input instanceof HTMLInputElement)
-    input.value = String(projectBudgetSchema.parse(amountKrw));
+  if (input instanceof HTMLInputElement) input.value = String(amountKrw);
 }

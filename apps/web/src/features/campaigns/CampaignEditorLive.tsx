@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
-  MAX_PROJECT_BUDGET_KRW,
   projectCreateSchema,
   VIDEO_PURPOSES,
   VIDEO_STYLES,
@@ -18,7 +17,7 @@ import { errorText, selectClass } from "../live/errors";
 import ProjectDraftEditorLive from "./ProjectDraftEditorLive";
 import PricingPanel from "./PricingPanel";
 import { pricingConditions, setBudget } from "./pricing-form";
-import limitBudgetInput from "./budget-input";
+import limitBudgetInput, { MAX_PROJECT_BUDGET_KRW } from "./budget-input";
 
 // datetime-local 값(브라우저 현지 시각)을 ISO로
 const toIso = (local: string) => (local ? new Date(local).toISOString() : "");
@@ -145,7 +144,7 @@ function Editor({ initial }: { initial?: ProjectSummary }) {
           <Field
             id="campaign-budget"
             label="예산 (원)"
-            hint="최대 999,999,999원까지 입력할 수 있어요."
+            hint="최대 1,000,000,000원까지 입력할 수 있어요."
           >
             <Input
               id="campaign-budget"

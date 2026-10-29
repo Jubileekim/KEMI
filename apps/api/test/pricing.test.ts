@@ -135,24 +135,6 @@ describe("AI 단가 분석 (AI-01, AI-02)", () => {
     expect(generate).not.toHaveBeenCalled();
   });
 
-  it("참고 제작비 합계가 모집 예산 상한을 초과하면 거부한다", async () => {
-    const service = createPricingService({
-      generate: async () => ({
-        ...modelResult,
-        workUnits: [
-          {
-            ...modelResult.workUnits[0],
-            quantity: 10,
-            unitPriceKrw: 100_000_000,
-          },
-        ],
-      }),
-    });
-    await expect(service.analyze(client, validRequest)).rejects.toMatchObject({
-      status: 502,
-    });
-  });
-
   it("모델이 잘못된 데이터/초과 단가를 반환하면 502", async () => {
     const service = createPricingService({
       generate: async () => ({

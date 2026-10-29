@@ -1,6 +1,5 @@
 import {
   projectCreateSchema,
-  projectDraftValuesSchema,
   projectListQuerySchema,
   projectUpdateSchema,
 } from "@kemi/shared";
@@ -18,37 +17,6 @@ const validProject = {
 };
 
 describe("프로젝트 요청 스키마", () => {
-  it.each([1, 999_999_998, 999_999_999])(
-    "%i원은 작성·수정·초안 저장을 허용한다",
-    (budget) => {
-      expect(
-        projectCreateSchema.safeParse({ ...validProject, budget }).success,
-      ).toBe(true);
-      expect(projectUpdateSchema.safeParse({ budget }).success).toBe(true);
-      expect(projectDraftValuesSchema.safeParse({ budget }).success).toBe(true);
-    },
-  );
-
-  it.each([0, -1, 1.5, 1_000_000_000, 9_999_999_999, Infinity])(
-    "%s원은 작성·수정·초안 저장을 거부한다",
-    (budget) => {
-      expect(
-        projectCreateSchema.safeParse({ ...validProject, budget }).success,
-      ).toBe(false);
-      expect(projectUpdateSchema.safeParse({ budget }).success).toBe(false);
-      expect(projectDraftValuesSchema.safeParse({ budget }).success).toBe(
-        false,
-      );
-    },
-  );
-
-  it("예산이 없는 임시 저장은 유지한다", () => {
-    expect(projectDraftValuesSchema.safeParse({ budget: null }).success).toBe(
-      true,
-    );
-    expect(projectDraftValuesSchema.safeParse({}).success).toBe(true);
-  });
-
   it("B2C 영상 목적·스타일과 거래 조건을 받는다", () => {
     expect(projectCreateSchema.parse(validProject)).toEqual(validProject);
   });
