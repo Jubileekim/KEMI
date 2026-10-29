@@ -176,19 +176,27 @@ export function PackageCard({
   );
 }
 
+// Only canonical positive integers are safe for pagination and API requests.
+export function safeFeedPage(value: string | null): number {
+  if (!value || !/^[1-9]\d*$/.test(value)) return 1;
+  const page = Number(value);
+  return Number.isSafeInteger(page) ? page : 1;
+}
+
 // FEED-01: 공개 작업물 피드
 function Feed() {
   const { role } = useSession();
   const [params, setParams] = useSearchParams();
+  const page = safeFeedPage(params.get("page"));
   const search = query({
     purpose: params.get("purpose") ?? undefined,
-    page: params.get("page") ?? undefined,
+    page: page > 1 ? page : undefined,
   });
   const feed = useQuery({
     queryKey: ["feed", search],
     queryFn: ({ signal }) => kemi.feed(search, signal),
   });
-  const page = Number(params.get("page") ?? "1");
+
   useEffect(() => {
     if (feed.isSuccess) track("feed_view", "feed");
   }, [feed.isSuccess]);
