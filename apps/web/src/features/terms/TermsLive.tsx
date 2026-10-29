@@ -65,7 +65,7 @@ function VersionView({ version }: { version: TermsVersion }) {
 
 function Editor({
   requestId,
-  base,
+  base: latest,
   onDone,
 }: {
   requestId: string;
@@ -73,6 +73,11 @@ function Editor({
   onDone: () => void;
 }) {
   const [commandId] = useState(newCommandId);
+  // 입력값과 저장 기준은 편집을 시작한 버전에 함께 고정한다.
+  const [base] = useState(latest);
+  const stale =
+    (base?.versionNo ?? 0) !== (latest?.versionNo ?? 0) ||
+    base?.termsHash !== latest?.termsHash;
   const save = useMutation({
     mutationFn: (values: TermsValues) =>
       kemi.saveTerms(requestId, {
@@ -87,6 +92,7 @@ function Editor({
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault();
+        if (stale || save.isPending) return;
         const form = new FormData(event.currentTarget);
         const text = (name: string) =>
           String(form.get(name) ?? "").trim() || null;
@@ -133,7 +139,18 @@ function Editor({
           {errorText(save.error, "조건서를 저장하지 못했어요.")}
         </p>
       )}
-      <Button type="submit" disabled={save.isPending}>
+      {stale && (
+        <div role="alert">
+          <p>
+            새 조건서 버전이 있어요. 최신 내용을 확인하고 편집을 다시 시작해
+            주세요.
+          </p>
+          <Button type="button" variant="outline" onClick={onDone}>
+            편집 닫고 최신 버전 확인
+          </Button>
+        </div>
+      )}
+      <Button type="submit" disabled={save.isPending || stale}>
         새 버전으로 저장
       </Button>
     </form>
@@ -273,7 +290,12 @@ export default function TermsLive({
         </Button>
       )}
       {open && latest?.status === "SIGNING" && !signedByMe && (
-        <SignForm requestId={requestId} version={latest} onDone={refresh} />
+        <SignForm
+          key={`${requestId}:${latest.versionNo}:${latest.termsHash}`}
+          requestId={requestId}
+          version={latest}
+          onDone={refresh}
+        />
       )}
       {open && latest?.status === "SIGNING" && signedByMe && (
         <p role="status">상대방의 서명을 기다리고 있어요.</p>
