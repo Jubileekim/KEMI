@@ -13,30 +13,28 @@ const portfolio = {
   thumbnailFileId: null,
 };
 
-test("작품 영상 정보 조회 실패를 영상 없음으로 오인하지 않고 재시도한다", async ({
-  page,
-}) => {
+test("영상 정보 오류와 복구를 구분한다", async ({ page }) => {
   let mediaReads = 0;
   await page.route("**/api/portfolios/777", (route) =>
     route.fulfill({ json: portfolio }),
   );
   await page.route("**/api/portfolios/777/media", (route) => {
     mediaReads += 1;
-    if (mediaReads === 1)
+    if (mediaReads === 1) {
       return route.fulfill({
         status: 503,
         json: { error: { code: "SERVICE_UNAVAILABLE" } },
       });
+    }
     return route.fulfill({ json: { video: null, thumbnail: null } });
   });
 
   await page.goto("/works/777");
-  await expect(
-    page.getByRole("alert").filter({ hasText: "영상 정보를 불러오지 못했어요." }),
-  ).toBeVisible();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("영상 정보를 불러오지 못했어요.");
   await expect(page.getByText("재생할 영상이 없어요.")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "영상 정보 다시 불러오기" }).click();
+  await page.getByText("영상 정보 다시 불러오기").click();
   await expect(page.getByText("재생할 영상이 없어요.")).toBeVisible();
   expect(mediaReads).toBe(2);
 });
