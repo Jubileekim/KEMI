@@ -5,7 +5,7 @@ import {
   type Portfolio,
   type ServicePackage,
 } from "@kemi/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -109,10 +109,21 @@ export function Thumbnail({
         title={portfolio.title}
         onFail={() => {
           if (shouldRefreshMedia(media.dataUpdatedAt, Date.now()))
-            media.refetch().catch(() => setVideoFailed(true));
+            media.refetch().then((result) => {
+              if (result.isError) setVideoFailed(true);
+            });
           else setVideoFailed(true);
         }}
       />
+    );
+  if (media.error)
+    return (
+      <div
+        className="grid aspect-video place-items-center rounded-xl bg-muted p-3 text-center text-sm text-muted-foreground"
+        role="status"
+      >
+        미리보기를 불러오지 못했어요.
+      </div>
     );
   if (mode === "empty" || !media.data?.thumbnail)
     return <div className="aspect-video rounded-xl bg-muted" aria-hidden />;
@@ -300,6 +311,7 @@ function Feed() {
 
 // FEED-02·03: 작품 상세(영상 재생, 제작자·패키지 연결)
 function WorkDetail({ id }: { id: string }) {
+  const [videoFailed, setVideoFailed] = useState(false);
   const work = useQuery({
     queryKey: ["portfolio", id],
     queryFn: ({ signal }) => kemi.portfolio(id, signal),
@@ -316,31 +328,69 @@ function WorkDetail({ id }: { id: string }) {
     queryFn: ({ signal }) =>
       kemi.servicePackage(work.data?.packageId ?? "", signal),
   });
+  const retryVideo = () => {
+    media.refetch().then((result) => {
+      if (result.isSuccess) setVideoFailed(false);
+    });
+  };
   if (work.isPending) return <Loading text="작품을 불러오고 있어요." />;
   if (work.error) return <Failure error={work.error} />;
   const w = work.data;
+  let mediaView: ReactNode;
+  if (media.error) {
+    mediaView = (
+      <div role="alert" className="grid gap-3">
+        <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        <Button
+          variant="outline"
+          className="justify-self-start"
+          disabled={media.isFetching}
+          onClick={() => media.refetch()}
+        >
+          영상 정보 다시 불러오기
+        </Button>
+      </div>
+    );
+  } else if (videoFailed) {
+    mediaView = (
+      <div role="alert" className="grid gap-3">
+        <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
+        <Button
+          variant="outline"
+          className="justify-self-start"
+          disabled={media.isFetching}
+          onClick={retryVideo}
+        >
+          영상 다시 시도
+        </Button>
+      </div>
+    );
+  } else if (media.data?.video) {
+    mediaView = (
+      <video
+        controls
+        onError={() => setVideoFailed(true)}
+        onPlaying={() => track("work_play", w.id)}
+        preload="metadata"
+        className="aspect-video w-full rounded-xl bg-black"
+        src={media.data.video.url}
+        poster={media.data.thumbnail?.url}
+      >
+        <track kind="captions" />
+      </video>
+    );
+  } else {
+    mediaView = (
+      <p className="text-muted-foreground">
+        {media.isPending ? "영상을 준비하고 있어요." : "재생할 영상이 없어요."}
+      </p>
+    );
+  }
   return (
     <>
       <h1 className="type-heading-lg">{w.title}</h1>
       <Card>
-        {media.data?.video ? (
-          <video
-            controls
-            onPlaying={() => track("work_play", w.id)}
-            preload="metadata"
-            className="aspect-video w-full rounded-xl bg-black"
-            src={media.data.video.url}
-            poster={media.data.thumbnail?.url}
-          >
-            <track kind="captions" />
-          </video>
-        ) : (
-          <p className="text-muted-foreground">
-            {media.isPending
-              ? "영상을 준비하고 있어요."
-              : "재생할 영상이 없어요."}
-          </p>
-        )}
+        {mediaView}
         {w.description && (
           <p className="whitespace-pre-wrap">{w.description}</p>
         )}
@@ -471,5 +521,5 @@ export function CreatorDetailLive() {
 // 작품 피드(/works)와 작품 상세(/works/:workId)
 export default function CatalogLive() {
   const { workId } = useParams();
-  return workId ? <WorkDetail id={workId} /> : <Feed />;
+  return workId ? <WorkDetail key={workId} id={workId} /> : <Feed />;
 }

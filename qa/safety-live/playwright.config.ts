@@ -13,6 +13,7 @@ export default defineConfig({
     "onboarding.spec.ts",
     "contract.spec.ts",
     "public-session.spec.ts",
+    "media-failure.spec.ts",
   ],
   forbidOnly: Boolean(process.env.CI),
   fullyParallel: false,
