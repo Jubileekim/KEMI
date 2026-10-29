@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { session } from "../../app/session";
 import { kemi } from "../../shared/api/kemi";
 import Button from "../../components/ui/button";
 import Input from "../../components/ui/input";
 import Label from "../../components/ui/label";
+import profileImageError from "./profile-image-validation";
 
 export default function ProfileImageField({
   value,
@@ -18,6 +20,7 @@ export default function ProfileImageField({
   onSelect: (file: File) => void;
   onRemove: () => void;
 }) {
+  const [fileProblem, setFileProblem] = useState("");
   const image = useQuery({
     queryKey: ["profile-image", value, session.epoch()],
     enabled: !!value,
@@ -44,17 +47,29 @@ export default function ProfileImageField({
         type="file"
         accept="image/png,image/jpeg,image/webp"
         disabled={busy}
-        aria-describedby="profile-image-hint"
+        aria-describedby={
+          fileProblem
+            ? "profile-image-hint profile-image-error"
+            : "profile-image-hint"
+        }
         onChange={(event) => {
           const input = event.currentTarget;
           const file = input.files?.[0];
           input.value = "";
-          if (file) onSelect(file);
+          if (!file) return;
+          const issue = profileImageError(file);
+          setFileProblem(issue ?? "");
+          if (!issue) onSelect(file);
         }}
       />
       <p id="profile-image-hint" className="text-sm text-muted-foreground">
         PNG·JPG·WebP, 최대 10MB. 선택한 뒤 프로필을 저장하면 적용돼요.
       </p>
+      {fileProblem && (
+        <p id="profile-image-error" role="alert" className="text-destructive">
+          {fileProblem}
+        </p>
+      )}
       {value && (
         <Button
           type="button"
