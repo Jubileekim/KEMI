@@ -1,12 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
-import sendPendingMessage from "../src/features/requests/pending-message";
+import sendPendingMessage, {
+  type PendingMessage,
+} from "../src/features/requests/pending-message";
 
 describe("채팅 메시지 전송 재시도", () => {
   it("파일 업로드 성공 뒤 메시지 실패 시 같은 파일 ID와 명령 ID를 재사용한다", async () => {
     const file = new File(["contents"], "sample.txt", {
       type: "text/plain",
     });
-    const command = { id: "cmd-1", body: "  안녕하세요  ", file };
+    let command: PendingMessage = {
+      id: "cmd-1",
+      body: "  안녕하세요  ",
+      file,
+    };
+    const save = (next: PendingMessage) => {
+      command = next;
+    };
     const upload = vi.fn(async () => "file-1");
     const send = vi
       .fn()
@@ -14,11 +23,11 @@ describe("채팅 메시지 전송 재시도", () => {
       .mockResolvedValueOnce({ id: "message-1" });
 
     await expect(
-      sendPendingMessage(command, upload, send),
+      sendPendingMessage(command, save, upload, send),
     ).rejects.toThrow("network");
-    await expect(sendPendingMessage(command, upload, send)).resolves.toEqual({
-      id: "message-1",
-    });
+    await expect(
+      sendPendingMessage(command, save, upload, send),
+    ).resolves.toEqual({ id: "message-1" });
     expect(upload).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledTimes(2);
     expect(send).toHaveBeenNthCalledWith(1, {
@@ -34,10 +43,13 @@ describe("채팅 메시지 전송 재시도", () => {
   });
 
   it("파일 업로드가 실패하면 메시지를 보내지 않고 재시도 때만 다시 업로드한다", async () => {
-    const command = {
+    let command: PendingMessage = {
       id: "cmd-2",
       body: "",
       file: new File(["contents"], "sample.txt"),
+    };
+    const save = (next: PendingMessage) => {
+      command = next;
     };
     const upload = vi
       .fn()
@@ -45,10 +57,10 @@ describe("채팅 메시지 전송 재시도", () => {
       .mockResolvedValueOnce("file-2");
     const send = vi.fn(async () => ({ id: "message-2" }));
     await expect(
-      sendPendingMessage(command, upload, send),
+      sendPendingMessage(command, save, upload, send),
     ).rejects.toThrow("upload");
     expect(send).not.toHaveBeenCalled();
-    await sendPendingMessage(command, upload, send);
+    await sendPendingMessage(command, save, upload, send);
     expect(upload).toHaveBeenCalledTimes(2);
     expect(send).toHaveBeenCalledWith({
       clientMessageId: "cmd-2",
@@ -62,6 +74,7 @@ describe("채팅 메시지 전송 재시도", () => {
     const send = vi.fn(async () => ({ id: "message-3" }));
     await sendPendingMessage(
       { id: "cmd-3", body: "메시지", file: null },
+      vi.fn(),
       upload,
       send,
     );
