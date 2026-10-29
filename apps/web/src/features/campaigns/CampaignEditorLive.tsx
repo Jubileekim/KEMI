@@ -132,7 +132,7 @@ function Editor({ initial }: { initial?: ProjectSummary }) {
                       styles.length >= MAX_CAMPAIGN_STYLES
                     }
                     onChange={(event) => {
-                      const checked = event.currentTarget.checked;
+                      const { checked } = event.currentTarget;
                       setStyles((prev) =>
                         toggleCampaignStyle(prev, value, checked),
                       );
