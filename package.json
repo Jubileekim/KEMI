@@ -25,7 +25,7 @@
     "test:api:db": "npm run test:db -w @kemi/api",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --write apps/web/src/features/portfolio/CatalogLive.tsx && git diff -- apps/web/src/features/portfolio/CatalogLive.tsx && exit 1",
+    "format:check": "prettier --check .",
     "dev": "npm run dev:web",
     "build": "npm run build:web",
     "preview": "npm run preview:web",
