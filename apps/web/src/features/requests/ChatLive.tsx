@@ -38,6 +38,9 @@ export default function ChatLive({ requestId }: { requestId: string }) {
         pending.current = { id: newCommandId(), body: text, file };
       return sendPendingMessage(
         pending.current,
+        (next) => {
+          if (pending.current?.id === next.id) pending.current = next;
+        },
         async (attachedFile) =>
           (await uploadFile(attachedFile, "CHAT_ATTACHMENT", requestId)).id,
         (body) => kemi.sendMessage(requestId, body),
