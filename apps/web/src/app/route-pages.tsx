@@ -6,11 +6,18 @@ import {
   useLocation,
   useSearchParams,
 } from "react-router";
-import Button from "@/components/ui/button";
+import Button from "../components/ui/button";
 import { mockEnabled, useSession, session } from "./session";
 import { authEnabled } from "../features/auth/config";
-import { screens, type Screen } from "./routes";
+import { screens, type Role, type Screen } from "./routes";
 import ScreenLinks from "./ScreenLinks";
+
+const roleNames: Record<Role, string> = {
+  guest: "비회원",
+  client: "의뢰인",
+  creator: "크리에이터",
+  ops: "운영자",
+};
 
 export function Guard({
   screen,
@@ -50,7 +57,8 @@ export function Guard({
         <Button onClick={() => session.bootstrap()}>세션 다시 확인</Button>
       </section>
     );
-  if (role === "guest")
+  // A remembered role alone must never authorize a protected page.
+  if (status !== "authenticated" || role === "guest")
     return (
       <Navigate
         replace
@@ -59,9 +67,22 @@ export function Guard({
     );
   if (!screen.roles.includes(role))
     return (
-      <section role="alert">
+      <section role="alert" className="showcase-card grid gap-6">
         <h1 className="type-heading-lg">접근 권한이 없어요</h1>
-        <p>현재 계정으로 이용할 수 없는 화면이에요.</p>
+        <p>
+          이 페이지는{" "}
+          {screen.roles.map((allowed) => roleNames[allowed]).join(" · ")} 계정만
+          이용할 수 있어요. 현재 계정은 {roleNames[role]}입니다.
+        </p>
+        <p className="text-muted-foreground">
+          필요한 권한이 있는 계정으로 다시 로그인하거나 홈으로 이동해 주세요.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <Link to="/">홈으로</Link>
+          </Button>
+          <Button onClick={() => session.logout()}>다른 계정으로 로그인</Button>
+        </div>
       </section>
     );
   return children;
