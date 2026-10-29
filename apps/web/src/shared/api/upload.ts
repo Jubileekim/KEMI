@@ -4,6 +4,8 @@ import {
   type FilePurpose,
   type StoredFile,
 } from "@kemi/shared";
+import { toast } from "sonner";
+import openSignedDownload from "../files/signed-download";
 import { ApiError } from "./client";
 import { kemi } from "./kemi";
 
@@ -63,7 +65,10 @@ export async function uploadFile(
 }
 
 // 서명된 다운로드 주소를 받아 새 창으로 연다(만료 10분).
-export async function openFile(fileId: string) {
-  const { url } = await kemi.download(fileId);
-  window.open(url, "_blank", "noopener,noreferrer");
+export function openFile(fileId: string) {
+  return openSignedDownload(
+    async () => (await kemi.download(fileId)).url,
+    () => window.open("about:blank", "_blank"),
+    (message) => toast.error(message),
+  );
 }
