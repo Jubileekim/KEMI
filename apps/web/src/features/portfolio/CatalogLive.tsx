@@ -521,5 +521,5 @@ export function CreatorDetailLive() {
 // 작품 피드(/works)와 작품 상세(/works/:workId)
 export default function CatalogLive() {
   const { workId } = useParams();
-  return workId ? <WorkDetail id={workId} /> : <Feed />;
+  return workId ? <WorkDetail key={workId} id={workId} /> : <Feed />;
 }
