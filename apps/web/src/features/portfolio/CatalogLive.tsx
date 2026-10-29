@@ -5,7 +5,7 @@ import {
   type Portfolio,
   type ServicePackage,
 } from "@kemi/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -327,60 +327,69 @@ function WorkDetail({ id }: { id: string }) {
       kemi.servicePackage(work.data?.packageId ?? "", signal),
   });
   const retryVideo = () => {
-    void media.refetch().then((result) => {
+    media.refetch().then((result) => {
       if (result.isSuccess) setVideoFailed(false);
     });
   };
   if (work.isPending) return <Loading text="작품을 불러오고 있어요." />;
   if (work.error) return <Failure error={work.error} />;
   const w = work.data;
+  let mediaView: ReactNode;
+  if (media.error)
+    mediaView = (
+      <div role="alert" className="grid gap-3">
+        <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        <Button
+          variant="outline"
+          className="justify-self-start"
+          disabled={media.isFetching}
+          onClick={() => media.refetch()}
+        >
+          영상 정보 다시 불러오기
+        </Button>
+      </div>
+    );
+  else if (videoFailed)
+    mediaView = (
+      <div role="alert" className="grid gap-3">
+        <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
+        <Button
+          variant="outline"
+          className="justify-self-start"
+          disabled={media.isFetching}
+          onClick={retryVideo}
+        >
+          영상 다시 시도
+        </Button>
+      </div>
+    );
+  else if (media.data?.video)
+    mediaView = (
+      <video
+        controls
+        onError={() => setVideoFailed(true)}
+        onPlaying={() => track("work_play", w.id)}
+        preload="metadata"
+        className="aspect-video w-full rounded-xl bg-black"
+        src={media.data.video.url}
+        poster={media.data.thumbnail?.url}
+      >
+        <track kind="captions" />
+      </video>
+    );
+  else
+    mediaView = (
+      <p className="text-muted-foreground">
+        {media.isPending
+          ? "영상을 준비하고 있어요."
+          : "재생할 영상이 없어요."}
+      </p>
+    );
   return (
     <>
       <h1 className="type-heading-lg">{w.title}</h1>
       <Card>
-        {media.error ? (
-          <div role="alert" className="grid gap-3">
-            <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-            <Button
-              variant="outline"
-              className="justify-self-start"
-              disabled={media.isFetching}
-              onClick={() => void media.refetch()}
-            >
-              영상 정보 다시 불러오기
-            </Button>
-          </div>
-        ) : videoFailed ? (
-          <div role="alert" className="grid gap-3">
-            <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
-            <Button
-              variant="outline"
-              className="justify-self-start"
-              disabled={media.isFetching}
-              onClick={retryVideo}
-            >
-              영상 다시 시도
-            </Button>
-          </div>
-        ) : media.data?.video ? (
-          <video
-            controls
-            onError={() => setVideoFailed(true)}
-            onPlaying={() => track("work_play", w.id)}
-            preload="metadata"
-            className="aspect-video w-full rounded-xl bg-black"
-            src={media.data.video.url}
-            poster={media.data.thumbnail?.url}
-          >
-            <track kind="captions" />
-          </video>
-        ) : (
-          <p className="text-muted-foreground">
-            {media.isPending
-              ? "영상을 준비하고 있어요."
-              : "재생할 영상이 없어요."}
-          </p>
-        )}
+        {mediaView}
         {w.description && (
           <p className="whitespace-pre-wrap">{w.description}</p>
         )}
