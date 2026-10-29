@@ -2,7 +2,18 @@ import { expect, it } from "vitest";
 import { safeFeedPage } from "../src/features/portfolio/CatalogLive";
 
 it("defaults invalid feed page URLs to the first page", () => {
-  for (const value of [null, "", "abc", "-1", "0", "1.5", "2e3", "NaN", "Infinity", "9007199254740992"]) {
+  for (const value of [
+    null,
+    "",
+    "abc",
+    "-1",
+    "0",
+    "1.5",
+    "2e3",
+    "NaN",
+    "Infinity",
+    "9007199254740992",
+  ]) {
     expect(safeFeedPage(value)).toBe(1);
   }
 });
