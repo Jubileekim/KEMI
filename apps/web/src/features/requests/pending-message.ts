@@ -15,15 +15,19 @@ interface SendBody {
 
 export default async function sendPendingMessage<T>(
   command: PendingMessage,
+  save: (next: PendingMessage) => void,
   upload: (file: File) => Promise<string>,
   send: (body: SendBody) => Promise<T>,
 ): Promise<T> {
-  if (command.file && !command.attachmentId) {
-    command.attachmentId = await upload(command.file);
+  const attachmentId =
+    command.attachmentId ??
+    (command.file ? await upload(command.file) : undefined);
+  if (attachmentId && !command.attachmentId) {
+    save({ ...command, attachmentId });
   }
   return send({
     clientMessageId: command.id,
     body: command.body.trim(),
-    attachmentFileIds: command.attachmentId ? [command.attachmentId] : [],
+    attachmentFileIds: attachmentId ? [attachmentId] : [],
   });
 }
