@@ -2,12 +2,29 @@ import { ArrowRight, Play } from "lucide-react";
 import { useSearchParams, Link } from "react-router";
 import { VIDEO_PURPOSES } from "@kemi/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { kemi, query } from "../../shared/api/kemi";
 import { purposeLabels, won } from "../live/labels";
 import { Failure } from "../live/ui";
 import { Thumbnail } from "../portfolio/CatalogLive";
 import AuthRequiredCta from "../../components/AuthRequiredCta";
 import "./landing.css";
+
+// Only explain unusually slow first visits; keep the existing request timeout
+// and retry policy unchanged until the cold-start cause is verified.
+export function SlowFeedNotice() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShow(true), 8_000);
+    return () => window.clearTimeout(timer);
+  }, []);
+  if (!show) return null;
+  return (
+    <p className="mt-2 text-sm text-muted-foreground" role="status">
+      첫 방문이라 작품을 불러오는 데 시간이 더 걸릴 수 있어요.
+    </p>
+  );
+}
 
 export default function LandingPage() {
   const [params, setParams] = useSearchParams();
@@ -69,6 +86,7 @@ export default function LandingPage() {
               대표 작품을 불러오고 있어요.
             </p>
           )}
+          {featured.isPending && <SlowFeedNotice />}
           {featured.isError && (
             <div className="landing-hero-state">
               <Failure error={featured.error} />
@@ -147,6 +165,7 @@ export default function LandingPage() {
               작품을 불러오고 있어요.
             </p>
           )}
+          {feed.isPending && <SlowFeedNotice />}
           {feed.isError && (
             <div className="landing-state">
               <Failure error={feed.error} />
