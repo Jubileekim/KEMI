@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
+import type { DirectRequest } from "@kemi/shared";
 import { useSession } from "../../app/session";
 import Badge from "../../components/ui/badge";
 import Button from "../../components/ui/button";
@@ -23,15 +24,15 @@ const notFound = (error: unknown) =>
   error instanceof ApiError && error.status === 404;
 
 // DIRECT-02: 직접 의뢰 정보와 크리에이터 수락·거절, 의뢰인 철회
-function DirectHeader({ requestId }: { requestId: string }) {
+function DirectHeader({
+  requestId,
+  item,
+}: {
+  requestId: string;
+  item?: DirectRequest;
+}) {
   const { role } = useSession();
   const client = useQueryClient();
-  const direct = useQuery({
-    queryKey: ["direct-request", requestId],
-    refetchOnWindowFocus: true,
-    queryFn: ({ signal }) => kemi.directRequest(requestId, signal),
-    retry: false,
-  });
   const answer = useMutation({
     mutationFn: (action: "accept" | "decline" | "withdraw") =>
       kemi.answerDirect(requestId, action),
@@ -41,8 +42,7 @@ function DirectHeader({ requestId }: { requestId: string }) {
       client.invalidateQueries({ queryKey: ["chat", requestId] });
     },
   });
-  if (!direct.data) return null;
-  const item = direct.data;
+  if (!item) return null;
   return (
     <Card title={`직접 의뢰 · ${item.package.title}`}>
       <Facts
@@ -123,33 +123,58 @@ function DirectHeader({ requestId }: { requestId: string }) {
 
 // 의뢰 상세(작업 공간): 직접 의뢰 정보, 대화, 최종 조건서·서명, 계약 이후 단계로 가는 길
 export default function WorkspaceLive({ requestId }: { requestId: string }) {
+  const direct = useQuery({
+    queryKey: ["direct-request", requestId],
+    refetchOnWindowFocus: true,
+    queryFn: ({ signal }) => kemi.directRequest(requestId, signal),
+    retry: false,
+  });
   const terms = useQuery({
     queryKey: ["terms", requestId],
     refetchOnWindowFocus: true,
     queryFn: ({ signal }) => kemi.terms(requestId, signal),
-    retry: (count, error) => !notFound(error) && count < 2,
+    retry: (count, error) =>
+      !(error instanceof ApiError && [403, 404].includes(error.status)) &&
+      count < 2,
   });
+  const termsDocument = terms.error ? undefined : terms.data;
+  // Terms can legitimately be absent before a direct request is accepted.
+  // Only the server's successful party-scoped read may open the workspace.
+  if (terms.isPending) return <Loading text="접근 권한을 확인하고 있어요." />;
+  if (terms.error && !notFound(terms.error))
+    return <Failure error={terms.error} />;
+  if (terms.error) {
+    if (direct.isPending)
+      return <Loading text="접근 권한을 확인하고 있어요." />;
+    if (direct.error) return <Failure error={direct.error} />;
+  }
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="type-heading-lg">
-          {terms.data?.reference?.project?.title ?? "의뢰 상세"}
+          {termsDocument?.reference?.project?.title ?? "의뢰 상세"}
         </h1>
-        {terms.data && (
+        {termsDocument && (
           <Badge variant="secondary">
-            {requestProgress(terms.data.workRequestStatus, terms.data.stage)}
+            {requestProgress(
+              termsDocument.workRequestStatus,
+              termsDocument.stage,
+            )}
           </Badge>
         )}
       </div>
-      <DirectHeader requestId={requestId} />
-      {terms.data?.reference && (
+      <DirectHeader
+        requestId={requestId}
+        item={direct.error ? undefined : direct.data}
+      />
+      {termsDocument?.reference && (
         <Card title="제안 내용">
           <p className="whitespace-pre-wrap">
-            {terms.data.reference.request.message}
+            {termsDocument.reference.request.message}
           </p>
           <p className="text-muted-foreground">
-            제안 {won(terms.data.reference.request.proposedAmount)} ·{" "}
-            {terms.data.reference.request.expectedDays}일
+            제안 {won(termsDocument.reference.request.proposedAmount)} ·{" "}
+            {termsDocument.reference.request.expectedDays}일
           </p>
         </Card>
       )}
@@ -164,8 +189,8 @@ export default function WorkspaceLive({ requestId }: { requestId: string }) {
           ) : (
             <Failure error={terms.error} />
           ))}
-        {terms.data && (
-          <TermsLive requestId={requestId} document={terms.data} />
+        {termsDocument && (
+          <TermsLive requestId={requestId} document={termsDocument} />
         )}
       </div>
       <div className="flex flex-wrap gap-3">
