@@ -26,6 +26,37 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
       status: "SIGNED",
       signedAt: date,
     };
+    let signed = false;
+    let signatureCount = 0;
+    const version = {
+      versionNo: 1,
+      status: "SIGNING",
+      termsHash: "hash",
+      authorId: "1",
+      createdAt: date,
+      values: {
+        amountKrw: 100000,
+        specification: "영상",
+        scope: "제작",
+        materials: "자료",
+        deadline: "기한",
+        revisions: "1회",
+        usageRights: "온라인",
+        cancellation: "협의",
+      },
+      signing: {
+        requestedBy: "1",
+        requestedAt: date,
+        expiresAt: "2099-01-01T00:00:00Z",
+      },
+      signatures: [
+        {
+          userId: role === "CLIENT" ? "2" : "1",
+          signerName: "상대방",
+          signedAt: date,
+        },
+      ],
+    };
     const direct = () => ({
       id: "3",
       clientId: "1",
@@ -47,8 +78,8 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
       desiredDeliveryDate: null,
       referencePortfolio: null,
       inquiryGroupId: null,
-      status: "CONTRACTED",
-      stage,
+      status: signed ? "CONTRACTED" : "DISCUSSING",
+      stage: signed ? stage : "DISCUSSING",
       respondDueAt: date,
       respondedAt: date,
       createdAt: date,
@@ -67,15 +98,28 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
       if (path === "/api/auth/me") return json({ user });
       if (path === "/api/direct-requests") return json({ items: [direct()] });
       if (path === "/api/direct-requests/3") return json(direct());
+      if (
+        path === "/api/work-requests/3/terms/versions/1/signatures" &&
+        route.request().method() === "POST"
+      ) {
+        expect(route.request().postDataJSON()).toMatchObject({
+          signerName: "회원",
+          consent: true,
+          termsHash: "hash",
+        });
+        signed = true;
+        signatureCount += 1;
+        return json({ contract });
+      }
       if (path === "/api/work-requests/3/terms")
         return json({
           workRequestId: "3",
-          workRequestStatus: "CONTRACTED",
-          stage,
+          workRequestStatus: signed ? "CONTRACTED" : "DISCUSSING",
+          stage: signed ? stage : "DISCUSSING",
           projectStatus: null,
           reference: null,
-          versions: [],
-          contract,
+          versions: signed ? [] : [version],
+          contract: signed ? contract : null,
         });
       if (path === "/api/activity")
         return json({
@@ -109,6 +153,20 @@ for (const role of ["CLIENT", "CREATOR"] as const) {
     await expect(
       page.getByRole("heading", { name: "의뢰 현황", exact: true }),
     ).toBeVisible();
+    await page.getByRole("link", { name: /완료 확인 영상/ }).click();
+    const workspace = page.getByRole("main");
+    await expect(workspace.getByText("협의 중", { exact: true })).toHaveCount(
+      2,
+    );
+    await page.getByLabel("서명자 이름").fill("회원");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "서명하기", exact: true }).click();
+    // 마지막 서명 후 이동·새로고침 없이 두 조회가 함께 갱신되어야 한다.
+    await expect(
+      workspace.getByText("계약 확정 · 결제 대기", { exact: true }),
+    ).toHaveCount(2);
+    expect(signatureCount).toBe(1);
+    await page.getByRole("link", { name: "의뢰 현황으로" }).click();
     for (const [next, text] of [
       ["PAYMENT_PENDING", "계약 확정 · 결제 대기"],
       ["PREPARING", "제작 준비"],
