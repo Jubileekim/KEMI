@@ -338,7 +338,9 @@ function WorkDetail({ id }: { id: string }) {
   if (media.error) {
     mediaView = (
       <div role="alert" className="grid gap-3">
-        <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        <p>
+          영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+        </p>
         <Button
           variant="outline"
           className="justify-self-start"
@@ -352,7 +354,9 @@ function WorkDetail({ id }: { id: string }) {
   } else if (videoFailed) {
     mediaView = (
       <div role="alert" className="grid gap-3">
-        <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
+        <p>
+          영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.
+        </p>
         <Button
           variant="outline"
           className="justify-self-start"
