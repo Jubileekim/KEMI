@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { safeFeedPage } from "../src/features/portfolio/CatalogLive";
+import safeFeedPage from "../src/features/portfolio/feed-page-query";
 
 it("defaults invalid feed page URLs to the first page", () => {
-  for (const value of [
+  [
     null,
     "",
     "abc",
@@ -13,9 +13,9 @@ it("defaults invalid feed page URLs to the first page", () => {
     "NaN",
     "Infinity",
     "9007199254740992",
-  ]) {
+  ].forEach((value) => {
     expect(safeFeedPage(value)).toBe(1);
-  }
+  });
 });
 
 it("keeps positive integer page values", () => {
