@@ -16,6 +16,7 @@ import {
   won,
 } from "../live/labels";
 import { Card, Facts, Failure, Field, Loading } from "../live/ui";
+import invalidateRequestProgress from "../live/request-progress";
 import { errorText } from "../live/errors";
 
 const linesOf = (text: string) =>
@@ -113,7 +114,10 @@ export default function CancellationLive({
     queryKey: key,
     queryFn: ({ signal }) => kemi.cancellation(contractId, signal),
   });
-  const update = (next: CancellationOverview) => client.setQueryData(key, next);
+  const update = (next: CancellationOverview) => {
+    client.setQueryData(key, next);
+    invalidateRequestProgress(client);
+  };
   const act = useMutation({
     mutationFn: (run: () => Promise<CancellationOverview>) => run(),
     onSuccess: update,
