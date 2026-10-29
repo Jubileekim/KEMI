@@ -10,6 +10,7 @@ import { openFile, uploadFile } from "../../shared/api/upload";
 import { dateTime } from "../live/labels";
 import { Card, Failure, Loading } from "../live/ui";
 import { errorText } from "../live/errors";
+import sendPendingMessage, { type PendingMessage } from "./pending-message";
 
 // CHAT-01~05: 요청별 대화방(실제 API). 5초마다 새 메시지를 확인한다.
 export default function ChatLive({ requestId }: { requestId: string }) {
@@ -25,11 +26,7 @@ export default function ChatLive({ requestId }: { requestId: string }) {
   });
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const pending = useRef<{
-    id: string;
-    body: string;
-    file: File | null;
-  } | null>(null);
+  const pending = useRef<PendingMessage | null>(null);
   const send = useMutation({
     mutationFn: async () => {
       // 같은 내용을 다시 보내면 같은 식별자를 써서 한 번만 저장되게 한다.
@@ -39,14 +36,12 @@ export default function ChatLive({ requestId }: { requestId: string }) {
         pending.current.file !== file
       )
         pending.current = { id: newCommandId(), body: text, file };
-      const attachment = file
-        ? await uploadFile(file, "CHAT_ATTACHMENT", requestId)
-        : null;
-      return kemi.sendMessage(requestId, {
-        clientMessageId: pending.current.id,
-        body: text.trim(),
-        attachmentFileIds: attachment ? [attachment.id] : [],
-      });
+      return sendPendingMessage(
+        pending.current,
+        async (attachedFile) =>
+          (await uploadFile(attachedFile, "CHAT_ATTACHMENT", requestId)).id,
+        (body) => kemi.sendMessage(requestId, body),
+      );
     },
     onSuccess: () => {
       pending.current = null;
@@ -123,11 +118,13 @@ export default function ChatLive({ requestId }: { requestId: string }) {
             rows={3}
             maxLength={4000}
             value={text}
+            disabled={send.isPending}
             onChange={(event) => setText(event.target.value)}
           />
           <Input
             aria-label="첨부 파일"
             type="file"
+            disabled={send.isPending}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
           {send.error && (
