@@ -26,6 +26,7 @@ import feedMediaMode, {
   shouldRefreshMedia,
 } from "./feed-media";
 import SaveWorkButton from "../saved/SaveWorkButton";
+import safeFeedPage from "./feed-page-query";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -191,15 +192,16 @@ export function PackageCard({
 function Feed() {
   const { role } = useSession();
   const [params, setParams] = useSearchParams();
+  const page = safeFeedPage(params.get("page"));
   const search = query({
     purpose: params.get("purpose") ?? undefined,
-    page: params.get("page") ?? undefined,
+    page: page > 1 ? page : undefined,
   });
   const feed = useQuery({
     queryKey: ["feed", search],
     queryFn: ({ signal }) => kemi.feed(search, signal),
   });
-  const page = Number(params.get("page") ?? "1");
+
   useEffect(() => {
     if (feed.isSuccess) track("feed_view", "feed");
   }, [feed.isSuccess]);
