@@ -36,9 +36,7 @@ test("작품 영상 정보 조회 실패를 영상 없음으로 오인하지 않
   ).toBeVisible();
   await expect(page.getByText("재생할 영상이 없어요.")).toHaveCount(0);
 
-  await page
-    .getByRole("button", { name: "영상 정보 다시 불러오기" })
-    .click();
+  await page.getByRole("button", { name: "영상 정보 다시 불러오기" }).click();
   await expect(page.getByText("재생할 영상이 없어요.")).toBeVisible();
   expect(mediaReads).toBe(2);
 });
