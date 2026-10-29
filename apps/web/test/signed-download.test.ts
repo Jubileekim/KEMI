@@ -35,9 +35,7 @@ describe("서명 다운로드 새 창", () => {
     const notify = vi.fn();
     await openSignedDownload(resolveUrl, () => null, notify);
     expect(resolveUrl).not.toHaveBeenCalled();
-    expect(notify).toHaveBeenCalledWith(
-      expect.stringContaining("팝업 차단"),
-    );
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining("팝업 차단"));
   });
 
   it("서명 주소 조회 실패 시 빈 창을 닫고 안내한다", async () => {
@@ -56,8 +54,6 @@ describe("서명 다운로드 새 창", () => {
     );
     expect(popup.close).toHaveBeenCalledOnce();
     expect(popup.location.replace).not.toHaveBeenCalled();
-    expect(notify).toHaveBeenCalledWith(
-      expect.stringContaining("파일 주소"),
-    );
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining("파일 주소"));
   });
 });
