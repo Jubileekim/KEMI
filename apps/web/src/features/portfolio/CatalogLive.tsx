@@ -114,6 +114,15 @@ export function Thumbnail({
         }}
       />
     );
+  if (media.error)
+    return (
+      <div
+        className="grid aspect-video place-items-center rounded-xl bg-muted p-3 text-center text-sm text-muted-foreground"
+        role="status"
+      >
+        미리보기를 불러오지 못했어요.
+      </div>
+    );
   if (mode === "empty" || !media.data?.thumbnail)
     return <div className="aspect-video rounded-xl bg-muted" aria-hidden />;
   return (
@@ -300,6 +309,7 @@ function Feed() {
 
 // FEED-02·03: 작품 상세(영상 재생, 제작자·패키지 연결)
 function WorkDetail({ id }: { id: string }) {
+  const [videoFailed, setVideoFailed] = useState(false);
   const work = useQuery({
     queryKey: ["portfolio", id],
     queryFn: ({ signal }) => kemi.portfolio(id, signal),
@@ -316,6 +326,11 @@ function WorkDetail({ id }: { id: string }) {
     queryFn: ({ signal }) =>
       kemi.servicePackage(work.data?.packageId ?? "", signal),
   });
+  const retryVideo = () => {
+    void media.refetch().then((result) => {
+      if (result.isSuccess) setVideoFailed(false);
+    });
+  };
   if (work.isPending) return <Loading text="작품을 불러오고 있어요." />;
   if (work.error) return <Failure error={work.error} />;
   const w = work.data;
@@ -323,9 +338,34 @@ function WorkDetail({ id }: { id: string }) {
     <>
       <h1 className="type-heading-lg">{w.title}</h1>
       <Card>
-        {media.data?.video ? (
+        {media.error ? (
+          <div role="alert" className="grid gap-3">
+            <p>영상 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+            <Button
+              variant="outline"
+              className="justify-self-start"
+              disabled={media.isFetching}
+              onClick={() => void media.refetch()}
+            >
+              영상 정보 다시 불러오기
+            </Button>
+          </div>
+        ) : videoFailed ? (
+          <div role="alert" className="grid gap-3">
+            <p>영상 재생에 문제가 있어요. 재생 주소를 다시 확인해 주세요.</p>
+            <Button
+              variant="outline"
+              className="justify-self-start"
+              disabled={media.isFetching}
+              onClick={retryVideo}
+            >
+              영상 다시 시도
+            </Button>
+          </div>
+        ) : media.data?.video ? (
           <video
             controls
+            onError={() => setVideoFailed(true)}
             onPlaying={() => track("work_play", w.id)}
             preload="metadata"
             className="aspect-video w-full rounded-xl bg-black"
