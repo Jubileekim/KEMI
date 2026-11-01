@@ -26,3 +26,7 @@ npm run dev:web
 ## 프론트엔드 0-A~0-C
 
 [실행·Mock 안내](docs/frontend-setup.md), [진행 기록](docs/frontend-progress.md)를 참고하세요. 기존 API·shared·검사 명령은 유지합니다.
+
+## UX 실험 아카이브
+
+- [웨딩 식전영상 의뢰 클릭형 사용자 여정](docs/ux/README.md) — 2026-10-21 작성된 6단계 HTML 프로토타입. 실제 구현·거래 검증과 구분되는 과거 설계 기록.
