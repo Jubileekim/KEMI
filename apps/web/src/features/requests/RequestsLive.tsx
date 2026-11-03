@@ -12,6 +12,7 @@ import { dateTime, requestProgress, won } from "../live/labels";
 import { Card, Failure, Field, Loading } from "../live/ui";
 import { errorText } from "../live/errors";
 import WorkspaceLive from "./WorkspaceLive";
+import ConversationList from "./ConversationList";
 
 // APPLY-01: 크리에이터 지원서 제출
 function ApplyForm({ projectId }: { projectId: string }) {
@@ -234,10 +235,6 @@ function Proposals({ projectId }: { projectId: string }) {
 // 의뢰 현황: 요청별 대화방(공개 모집 협의·직접 의뢰)과 크리에이터의 지원 내역
 function RequestList() {
   const { role } = useSession();
-  const rooms = useQuery({
-    queryKey: ["chat-rooms"],
-    queryFn: ({ signal }) => kemi.chatRooms(signal),
-  });
   const mine = useQuery({
     queryKey: ["my-applications"],
     enabled: role === "creator",
@@ -251,30 +248,7 @@ function RequestList() {
   return (
     <>
       <h1 className="type-heading-lg">의뢰 현황</h1>
-      <Card title="진행 중인 대화">
-        {rooms.isPending && <Loading />}
-        {rooms.error && <Failure error={rooms.error} />}
-        {rooms.data?.items.length === 0 && <p>아직 협의 중인 의뢰가 없어요.</p>}
-        <ul className="grid gap-3">
-          {rooms.data?.items.map((room) => (
-            <li
-              key={room.workRequestId}
-              className="flex flex-wrap items-center gap-3"
-            >
-              <Link
-                to={`/requests/${room.workRequestId}`}
-                className="underline-offset-4 hover:underline"
-              >
-                {room.projectTitle ?? "직접 의뢰"} · {room.counterpartName}
-              </Link>
-              {room.unreadCount > 0 && (
-                <Badge>새 메시지 {room.unreadCount}</Badge>
-              )}
-              {room.readOnly && <Badge variant="outline">종료됨</Badge>}
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <ConversationList />
       <Card title="직접 의뢰">
         {directs.isPending && <Loading />}
         {directs.error && <Failure error={directs.error} />}
