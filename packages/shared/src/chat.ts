@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { ActivityStage } from "./activity.js";
+import type { WorkRequestStatus } from "./application.js";
 
 // 요청별 대화방 (CHAT-01~05). 같은 요청에는 방이 하나뿐이고, 계약 전후에 같은 방·같은 기록을 쓴다.
 // 메시지 종류: USER(당사자가 보냄), SYSTEM(계약 체결·결제 완료 같은 작업 사건 안내, WORK-04)
@@ -77,6 +79,9 @@ export interface ChatRoomSummary {
   counterpartName: string;
   // 협의가 끝났으면(거절·철회·미선정) 읽기만 할 수 있다(CHAT-05).
   readOnly: boolean;
+  // 요청 상태와 거래 진행 단계(내 활동·의뢰 상세와 같은 값). 대화 목록을 진행 중·완료로 나눌 때 쓴다.
+  status: WorkRequestStatus;
+  stage: ActivityStage;
   lastMessage: ChatMessage | null;
   unreadCount: number;
 }

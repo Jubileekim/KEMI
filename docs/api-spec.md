@@ -4071,6 +4071,8 @@ REVIEW(검토 중)·WARN(경고)·LIMIT(이용 제한)·RELEASE(해제). 근거(
 | `creatorId` | string | 예 | - | - |
 | `counterpartName` | string | 예 | - | - |
 | `readOnly` | boolean | 예 | - | - |
+| `status` | `PENDING`, `DISCUSSING`, `CONTRACTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`, `NOT_SELECTED` | 예 | - | - |
+| `stage` | `PENDING`, `DISCUSSING`, `CLOSED`, `PAYMENT_PENDING`, `PREPARING`, `IN_PROGRESS`, `DELIVERED`, `COMPLETED`, `CANCELED`, `DISPUTED` | 예 | - | 거래 진행 단계(내 활동·의뢰 상세와 같은 값). 완료·종료(COMPLETED·CANCELED·CLOSED)와 진행 중을 나눌 때 쓴다. |
 | `lastMessage` | [ChatMessage](#schema-chatmessage) 또는 null | 예 | - | - |
 | `unreadCount` | integer | 예 | - | - |
 
