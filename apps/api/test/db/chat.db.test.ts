@@ -269,14 +269,6 @@ describe("협의 종료·계약 전후 (CHAT-04·05, WORK-04)", () => {
       pairs.map(([token, id]) => send(token ?? "", id ?? "", "닫힌 방")),
     );
     expect(sends.map((r) => r.status)).toEqual([409, 409]);
-    // 목록에도 요청 상태·진행 단계가 함께 온다(끝난 협의는 CLOSED).
-    const listed = (await rooms(client.token)).body.items;
-    expect(
-      listed.find((r: { workRequestId: string }) => r.workRequestId === ids[0]),
-    ).toMatchObject({ status: "DECLINED", stage: "CLOSED", readOnly: true });
-    expect(
-      listed.find((r: { workRequestId: string }) => r.workRequestId === ids[1]),
-    ).toMatchObject({ status: "WITHDRAWN", stage: "CLOSED", readOnly: true });
     expect(
       (await messages(creators[0]?.token ?? "", ids[0] ?? "")).body.items,
     ).toHaveLength(2);
@@ -370,22 +362,7 @@ describe("협의 종료·계약 전후 (CHAT-04·05, WORK-04)", () => {
       "SYSTEM:조건서 1번 버전에",
       "계약 감사합니다",
     ]);
-    expect(list.body.room).toMatchObject({
-      readOnly: false,
-      status: "CONTRACTED",
-      stage: "PAYMENT_PENDING",
-    });
-    // 대화 목록만으로 진행 단계를 안다(내 활동과 같은 값).
-    const [room] = (await rooms(creator?.token ?? "")).body.items;
-    expect(room).toMatchObject({
-      workRequestId: id,
-      status: "CONTRACTED",
-      stage: "PAYMENT_PENDING",
-    });
-    const activity = await request(app)
-      .get("/api/activity")
-      .set(auth(client.token));
-    expect(activity.body.requests[0].stage).toBe(room.stage);
+    expect(list.body.room.readOnly).toBe(false);
     expect(await prisma.chatRoom.count()).toBe(1);
   });
 });

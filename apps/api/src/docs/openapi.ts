@@ -3364,8 +3364,6 @@ const openApiDocument = {
           "creatorId",
           "counterpartName",
           "readOnly",
-          "status",
-          "stage",
           "lastMessage",
           "unreadCount",
         ],
@@ -3377,13 +3375,6 @@ const openApiDocument = {
           creatorId: { type: "string" },
           counterpartName: { type: "string" },
           readOnly: { type: "boolean" },
-          status: { type: "string", enum: [...WORK_REQUEST_STATUSES] },
-          stage: {
-            type: "string",
-            enum: [...ACTIVITY_STAGES],
-            description:
-              "거래 진행 단계(내 활동·의뢰 상세와 같은 값). 완료·종료(COMPLETED·CANCELED·CLOSED)와 진행 중을 나눌 때 쓴다.",
-          },
           lastMessage: {
             oneOf: [
               { $ref: "#/components/schemas/ChatMessage" },

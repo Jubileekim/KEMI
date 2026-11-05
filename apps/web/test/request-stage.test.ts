@@ -27,7 +27,6 @@ describe("의뢰 거래 단계 표시", () => {
     const client = new QueryClient();
     const keys = [
       ["activity"],
-      ["chat-rooms"],
       ["direct-requests"],
       ["direct-request", "3"],
       ["terms", "3"],

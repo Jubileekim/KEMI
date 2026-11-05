@@ -8,9 +8,7 @@ import {
   chatMessageKindSchema,
   chatMessageListQuerySchema,
   chatReadSchema,
-  workRequestStatusSchema,
 } from "@kemi/shared";
-import { dealStage, dealStageInclude } from "../deal/stage.js";
 import AppError from "../http/app-error.js";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { requireReadyFiles } from "../files/file.service.js";
@@ -104,7 +102,6 @@ const roomInclude = {
       client: { select: { name: true } },
       creator: { select: { name: true } },
       project: { select: { title: true } },
-      ...dealStageInclude,
     },
   },
   messages: { orderBy: { id: "desc" }, take: 1, include: includeAttachments },
@@ -177,8 +174,6 @@ export function createChatService({
           ? request.creator.name
           : request.client.name,
       readOnly: CLOSED_REQUEST_STATUSES.has(request.status),
-      status: workRequestStatusSchema.parse(request.status),
-      stage: dealStage(request.status, request.contract),
       lastMessage: last ? toMessage(last) : null,
       unreadCount,
     };
